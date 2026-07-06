@@ -1,0 +1,49 @@
+# Secrets — Context7 MCP config embeds an API key; never commit it.
+# If you want to share MCP setup with a team, commit a key-less template instead.
+.mcp.json
+
+# Env / secrets — only public EXPO_PUBLIC_* keys ever belong in the app bundle.
+# Service-role / backend secrets must live on a backend, never in app source.
+# (.env.example is intentionally NOT ignored — it holds placeholders only.)
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Expo / Metro / TypeScript build output
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+*.tsbuildinfo
+
+# Native — managed workflow regenerates these via `expo prebuild` (CNG)
+/ios
+/android
+.kotlin/
+
+# Native signing material — never commit
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+pnpm-debug.*
+
+# Merge artifacts
+*.orig.*
+
+# Obsidian app state — keep the .md notes tracked, ignore the vault's local config
+docs/obsidian/.obsidian/
+
+# OS
+.DS_Store
