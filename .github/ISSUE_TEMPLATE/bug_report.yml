@@ -1,0 +1,77 @@
+name: "🐛 Bug report"
+description: Report something that is broken or behaving incorrectly.
+title: "bug: "
+labels: ["type: bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please be specific — vague bugs are hard to fix.
+        For security/privacy issues, do **not** file here; see `SECURITY.md`.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences — what is wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include exact error text if any.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots / video
+      description: Drag & drop images or a screen recording if helpful.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options: [iOS, Android, Web, Expo Go, Simulator/Emulator, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options: [low, medium, high, critical]
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected feature
+      options: [app-shell, cameras, ai-detection, review, alerts, map, profile, docs, other]
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Related logs / references
+      description: Link any Obsidian build log, decision, or prior bug note.
+  - type: textarea
+    id: cause
+    attributes:
+      label: Possible cause
+      description: Optional — any hunch about the root cause.

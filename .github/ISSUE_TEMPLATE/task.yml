@@ -1,0 +1,67 @@
+name: "🧩 Task"
+description: A scoped, single implementation task (one task per branch).
+title: "task: "
+labels: ["type: chore"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One task per branch. Use `/start-task` to produce a plan before coding, and
+        `/finish-task` to run checks and update the Obsidian logs when done.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Task summary
+      description: One clear task — not a bundle of work.
+    validations:
+      required: true
+  - type: input
+    id: phase
+    attributes:
+      label: Phase / roadmap link
+      description: e.g. "Phase 1 App Shell" — link the roadmap note.
+    validations:
+      required: true
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of done
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Files likely affected
+  - type: dropdown
+    id: newfiles
+    attributes:
+      label: New files needed?
+      options: [No, "Yes — listed below (needs approval)"]
+    validations:
+      required: true
+  - type: dropdown
+    id: approval
+    attributes:
+      label: Approval needed?
+      description: New app files/dependencies/features require approval first.
+      options: [No, Yes]
+    validations:
+      required: true
+  - type: checkboxes
+    id: quality
+    attributes:
+      label: Quality checks planned
+      options:
+        - label: typecheck
+        - label: lint
+        - label: test (if meaningful)
+        - label: manual run of the flow
+  - type: checkboxes
+    id: logs
+    attributes:
+      label: Obsidian logs to update on completion
+      options:
+        - label: Build log
+        - label: app_walkthrough (if meaningful)
+        - label: Decision log (if a decision)
+        - label: Bug log (if a bug)
