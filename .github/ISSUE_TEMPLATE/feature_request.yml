@@ -1,0 +1,62 @@
+name: "✨ Feature request"
+description: Propose a feature or enhancement.
+title: "feat: "
+labels: ["type: feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Features go through scope + approval before building. Non-MVP features are parked
+        unless explicitly approved — see `docs/obsidian/01 Product/Non-MVP Ideas.md`.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature summary
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What user need does this solve? Who benefits?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: mvp
+    attributes:
+      label: MVP or future?
+      options: [MVP, Future / post-MVP, Unsure]
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options: [high, medium, low]
+    validations:
+      required: true
+  - type: textarea
+    id: flow
+    attributes:
+      label: User flow
+      description: Step by step, how the user would move through it.
+  - type: textarea
+    id: screens
+    attributes:
+      label: Screens affected
+  - type: textarea
+    id: technical
+    attributes:
+      label: Technical notes
+      description: Types, mock data, service seams, libraries to verify with Context7.
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks / privacy concerns
+      description: Especially anything touching camera/video, location, or what becomes public.
