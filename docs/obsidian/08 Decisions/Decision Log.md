@@ -23,6 +23,33 @@ consequences.
 
 ---
 
+### 2026-07-06 — Phase 1 app shell: expo-router navigation + Manrope + typed design tokens
+- **Status:** accepted (resolves the open "Navigation approach" decision below)
+- **Context:** Phase 1 needed the first navigation, screens, and visual identity. Two forks were
+  open: expo-router vs React Navigation ([[Folder Structure]]) and the typeface. Both were
+  confirmed with the user before building.
+- **Decision:**
+  - **Navigation → expo-router** (file-based `app/` routing, built on React Navigation). Entry is
+    `expo-router/entry`; root **Stack** (`app/_layout.tsx`) → welcome (`app/index.tsx`) → bottom
+    **Tabs** (`app/(tabs)/`: home, cameras, map, review, profile). `experiments.typedRoutes` on;
+    `scheme: "watchdog"` for future deep links (e.g. open-alert links).
+  - **Typography → Manrope** via `@expo-google-fonts/manrope` (weights 400/500/600/700), loaded
+    behind an `expo-splash-screen` gate so the first frame is already in-typeface.
+  - **Design tokens → a plain typed module** (`src/theme/`, no context/provider — one static dark
+    theme in the MVP). Dark navy `#0B1220`, muted cards, ONE blue accent for primary actions only,
+    red/orange = alert, green = safe; `textMuted` set to `#7A8699` for WCAG AA on small text.
+  - **Reusable primitives only where every screen needs them now** (AppText, ScreenContainer,
+    Card, ScreenHeader, PrimaryButton, EmptyState, Loading, ErrorState). No `src/features`, no
+    state library, no gesture-handler/reanimated yet.
+- **Alternatives:** React Navigation bare (rejected — expo-router gives file routing + deep links
+  and is React Navigation underneath); Inter / IBM Plex / system font (rejected — Manrope is
+  premium and less overused); a React context theme (rejected — no runtime theme switch in the
+  MVP, a plain import is simpler and provider-free).
+- **Consequences:** Adding a screen = adding a file under `app/`. New feature folders, deps, and
+  screens still need approval ([[File Creation Policy]]). typedRoutes' strict types generate on
+  `expo start` (typecheck passes without them). Home uses a clearly-labeled *simulated* fetch to
+  exercise its loading/error states.
+
 ### 2026-07-06 — Phase 0 app foundation: Expo SDK 57, blank-TypeScript, npm
 - **Status:** accepted
 - **Context:** Phase 0 needed the first real app source — a clean, minimal Expo + React
@@ -73,7 +100,7 @@ consequences.
 
 ## Open decisions (to record when made)
 
-- Navigation approach: expo-router vs React Navigation ([[Phase 1 App Shell]]).
+- ~~Navigation approach: expo-router vs React Navigation~~ → **decided: expo-router** (2026-07-06).
 - Poster identity model for public alerts (real vs anonymous/local) ([[Phase 4 Alert Posting]]).
 - Map library choice ([[Phase 5 Map Alerts]]).
 - Backend: Supabase vs Firebase ([[Phase 7 Backend Integration]]).

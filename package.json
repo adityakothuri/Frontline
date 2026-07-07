@@ -1,12 +1,21 @@
 {
   "name": "watchdog",
   "version": "0.0.1",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/manrope": "^0.4.2",
+    "@expo/vector-icons": "^15.0.2",
     "expo": "~57.0.2",
+    "expo-constants": "~57.0.3",
+    "expo-font": "~57.0.0",
+    "expo-linking": "~57.0.1",
+    "expo-router": "~57.0.3",
+    "expo-splash-screen": "~57.0.2",
     "expo-status-bar": "~57.0.0",
     "react": "19.2.3",
-    "react-native": "0.86.0"
+    "react-native": "0.86.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "4.25.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

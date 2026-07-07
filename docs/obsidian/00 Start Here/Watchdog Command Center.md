@@ -1,7 +1,7 @@
 ---
 tags: [command-center, start-here]
 status: active
-phase: "Phase 0 — Foundation"
+phase: "Phase 1 — App Shell"
 updated: 2026-07-06
 ---
 
@@ -14,31 +14,32 @@ updated: 2026-07-06
 
 ## Current Status
 
-🟢 **Phase 0 — Foundation complete.** The project brain (Obsidian vault + `CLAUDE.md` + workflow
-skills) is in place, and the **Expo SDK 57 + React Native + TypeScript app foundation is now
-scaffolded** on branch `feature/phase-0-app-foundation`: it boots (Metro bundles cleanly),
-`npm run verify` (typecheck + lint) passes, `expo-doctor` is 20/20, and CI is compatible. It is
-**foundation only** — no features, navigation, state, backend, or designed UI yet (that's Phase
-1, and still requires approval for new app files). Not yet committed (awaiting explicit go-ahead).
+🟢 **Phase 1 — App Shell complete.** On top of the Phase 0 foundation, the app now has a real
+**expo-router** shell with a **Manrope + dark design system**: a welcome / demo-entry screen,
+bottom-tab navigation (Home, Cameras, Map, Review, Profile), typed design tokens, eight reusable
+components, and a Home dashboard with loading / error / empty states over clearly-labeled mock
+data. `npm run verify` passes, `expo-doctor` is 20/20, and it bundles cleanly (1139 modules).
+Reviews: ui-reviewer PASS (a11y + accent fixes applied), qa-tester PASS, slop-check PASS. It is
+**shell only** — no real cameras, detection, map data, posting, or backend (Phases 2+). Committed
+locally on `main` + `feature/phase-0-app-foundation`; Phase 1 work is uncommitted on the working
+tree (awaiting go-ahead) and **push is still blocked on `gh auth login`**.
 
 ## Current Phase
 
-**[[Phase 0 Setup]]** — Foundation and project discipline.
+**[[Phase 1 App Shell]]** — polished, navigable shell (done). Foundation: [[Phase 0 Setup]].
 
 ## Current Active Task
 
-**✅ Done — scaffold the Expo + TypeScript app foundation.** Minimal `blank-typescript` app
-(SDK 57, npm): `index.ts`/`App.tsx`, config, `eslint.config.js`, `.prettierignore`, merged
-`.gitignore`, and the `verify` script CI expects. Build log:
-[[2026-07-06 Phase 0 App Foundation]]. Walkthrough: [[app_walkthrough]].
+**✅ Done — Phase 1 app shell.** expo-router (`app/` routes) + Manrope, `src/theme` tokens,
+`src/components` primitives, Home mock dashboard, designed empty/loading/error states. Build log:
+[[2026-07-06 Phase 1 App Shell]]. Walkthrough: [[app_walkthrough]]. Decisions: [[Decision Log]].
 
 ## Next Recommended Task
 
-**Phase 1 — build the polished app shell.** The foundation exists; now decide **navigation**
-(expo-router vs React Navigation — open in [[Decision Log]]), add the `src/` feature tree
-([[Folder Structure]]), introduce **design tokens** ([[UI Design System]]), and replace the
-placeholder `App.tsx` with the real shell / first screens. ⚠️ Requires approval for each new
-app file/dependency ([[File Creation Policy]]). See [[Phase 1 App Shell]].
+**Phase 2 — Camera Simulation.** Build the Cameras tab for real: a `src/features/cameras/` folder
+(simulated camera list + status + a mock feed / event timeline), consumed by `app/(tabs)/cameras.tsx`,
+using the existing tokens/components. ⚠️ Requires approval for each new app file/dependency
+([[File Creation Policy]]). See [[Phase 2 Camera Simulation]] and [[Screens List]].
 
 ---
 

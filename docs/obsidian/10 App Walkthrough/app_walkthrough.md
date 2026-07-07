@@ -43,9 +43,10 @@ Add new feature entries **newest at the bottom** (chronological), using the entr
 
 # Feature Walkthroughs
 
-> _The app **foundation** now exists (Expo SDK 57 + TypeScript). No user-facing **features**
-> yet — screens, navigation, and the design system arrive in **[[Phase 1 App Shell]]**. Add new
-> entries newest at the bottom, using [[App Walkthrough Template]]._
+> _The app **shell** now exists — expo-router navigation, a Manrope + dark design system, an
+> entry flow, and the five tab screens (see the two entries below). Real features (cameras,
+> detection, map, posting) are Phases 2+. Add new entries newest at the bottom, using
+> [[App Walkthrough Template]]._
 
 <!-- Copy the entry template from [[App Walkthrough Template]] for each new feature. -->
 
@@ -110,6 +111,81 @@ Build log: [[2026-07-06 Phase 0 App Foundation]]
   camera are added.
 - `watchman` is not installed locally (Metro falls back to Node's watcher — non-fatal).
 - Local Node 24 vs CI Node 20: both satisfy RN 0.86's engine range.
+
+---
+
+## App Shell — Navigation & Design System
+
+### Date Added
+2026-07-06
+
+### Purpose
+Turn the bare foundation into a navigable, on-brand app: an entry flow, bottom-tab navigation, a
+design-token system, reusable UI primitives, and a Home dashboard — all _designed, not templated_.
+Still shell-only: no real cameras, detections, map data, or posting.
+
+### User Flow
+Launch → the native splash holds until Manrope loads → **Welcome** ([app/index.tsx](../../../app/index.tsx)):
+wordmark + tagline + "Enter demo mode" → `router.replace('/home')` into the **bottom tabs**. Tabs:
+Home (live dashboard) and Cameras / Map / Review / Profile (designed placeholders). Home shows a
+brief loading state, then a greeting, three stat cards, and a recent-activity list; a failed load
+shows a retry-able error state.
+
+### Important Files
+| File | Purpose |
+|---|---|
+| [app/_layout.tsx](../../../app/_layout.tsx) | Root Stack; loads 4 Manrope weights behind an expo-splash-screen gate; renders null until ready. |
+| [app/index.tsx](../../../app/index.tsx) | Welcome / demo-entry screen; `router.replace('/home')`. |
+| [app/(tabs)/_layout.tsx](../../../app/%28tabs%29/_layout.tsx) | Bottom Tabs; dark-themed bar, Ionicons, Manrope labels. |
+| [app/(tabs)/home.tsx](../../../app/%28tabs%29/home.tsx) | Home dashboard; loading/error/content over the mock summary. |
+| app/(tabs)/{cameras,map,review,profile}.tsx | Placeholder tabs with designed empty states. |
+| src/theme/{colors,spacing,typography,index}.ts | Typed design tokens (single source of truth). |
+| src/components/*.tsx | Reusable primitives: AppText, ScreenContainer, ScreenHeader, Card, PrimaryButton, EmptyState, Loading, ErrorState. |
+| [src/mock/dashboard.ts](../../../src/mock/dashboard.ts) | Clearly-labeled simulated Home summary + `getDashboardSummary()`. |
+
+### How The Code Works
+expo-router boots `expo-router/entry` → `app/_layout.tsx`. The root Stack keeps the native splash
+up (`SplashScreen.preventAutoHideAsync()`), loads Manrope via `useFonts`, hides the splash when
+ready, and renders the Stack (welcome → tabs). Every screen wraps content in `ScreenContainer`
+(SafeArea + dark background + padding) and renders text through `AppText`, which applies a Manrope
+weight + a scale variant — so type and color never drift from the tokens. Home calls
+`getDashboardSummary()` in an effect and switches between `Loading`, `ErrorState` (retry), and
+content; state is only set from the async callbacks (never synchronously in the effect).
+
+### Data Flow
+`src/mock/dashboard.ts` → `getDashboardSummary()` (a labeled _simulated_ async call) →
+`home.tsx` local state → stat cards + activity list. No global state, no backend. The other four
+tabs render static `EmptyState`s (no data source yet).
+
+### Important Types / Components / Functions
+Tokens: `colors`, `spacing`, `radii`, `fonts`, `textVariants` (+ `theme`) — all `as const`, with
+`ColorToken` / `TextVariant` / `Tone` types. Components: `AppText` (variant + color),
+`ScreenContainer` (SafeArea edges), `EmptyState` / `Loading` / `ErrorState` (shared state
+patterns). Domain: `DashboardSummary`, `DashboardStat`, `ActivityItem`, `Tone`.
+
+### Temporary or Mock Parts
+`src/mock/dashboard.ts` is entirely simulated (labeled in-file and on-screen: "Demo mode —
+simulated"). `getDashboardSummary()` uses a `setTimeout` to mimic a network call so Home can
+exercise its loading state — a real service replaces it behind the same signature. The four
+placeholder tabs are intentionally featureless (their real screens are Phases 2–6).
+
+### How To Extend This Later
+Add a screen = add a file under `app/`. Feature screens (cameras, detection review, map, posting)
+each get a `src/features/<name>/` folder (with approval) owning their screens/hooks/types/mock,
+consumed by the matching route. Swap the mock service for a real one behind the same typed
+interface. Build new shared components only on the second real use.
+
+### Related Logs
+Build log: [[2026-07-06 Phase 1 App Shell]]
+
+### Related Decisions
+[[Decision Log]] — "2026-07-06 — Phase 1 app shell: expo-router navigation + Manrope + typed design tokens".
+
+### Risks / Notes
+- typedRoutes' strict route types generate on `expo start` (gitignored); typecheck passes without them.
+- Home's error branch is defensive wiring — the mock never rejects, so it isn't hit in the demo.
+- Backlog (from ui-review): skeleton loading for Home, a themed `app/+not-found.tsx`, and routing
+  the "pending review" stat into the Review tab once it exists (gives Home one primary action).
 
 ---
 
