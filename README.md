@@ -64,28 +64,28 @@ App code will follow a **feature-based** layout — see
 
 ## Getting Started
 
-> The app is not scaffolded yet (Phase 0). These steps apply once Phase 1 creates the Expo app.
-
-**Prerequisites:** Node.js (this machine uses Node in `~/.local`, npm global prefix `~/.local`).
+**Prerequisites:** Node.js ≥ 20.19.4 (this machine uses Node in `~/.local`), and a way to
+preview — Expo Go on a phone, an iOS Simulator / Android emulator, or a web browser.
 
 ```bash
-# after the app is scaffolded (Phase 1):
 npm install
-npm start        # start Expo
+npm start        # start the Expo dev server, then press i / a / w (or scan the QR in Expo Go)
 ```
 
-## Available Scripts
+📖 **Full run instructions:** [docs/RUNNING.md](docs/RUNNING.md) — prerequisites, each platform,
+what you'll see, and troubleshooting.
 
-No `package.json` yet. When the app is scaffolded, these scripts are expected (and are what CI
-and the quality hook look for):
+## Available Scripts
 
 | Script | Purpose |
 |--------|---------|
 | `start` | Launch the Expo dev server |
+| `ios` / `android` / `web` | Start directly on a platform |
 | `typecheck` | `tsc --noEmit` |
 | `lint` | ESLint |
-| `test` | Tests (added when meaningful) |
-| `verify` | Convenience: typecheck + lint (+ test) — run before every PR |
+| `format` | Prettier (app source only) |
+| `test` | Placeholder (real tests added when meaningful) |
+| `verify` | typecheck + lint — run before every PR (also what CI runs) |
 
 ## Development Workflow
 
@@ -124,9 +124,10 @@ git-ignored; `.env.example` (placeholders only) is committed. See
 
 ## Current Status
 
-🟡 **Phase 0 — Foundation.** Project brain + repo workflow are set up; **no app source code
-yet, on purpose.** Next: Phase 1 — polished app shell (requires approval before creating app
-source + dependencies).
+🟢 **Phase 1 — App Shell.** The Expo + TypeScript app runs: expo-router navigation (welcome →
+Home / Cameras / Map / Review / Profile tabs), a Manrope + dark design system, and a demo Home
+dashboard with **simulated** data. No real cameras, detection, map data, or backend yet (Phases
+2+). See [docs/RUNNING.md](docs/RUNNING.md) to run it.
 
 ## Notes
 
