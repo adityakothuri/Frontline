@@ -1,16 +1,18 @@
 {
   "expo": {
-    "name": "Watchdog",
-    "slug": "watchdog",
+    "name": "Frontline",
+    "slug": "frontline",
     "version": "0.0.1",
-    "scheme": "watchdog",
+    "scheme": "frontline",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.frontline.app"
     },
     "android": {
+      "package": "com.frontline.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B1220",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -25,7 +27,6 @@
     },
     "plugins": [
       "expo-router",
-      "expo-status-bar",
       "expo-font",
       [
         "expo-splash-screen",

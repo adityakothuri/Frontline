@@ -1,63 +1,73 @@
-import { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useCallback, useState } from 'react';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AppText,
   Card,
+  CategoryBadge,
   ErrorState,
   Loading,
+  PrimaryButton,
   ScreenContainer,
   ScreenHeader,
 } from '@/components';
-import { colors, radii, spacing, type ColorToken } from '@/theme';
-import {
-  getDashboardSummary,
-  type DashboardSummary,
-  type Tone,
-} from '@/mock/dashboard';
-
-// Tone maps to meaning, not decoration: green = safe/confirmed, orange = needs
-// attention, neutral stays quiet. The blue accent is reserved for actions, so it
-// is never used here as a data color; red is reserved for serious alerts elsewhere.
-const statValueColor: Record<Tone, ColorToken> = {
-  neutral: 'textPrimary', // a crisp-white number reads as correctly neutral
-  success: 'success',
-  alert: 'warning',
-};
-const dotColor: Record<Tone, ColorToken> = {
-  neutral: 'textSecondary', // a quiet muted mark for non-events
-  success: 'success',
-  alert: 'warning',
-};
+import { colors, spacing, type ColorToken } from '@/theme';
+import { formatRelativeTime, getNearbyAlerts, type Alert } from '@/mock/alerts';
 
 type Status = 'loading' | 'error' | 'ready';
 
-export default function HomeScreen() {
-  const [status, setStatus] = useState<Status>('loading');
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [attempt, setAttempt] = useState(0);
+type Summary = {
+  active: number;
+  serious: number;
+  today: number;
+  recent: Alert[];
+};
 
-  // Simulated fetch of the dashboard summary. State is only set from the async
-  // callbacks (never synchronously in the effect body), so a failed load lands
-  // on the error state and `retry` re-runs the effect.
-  useEffect(() => {
-    let active = true;
-    getDashboardSummary()
-      .then((data) => {
-        if (!active) return;
-        setSummary(data);
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
-    return () => {
-      active = false;
-    };
-  }, [attempt]);
+const DAY = 24 * 3_600_000;
+
+// Pure: derives the dashboard summary from alerts + a captured `now` (so the
+// component render itself never calls an impure clock — see react-hooks/purity).
+function buildSummary(data: Alert[], now: number): Summary {
+  return {
+    active: data.length,
+    serious: data.filter((a) => a.severity === 'high').length,
+    today: data.filter((a) => now - a.createdAt < DAY).length,
+    recent: data.slice(0, 3),
+  };
+}
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const [status, setStatus] = useState<Status>('loading');
+  const [summary, setSummary] = useState<Summary | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getNearbyAlerts()
+        .then((data) => {
+          if (!active) return;
+          setSummary(buildSummary(data, Date.now()));
+          setStatus('ready');
+        })
+        .catch(() => {
+          if (active) setStatus('error');
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const retry = () => {
     setStatus('loading');
-    setAttempt((n) => n + 1);
+    getNearbyAlerts()
+      .then((data) => {
+        setSummary(buildSummary(data, Date.now()));
+        setStatus('ready');
+      })
+      .catch(() => setStatus('error'));
   };
 
   if (status === 'loading') {
@@ -76,17 +86,43 @@ export default function HomeScreen() {
     );
   }
 
+  const stats: {
+    key: string;
+    value: number;
+    label: string;
+    color: ColorToken;
+  }[] = [
+    {
+      key: 'active',
+      value: summary.active,
+      label: 'Active nearby',
+      color: 'textPrimary',
+    },
+    {
+      key: 'serious',
+      value: summary.serious,
+      label: 'Serious',
+      color: summary.serious > 0 ? 'danger' : 'textSecondary',
+    },
+    {
+      key: 'today',
+      value: summary.today,
+      label: 'Reported today',
+      color: 'textPrimary',
+    },
+  ];
+
   return (
     <ScreenContainer scroll>
       <ScreenHeader
         title="Good to see you"
-        subtitle={`Watching over ${summary.neighborhood}`}
+        subtitle="Watching over Maple Grove"
       />
 
       <View style={styles.stats}>
-        {summary.stats.map((stat) => (
+        {stats.map((stat) => (
           <Card key={stat.key} style={styles.statCard}>
-            <AppText variant="title" color={statValueColor[stat.tone]}>
+            <AppText variant="title" color={stat.color}>
               {stat.value}
             </AppText>
             <AppText
@@ -100,52 +136,85 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      <AppText variant="heading" style={styles.sectionTitle}>
-        Recent activity
-      </AppText>
-      <View style={styles.activity}>
-        {summary.recentActivity.map((item) => (
-          <Card key={item.id} style={styles.activityCard}>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: colors[dotColor[item.tone]] },
-              ]}
-            />
-            <View style={styles.activityBody}>
-              <AppText variant="subtitle">{item.title}</AppText>
-              <AppText
-                variant="body"
-                color="textSecondary"
-                style={styles.activityDetail}
-              >
-                {item.detail}
-              </AppText>
-            </View>
-            <AppText variant="caption" color="textMuted">
-              {item.time}
-            </AppText>
-          </Card>
-        ))}
+      <PrimaryButton
+        label="Report an alert"
+        onPress={() => router.push('/report')}
+        style={styles.report}
+      />
+
+      <View style={styles.sectionRow}>
+        <AppText variant="heading">Recent activity</AppText>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/alerts')}
+        >
+          <AppText variant="label" color="accent">
+            See all
+          </AppText>
+        </Pressable>
       </View>
 
+      {summary.recent.length === 0 ? (
+        <Card>
+          <AppText variant="body" color="textSecondary">
+            All quiet nearby. Tap “Report an alert” if you see something.
+          </AppText>
+        </Card>
+      ) : (
+        <View style={styles.activity}>
+          {summary.recent.map((alert) => (
+            <Pressable
+              key={alert.id}
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({
+                  pathname: '/alert/[id]',
+                  params: { id: alert.id },
+                })
+              }
+            >
+              <Card style={styles.activityCard}>
+                <View style={styles.activityBody}>
+                  <CategoryBadge
+                    category={alert.category}
+                    severity={alert.severity}
+                  />
+                  <AppText variant="subtitle">{alert.title}</AppText>
+                  <AppText variant="caption" color="textMuted">
+                    {formatRelativeTime(alert.createdAt)}
+                  </AppText>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={colors.textMuted}
+                />
+              </Card>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       <AppText variant="caption" color="textMuted" style={styles.demoNote}>
-        Demo mode — the cameras, detections, and alerts shown here are
-        simulated.
+        Demo mode — the alerts shown here are simulated neighbor reports.
       </AppText>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  stats: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
+  stats: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
   statCard: { flex: 1, paddingVertical: spacing.lg },
   statLabel: { marginTop: spacing.xs },
-  sectionTitle: { marginBottom: spacing.md },
+  report: { marginBottom: spacing.xl },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
   activity: { gap: spacing.md },
   activityCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  dot: { width: 10, height: 10, borderRadius: radii.pill },
-  activityBody: { flex: 1 },
-  activityDetail: { marginTop: 2 },
+  activityBody: { flex: 1, gap: spacing.xs },
   demoNote: { marginTop: spacing.xl, textAlign: 'center' },
 });

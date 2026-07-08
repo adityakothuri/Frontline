@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   View,
   StyleSheet,
@@ -17,6 +19,9 @@ type ScreenContainerProps = {
   // Tab screens default to 'top' only (the tab bar owns the bottom inset);
   // full-screen routes like Welcome pass ['top', 'bottom'].
   edges?: ScreenEdge[];
+  // Forms pass this so the keyboard pushes content up instead of covering the
+  // submit button, and taps on chips register without a dismiss-first tap.
+  keyboardAware?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
 };
 
@@ -24,21 +29,33 @@ export function ScreenContainer({
   children,
   scroll = false,
   edges = ['top'],
+  keyboardAware = false,
   contentStyle,
 }: ScreenContainerProps) {
+  const body = scroll ? (
+    <ScrollView
+      contentContainerStyle={[styles.content, contentStyle]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
+      {children}
+    </ScrollView>
+  ) : (
+    <View style={[styles.content, styles.flex, contentStyle]}>{children}</View>
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
-      {scroll ? (
-        <ScrollView
-          contentContainerStyle={[styles.content, contentStyle]}
-          showsVerticalScrollIndicator={false}
+      {keyboardAware ? (
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {children}
-        </ScrollView>
+          {body}
+        </KeyboardAvoidingView>
       ) : (
-        <View style={[styles.content, styles.flex, contentStyle]}>
-          {children}
-        </View>
+        body
       )}
     </SafeAreaView>
   );
