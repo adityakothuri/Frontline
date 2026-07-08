@@ -10,9 +10,9 @@ This file explains how **Frontline** works as the codebase grows. It is **not ju
 is a guided explanation of how the app actually works, so you can understand the codebase without
 digging through files blindly. Update it after every moderate or meaningful change.
 
-> **Reset on 2026-07-07 for the Watchdog → Frontline reframe.** The **reused design system + app
+> **Reset on 2026-07-07 for the reframe to Frontline.** The **reused design system + app
 > shell**, the **data/AI service layer** (Phase 2), and the **guided need flow** (Phase 3) are real
-> Frontline. The legacy Watchdog feature screens have been **removed**. Resource detail pages, AI
+> Frontline. The legacy feature screens have been **removed**. Resource detail pages, AI
 > call scripts/summaries, and the map arrive in Phases 4–7.
 
 ## How to use this file
@@ -33,15 +33,12 @@ component pattern · important refactor · a bug fix that changes a flow. Not fo
 ### Design system — `src/theme/`
 - **Purpose:** one source of visual truth. `colors` (dark navy palette; semantic `success`/`warning`/
   `danger` re-mapped for Frontline as verified/unverified/emergency), `spacing` + `radii`,
-  `typography` (Manrope 400/500/600/700 + a type scale), `mapStyle` (muted dark map), aggregated in
-  `index.ts` as `theme`.
+  `typography` (Manrope 400/500/600/700 + a type scale), aggregated in `index.ts` as `theme`.
 - **Reuse:** product-agnostic; carried over intact. Prefer these tokens over inline styles.
 
 ### Generic components — `src/components/`
-- `ScreenContainer`, `AppText`, `Card`, `PrimaryButton`, `ScreenHeader`, `EmptyState`, `ErrorState`,
-  `Loading` — reusable primitives that depend only on the theme. These stay.
-- `AlertMarker`, `CategoryBadge` and the legacy alert screens are **Watchdog-specific** and will be
-  replaced (do not extend them for Frontline).
+- `ScreenContainer`, `AppText`, `Card`, `PrimaryButton`, `Chip`, `ScreenHeader`, `EmptyState`,
+  `ErrorState`, `Loading` — reusable primitives that depend only on the theme.
 
 ### App shell — `app/`
 - `expo-router` file-based routing; `_layout.tsx` (root stack + font/splash gate), `(tabs)/_layout.tsx`

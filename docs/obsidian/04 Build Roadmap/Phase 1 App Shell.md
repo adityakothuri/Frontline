@@ -24,7 +24,7 @@ and carry over intact. Frontline reframes the *content*, not the shell.
 
 - The **welcome** copy/wordmark and the **tab set** become Frontline (Home "What do you need help
   with?", Resources, Map, Saved, Profile) — done as those feature phases land.
-- Legacy Watchdog feature screens (home/map/alerts/report) are **replaced**, not extended, starting
+- Legacy feature screens (home/map/alerts/report) are **replaced**, not extended, starting
   in [[Phase 2 Resource Data Model and Service]].
 
 ## Definition of done (met)
@@ -34,7 +34,7 @@ and carry over intact. Frontline reframes the *content*, not the shell.
 
 ## Risks
 
-- Carrying over Watchdog product *semantics* by accident — re-check color meanings (green=verified,
+- Carrying over the old product *semantics* by accident — re-check color meanings (green=verified,
   amber=unverified, red=emergency) per [[UI Design System]] as screens are rebuilt.
 
 ## Related

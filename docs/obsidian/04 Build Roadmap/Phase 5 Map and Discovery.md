@@ -38,7 +38,7 @@ Add place. Show the same resource results as **category pins** on a map, synchro
 ## Risks
 
 - Pin clutter — cluster or cap density; keep pins legible.
-- Re-introducing Watchdog severity semantics — pins are keyed by **category**, not severity.
+- Re-introducing the old alert-severity semantics — pins are keyed by **category**, not severity.
 
 ## Related
 

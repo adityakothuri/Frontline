@@ -9,7 +9,7 @@ updated: 2026-07-07
 Running log of notable product, design, and technical decisions (lightweight ADRs). Add a new entry
 (newest at top) whenever a meaningful choice is made. Each entry: context → decision → consequences.
 
-> Reset on 2026-07-07 when the project was reframed from Watchdog to Frontline. Watchdog-era
+> Reset on 2026-07-07 when the project was reframed to Frontline. Earlier-era
 > decisions were intentionally not carried over; they applied to a product that no longer exists.
 
 ## Entry template
@@ -37,19 +37,19 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 - **Consequences:** screens consume ready-to-render results; the real Claude implementation still
   fits behind the same interface. Docs updated to match.
 
-### 2026-07-07 — Reframe Watchdog → Frontline
+### 2026-07-07 — Reframe to Frontline
 - **Status:** accepted
-- **Context:** The Watchdog neighborhood-safety product was scrapped. A new product, **Frontline**
+- **Context:** The previous product was scrapped. A new product, **Frontline**
   (a veteran benefits/resource navigator with AI embedded in workflows), replaces it. The repo's
   development framework (agents, hooks, rules, skills, MCP, Obsidian, workflow) and the reusable
   RN+Expo design system are worth preserving.
 - **Decision:** Do a **documentation + framework + config reframe** — rewrite the Obsidian brain and
-  `CLAUDE.md` for Frontline, rename app config to `com.frontline.app`, delete Watchdog historical
+  `CLAUDE.md` for Frontline, rename app config to `com.frontline.app`, delete legacy historical
   records, and preserve the framework and design system. **Feature screens are not rewritten yet**;
   they are the first coding milestone ([[Phase 2 Resource Data Model and Service]]).
 - **Alternatives:** (a) start a brand-new repo — loses the mature framework; (b) rewrite all code
   now — too big, unreviewable, and premature before the product docs settle.
-- **Consequences:** The running app keeps its Watchdog *screens* until Phase 2–5 rebuild them; only
+- **Consequences:** The running app keeps its legacy *screens* until Phase 2–5 rebuild them; only
   its native identity is now Frontline. The `ios/` native project must be regenerated.
 
 ### 2026-07-07 — AI is interface-first, templated before real

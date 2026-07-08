@@ -8,7 +8,7 @@ project brain lives in the Obsidian vault at
 Tooling inventory: [SKILLS.md](SKILLS.md).
 
 > **Current phase: Reframed to Frontline (Phase 1 shell reused, feature build not started).**
-> The Watchdog neighborhood-safety product was scrapped. The reusable design system + app shell
+> The previous product was scrapped. The reusable design system + app shell
 > (tokens, generic components, navigation) carry over; the first Frontline feature milestone is
 > **Phase 2 — Resource Data Model & Mock Service**. New app files/dependencies still need approval.
 
@@ -143,7 +143,7 @@ Canonical: [Anti-AI-Slop Code Rules](docs/obsidian/03%20Technical/Anti-AI-Slop%2
 
 Because Frontline serves veterans, hold to these every session:
 
-- The app is **Frontline**, not Watchdog. It helps veterans find benefits and local resources.
+- The app is **Frontline**. It helps veterans find benefits and local resources.
 - The MVP is: **guided help flows, local resource discovery, AI summarization, generated call
   scripts, saved resources, and trust/verification.**
 - **AI is embedded into workflows**, never a generic chatbot.

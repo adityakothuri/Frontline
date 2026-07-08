@@ -14,11 +14,11 @@ updated: 2026-07-07
 
 ## Current Status
 
-🟢 **Frontline MVP in progress.** The reframe (Watchdog → Frontline) is complete, and the core loop
+🟢 **Frontline MVP in progress.** The reframe is complete, and the core loop
 is coming together: a veteran opens the app, picks **what they need help with**, answers a few quick
 questions, and sees **nearby simulated resources** with working Call/Directions. Built on the reused
 design system + app shell, the Phase 2 **data/AI service seams**, and the Phase 3 **guided need
-flow**. Legacy Watchdog screens have been removed. Still to come: resource detail pages, AI call
+flow**. Legacy screens have been removed. Still to come: resource detail pages, AI call
 scripts/summaries, and the map (Phases 4–7). The dev framework (agents, hooks, rules, skills, MCP,
 Obsidian, workflow) is **preserved**.
 
@@ -33,11 +33,11 @@ visible screens). Next: **[[Phase 4 Resource List and Detail]]** (detail page + 
 **✅ Done — Phase 3: Guided Need Flow (first visible screens).** Home "What do you need help with?"
 grid → guided questions (`app/need/[category].tsx`) → results list (`app/results.tsx`) wired to
 `resourceService.search`, with a `ResourceCard` (open-now + trust badge + working Call/Directions).
-Removed the legacy Watchdog screens; tabs are Home · Saved · Profile. `npm run verify` passes and
+Removed the legacy screens; tabs are Home · Saved · Profile. `npm run verify` passes and
 `expo export` bundles cleanly. **Not yet eyeballed in the Simulator.** Build log:
 [[2026-07-07 Phase 3 Guided Need Flow]]. Walkthrough: [[app_walkthrough]].
 
-Prior: **✅ Phase 2** (data/AI seams) · **✅ Reframe** Watchdog → Frontline. See [[Decision Log]].
+Prior: **✅ Phase 2** (data/AI seams) · **✅ Reframe** to Frontline. See [[Decision Log]].
 
 ## Next Recommended Task
 

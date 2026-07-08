@@ -12,7 +12,7 @@ veterans, these are not optional.
 
 ## Product truth
 
-- The app is **Frontline**, not Watchdog. It helps **veterans find benefits and local resources**.
+- The app is **Frontline**. It helps **veterans find benefits and local resources**.
 - The MVP is: **guided help flows, local resource discovery, AI summarization, generated call
   scripts, saved resources, and trust/verification**. See [[MVP Definition|MVP Scope]].
 

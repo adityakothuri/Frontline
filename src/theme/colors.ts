@@ -1,6 +1,6 @@
-// Watchdog color tokens — dark, calm, premium. Color carries MEANING here:
-// red/orange = a real alert, green = safe/confirmed. Never decorative.
-// Direction: docs/obsidian/02 Design/UI Design System.md.
+// Frontline color tokens — dark, calm, premium. Color carries MEANING here:
+// green = verified/confirmed, amber = unverified/outdated, red = emergency only.
+// Never decorative. Direction: docs/obsidian/02 Design/UI Design System.md.
 export const colors = {
   // Foundation — tinted dark navy/charcoal (never pure black)
   background: '#0B1220',
@@ -23,11 +23,11 @@ export const colors = {
   accentSoft: 'rgba(76,141,255,0.14)',
 
   // Semantic — used for meaning, never as chrome
-  danger: '#F0554A', // red — serious alert emphasis
+  danger: '#F0554A', // red — emergencies only
   dangerSoft: 'rgba(240,85,74,0.14)',
-  warning: '#F5A623', // orange — alert emphasis
+  warning: '#F5A623', // amber — unverified / outdated / caution
   warningSoft: 'rgba(245,166,35,0.14)',
-  success: '#34C759', // green — safe / confirmed
+  success: '#34C759', // green — verified / confirmed
   successSoft: 'rgba(52,199,89,0.14)',
 
   // Utility

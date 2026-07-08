@@ -134,7 +134,7 @@ client** — real LLM calls go through a server-side proxy. `.env*` is git-ignor
 
 ## Current Status
 
-🟡 **Reframed from Watchdog → Frontline.** The previous neighborhood-safety product was scrapped;
+🟡 **Reframed to Frontline.** The previous neighborhood-safety product was scrapped;
 this repo is now Frontline (a veteran benefits/resource navigator). The reusable **design system +
 app shell** carry over; documentation, `CLAUDE.md`, and app config are reframed. **Feature screens
 are built next**, starting with the resource data model + service seams

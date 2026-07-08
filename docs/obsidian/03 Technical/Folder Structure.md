@@ -18,13 +18,16 @@ app/                     # expo-router routes (entry = expo-router/entry)
   (tabs)/_layout.tsx     # bottom tabs
 src/
   components/            # shared UI primitives (ScreenContainer, AppText, Card, PrimaryButton,
-                         #   ScreenHeader, EmptyState, ErrorState, Loading)  ← reused
-  theme/                 # design tokens (colors, spacing, typography, mapStyle, index) ← reused
-  mock/                  # legacy Watchdog mock (to be replaced)
+                         #   Chip, ScreenHeader, EmptyState, ErrorState, Loading)  ← reused
+  theme/                 # design tokens (colors, spacing, typography, index) ← reused
+  types/                 # domain types (resource, need)
+  lib/                   # small utilities (geo, hours)
+  services/              # resources + ai service seams (see below)
+  features/              # feature modules (resources, …)
 ```
 
-> Legacy Watchdog feature screens/components still exist under `app/` and `src/components`
-> (alert/report/map). They are replaced feature-by-feature starting Phase 2 — not extended.
+> The legacy feature screens have been removed; Frontline screens are built per phase under
+> `app/` and `src/features/`.
 
 ## Proposed Frontline layout (added with approval, per phase)
 

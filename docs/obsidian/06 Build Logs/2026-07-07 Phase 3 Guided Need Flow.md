@@ -9,7 +9,7 @@ status: done
 ## What was built
 
 The first tappable Frontline flow: **Home → pick a category → guided questions → nearby resources**,
-wired to the Phase 2 `resourceService`. Also replaced the legacy Watchdog navigation/screens.
+wired to the Phase 2 `resourceService`. Also replaced the legacy navigation/screens.
 
 ### New screens & flow
 - `app/(tabs)/home.tsx` — **"What do you need help with?"** with a 2-column grid of the 12 need
@@ -33,10 +33,10 @@ wired to the Phase 2 `resourceService`. Also replaced the legacy Watchdog naviga
 ### Navigation / shell
 - `app/(tabs)/_layout.tsx` → **Home · Saved · Profile**.
 - `app/_layout.tsx` → registers `need/[category]` + `results` with a themed header; dropped the
-  Watchdog `report` / `alert/[id]` modals.
+  the legacy `report` / `alert/[id]` modals.
 - `app/index.tsx` → Frontline welcome (wordmark, tagline, "not the VA" disclaimer, "Get started").
 
-### Removed (legacy Watchdog, replaced by this navigation)
+### Removed (legacy, replaced by this navigation)
 `app/(tabs)/{map,alerts,cameras,review}.tsx`, `app/report.tsx`, `app/alert/[id].tsx`,
 `src/components/{AlertMarker,CategoryBadge,maps,maps.web}.tsx`, `src/mock/alerts.ts`,
 `src/theme/mapStyle.ts`. (A Frontline map returns in Phase 5.)
