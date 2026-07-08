@@ -42,6 +42,8 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="report" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="alert/[id]" options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );

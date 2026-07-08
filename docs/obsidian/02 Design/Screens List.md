@@ -1,7 +1,7 @@
 ---
 tags: [design, screens]
-status: draft
-updated: 2026-07-05
+status: active
+updated: 2026-07-07
 ---
 
 # Screens List
@@ -9,39 +9,47 @@ updated: 2026-07-05
 The screens needed for the MVP demo loop, grouped by area. Screens are **created with approval**
 during their roadmap phase — this list is the plan, not a build order to run unattended.
 
-## Entry
+## Entry & shell
 
 | Screen | Purpose | Phase |
 |--------|---------|-------|
-| Welcome / Onboarding | Establish identity; enter demo mode | [[Phase 1 App Shell]] |
-| Auth / Demo entry | Sign in or continue as demo | [[Phase 1 App Shell]] |
+| Welcome / entry | Establish identity; enter (no login required) | [[Phase 1 App Shell]] |
 
 ## Core tabs (bottom navigation)
 
 | Screen | Purpose | Phase |
 |--------|---------|-------|
-| Home dashboard | Calm overview: recent activity, quick actions | [[Phase 1 App Shell]] |
-| Cameras | List of simulated cameras + status | [[Phase 2 Camera Simulation]] |
-| Camera detail | Mock feed + event timeline | [[Phase 2 Camera Simulation]] |
-| Review (Alerts) | Pending detection queue | [[Phase 3 Detection Review]] |
-| Detection detail / Review | Clip, AI description, approve/reject, expiration | [[Phase 3 Detection Review]] |
-| Map | Neighborhood alerts on a map | [[Phase 5 Map Alerts]] |
-| Alert detail sheet | Tapped alert details | [[Phase 5 Map Alerts]] |
-| Profile / Settings | Account, privacy, notifications, defaults | [[Phase 6 Polish]] |
+| Home — "What do you need help with?" | Category grid; the front door | [[Phase 3 Guided Need Flow]] |
+| Resources (list) | Nearby resources as scannable cards | [[Phase 4 Resource List and Detail]] |
+| Map | Nearby resources as category pins | [[Phase 5 Map and Discovery]] |
+| Saved | Saved resources, benefits, scripts, checklists | [[Phase 8 Saved and Profile]] |
+| Profile | Optional-only veteran preferences | [[Phase 8 Saved and Profile]] |
 
-## Supporting
+## Core flow screens / modals
 
 | Screen / element | Purpose | Phase |
 |------------------|---------|-------|
-| Post alert (confirm) | Edit description + expiration, confirm public post | [[Phase 4 Alert Posting]] |
+| Guided need flow | Category → short questions → structured need + location/ZIP | [[Phase 3 Guided Need Flow]] |
+| Resource detail | Summary · eligibility · documents · contact · trust · next steps · call script | [[Phase 4 Resource List and Detail]] |
+| Call script sheet | Generated script + nervous-user variant | [[Phase 6 AI Plans and Call Scripts]] |
+| Benefit summary | AI plain-English summary of a benefit/document | [[Phase 7 AI Summarization]] |
+| "What should I bring?" checklist | Documents to bring for a resource | [[Phase 4 Resource List and Detail]] |
 | Empty / Loading / Error states | Every screen has all three | All phases |
+
+## Later (post-MVP)
+
+| Screen | Purpose | Phase |
+|--------|---------|-------|
+| Live data / official sources | Resources from verified official/directory sources | [[Phase 10 Backend and Data Ingestion]] |
+| Apply / claims (future) | Application or claims hand-off | [[Non-MVP Ideas]] |
 
 ## Notes
 
-- Navigation structure (bottom tabs vs stack) is decided in [[Phase 1 App Shell]] with the
-  `react-native-architect` and `react-navigation` skill; record the call in [[Decision Log]].
-- Keep the tab bar minimal and legible. See [[UI Design System]].
+- Navigation is the reused bottom-tab + stack shell from [[Phase 1 App Shell]]; record structural
+  calls in [[Decision Log]].
+- Keep the tab bar minimal and legible; big tap targets and accessible labels. See
+  [[UI Design System]].
 
 ## Related
 
-[[App Flow]] · [[UI Design System]] · [[User Stories]]
+[[App Flow|Core User Flows]] · [[Map and Search Design]] · [[UI Design System]] · [[User Stories]]

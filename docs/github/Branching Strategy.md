@@ -25,11 +25,11 @@ PRs small, reviewable, and easy to log in the Obsidian build log.
 
 ```text
 feature/phase-1-navigation
-feature/camera-simulation
-fix/map-alert-empty-state
+feature/guided-need-flow
+fix/resource-card-empty-state
 chore/github-ci
 docs/update-readme
-refactor/alert-types
+refactor/resource-types
 ```
 
 ## When to create a branch

@@ -1,79 +1,88 @@
-# Watchdog Claude Instructions
+# Frontline Claude Instructions
 
-Watchdog is a frontend-heavy **React Native + Expo (TypeScript)** neighborhood-safety app.
-This file is the fast brief. The full project brain lives in the Obsidian vault at
+Frontline is a frontend-heavy **React Native + Expo (TypeScript)** app that helps **veterans find
+benefits, local resources, and practical next steps**. This file is the fast brief. The full
+project brain lives in the Obsidian vault at
 [docs/obsidian/](docs/obsidian/) — start at
-[Watchdog Command Center](docs/obsidian/00%20Start%20Here/Watchdog%20Command%20Center.md).
+[Frontline Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md).
 Tooling inventory: [SKILLS.md](SKILLS.md).
 
-> **Current phase: Phase 0 — Foundation.** No app source code exists yet, on purpose. The app
-> shell is next and requires approval before any source files or dependencies are created.
+> **Current phase: Reframed to Frontline (Phase 1 shell reused, feature build not started).**
+> The Watchdog neighborhood-safety product was scrapped. The reusable design system + app shell
+> (tokens, generic components, navigation) carry over; the first Frontline feature milestone is
+> **Phase 2 — Resource Data Model & Mock Service**. New app files/dependencies still need approval.
 
 ## Product Summary
 
-Watchdog is a neighborhood safety app where users connect or simulate cameras, review
-AI-detected suspicious events, approve or reject detections, and post approved alerts to a
-neighborhood map with auto-delete settings.
+Frontline helps a veteran **find the help they need nearby and know exactly what to do next**. A
+veteran opens the app, chooses **what they need help with** (food, housing, healthcare, VA benefits,
+jobs, legal, transportation, and more), shares a location or ZIP, and gets **nearby relevant
+resources**, **plain-English benefit explanations**, and **AI-generated next steps** — what to bring,
+who to call, and what to say.
 
-**AI assists users; it does not replace user judgment.** User approval is required before
-anything becomes public. Tagline spirit: *Neighborhood safety, verified by people.*
+**AI is embedded into real workflows, not a chatbot.** The AI powers guided need flows, next-step
+plans, call scripts, and benefit/document summaries — always presented as **simplified guidance,
+never legal, medical, financial, or government-certified advice**. Frontline is a **resource
+navigator, not the VA or a government agency**. Tagline spirit: *Find your next step.*
 
 ## Core MVP Flow
 
-1. User opens the app.
-2. User signs in or enters demo mode.
-3. User sees a polished home dashboard.
-4. User views connected/simulated cameras.
-5. A simulated AI detection appears.
-6. User reviews the detection.
-7. User approves or rejects it.
-8. If approved, the user can edit description and expiration.
-9. Approved alert appears on the neighborhood map.
-10. Other users can open alert details.
-11. Alert expires based on auto-delete settings.
+1. User opens Frontline and sees a clean home: **"What do you need help with?"**
+2. User selects a **need category** (Food, Housing, Healthcare, Benefits, Jobs, Legal, …).
+3. A short **guided flow** asks: what exactly, how urgent (today / this week / just info),
+   in-person / online / either, which documents they have, and whether they want help calling,
+   visiting, applying, or understanding.
+4. User provides **location or ZIP code**.
+5. App shows **top nearby resources** in **list and map** form.
+6. User taps a resource to open its **detail page**.
+7. Detail shows a **plain-English AI summary**, eligibility, documents needed, and **next steps**.
+8. User taps **"Generate call script"** → a short, specific script for that resource (plus a
+   shorter "nervous user" variant).
+9. User can **save** the resource, get **directions**, or **call**.
+10. Saved resources, benefits, scripts, and document checklists are available for later.
 
 ## Feature Priority Order
 
 1. Foundation and project discipline
-2. Polished app shell
-3. Camera feed simulation
-4. AI detection simulation
-5. Human review flow
-6. Public alert posting
-7. Map-based alert viewing
-8. Alert lifecycle and auto-delete
-9. Profile and settings
-10. Real backend integration
-11. Real AI/video processing
-12. Real camera integrations
-13. Advanced community features
+2. Polished app shell + design system (reused from the previous build)
+3. Resource/benefit **data model** + typed mock service (and the `AiService` seam)
+4. **"What do you need help with?"** guided need flow
+5. Resource **list, cards, and detail pages**
+6. **Map** + local resource discovery
+7. **AI workflow layer** — next-step plans + call scripts (templated first, real API behind interface)
+8. **AI summarization** — benefits/documents into plain English (with hedging + verification)
+9. **Saved resources** + lightweight veteran **profile/preferences**
+10. **Trust, safety & verification** surfacing
+11. Real backend + verified data ingestion (post-MVP)
 
 Details + reasoning: [Feature Priority Order](docs/obsidian/01%20Product/Feature%20Priority%20Order.md).
 
 ## MVP Features
 
-A polished, believable **demo** of the core loop (steps above). Simulated where needed, and
-**labeled honestly** (`mock`/`demo`/`simulated`). MVP = polished app shell, simulated cameras,
-simulated detection, human review (approve/reject/edit/expiration), public alert posting,
-map viewing, alert expiration/auto-delete, light profile/settings.
-See [MVP Definition](docs/obsidian/01%20Product/MVP%20Definition.md).
+A polished, trustworthy **demo** of the core loop (steps above), simulated where needed and
+**labeled honestly** (`mock`/`demo`/`simulated`). MVP = polished app shell, the guided need flow,
+local resource discovery (list + map with resource cards + detail pages), AI-generated next-step
+plans and call scripts, AI benefit/document summarization, saved resources, a lightweight
+optional-only veteran profile, and a visible trust/verification layer (source type, last-checked,
+disclaimers). See [MVP Scope](docs/obsidian/01%20Product/MVP%20Definition.md).
 
 ## Not MVP Yet
 
-Real Ring/live streaming, real AI model, real backend persistence, police/emergency
-integration, advanced moderation, payments, comments, social feed. These are Priorities 9–13
-and are **not built without explicit approval**.
-See [Non-MVP Ideas](docs/obsidian/01%20Product/Non-MVP%20Ideas.md).
+Real backend persistence, live official-source data ingestion/scraping, real LLM calls shipped from
+the client (needs a proxy), full VA **claims filing**, **login with VA credentials**, sensitive
+**document upload**, and any automated legal/medical/financial advice. These are Priorities 11+ and
+are **not built without explicit approval**. See
+[Non-MVP Ideas](docs/obsidian/01%20Product/Non-MVP%20Ideas.md).
 
 ## Product Principles
 
-1. **User control first** — nothing private becomes public automatically.
-2. **Human verification** — AI detects; users decide.
-3. **Privacy by default** — raw footage stays private unless intentionally posted.
-4. **Calm safety** — serious and trustworthy, not alarmist.
-5. **Local relevance** — location-based, useful to nearby people.
-6. **Temporary by design** — alerts auto-delete/expire.
-7. **Beautiful MVP** — polished and demo-ready.
+1. **Veteran-first clarity** — plain language, low cognitive load, obvious next action.
+2. **AI in workflows, not a chatbot** — AI powers plans, scripts, and summaries embedded in the flow.
+3. **Trust by verification** — every resource shows source type, last-checked date, and status.
+4. **Not advice** — AI output is simplified guidance, never legal/medical/financial/government-certified.
+5. **Privacy by default** — collect the minimum; no SSN, VA login, bank info, or diagnosis.
+6. **Accessibility always** — large tap targets, high contrast, screen-reader friendly.
+7. **Local relevance** — location-based, useful to nearby people.
 8. **Structured development** — plan, scope, implement, review, test, log.
 9. **No AI slop** — intentional, typed, readable code; designed UI.
 10. **No uncontrolled file creation** — plan + approval before new app files.
@@ -82,19 +91,24 @@ Full text: [Product Principles](docs/obsidian/01%20Product/Product%20Principles.
 
 ## Design Direction
 
-Modern, premium, calm, serious, trustworthy — **not** childish, cluttered, fearmongering,
-generic, or template-like. Dark navy/charcoal foundation, crisp white text, muted-gray cards;
-red/orange **only** for serious alert emphasis; green for safe/confirm; subtle map styling;
-strong consistent spacing; designed loading/empty/error states.
-See [UI Design System](docs/obsidian/02%20Design/UI%20Design%20System.md) and
+Modern, premium, calm, serious, trustworthy — **not** childish, cluttered, alarmist, or
+template-like. Dark navy/charcoal foundation, crisp white text, muted-gray cards; the accent blue
+for primary actions; green for confirmed/verified, amber for "unverified / check the source," red
+reserved for genuine emergencies. Strong consistent spacing; designed loading/empty/error states;
+resource cards that surface the most important info fast. See
+[UI Design System](docs/obsidian/02%20Design/UI%20Design%20System.md) and
 [Anti-AI-Slop Design Rules](docs/obsidian/02%20Design/Anti-AI-Slop%20Design%20Rules.md).
 
 ## Technical Direction
 
 React Native + Expo, TypeScript-first, feature-based folders. Start with local state + typed
-**mock** services behind interfaces a real backend could later implement. **No** backend,
-auth, real model, or global state library in the MVP. Verify library APIs with **Context7**.
-See [Technical Architecture](docs/obsidian/03%20Technical/Technical%20Architecture.md) and
+**mock** services behind interfaces a real backend could later implement — including a typed
+**`AiService`** (templated responses first, real Claude API behind the same interface later). **No**
+backend, auth, real model calls, or global state library in the MVP. Real LLM calls must go through a
+**proxy** (API keys never ship in the client). Verify library APIs with **Context7**. See
+[Technical Architecture](docs/obsidian/03%20Technical/Technical%20Architecture.md),
+[AI Feature Design](docs/obsidian/03%20Technical/AI%20Feature%20Design.md),
+[Resource Data Model](docs/obsidian/03%20Technical/Resource%20Data%20Model.md), and
 [Folder Structure](docs/obsidian/03%20Technical/Folder%20Structure.md).
 
 ## File Creation Policy
@@ -125,11 +139,30 @@ explainable code. Act like a careful senior engineer, not a chaotic code generat
 
 Canonical: [Anti-AI-Slop Code Rules](docs/obsidian/03%20Technical/Anti-AI-Slop%20Code%20Rules.md).
 
+## Claude Development Rules (Frontline)
+
+Because Frontline serves veterans, hold to these every session:
+
+- The app is **Frontline**, not Watchdog. It helps veterans find benefits and local resources.
+- The MVP is: **guided help flows, local resource discovery, AI summarization, generated call
+  scripts, saved resources, and trust/verification.**
+- **AI is embedded into workflows**, never a generic chatbot.
+- Build **carefully, feature by feature**. Do not "build everything."
+- Do **not** create files randomly without purpose; do not make massive unrelated changes.
+- Always **preserve the established repo framework** (agents, hooks, rules, skills, MCP, Obsidian,
+  workflow) unless explicitly told otherwise.
+- Always **update documentation** when architecture or product decisions change.
+- Always prioritize **accessibility, clarity, trust, and privacy**.
+- **Avoid collecting sensitive data** unless absolutely necessary (never SSN, VA login, bank, diagnosis).
+- **Never** present AI output as legal, medical, financial, or government-certified advice.
+
+Canonical: [Claude Development Rules](docs/obsidian/03%20Technical/Claude%20Development%20Rules.md).
+
 ## Project Brain
 
 The Obsidian vault is the source of truth. Read before acting:
 
-- [Watchdog Command Center](docs/obsidian/00%20Start%20Here/Watchdog%20Command%20Center.md) — status, current/next task, links to everything.
+- [Frontline Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md) — status, current/next task, links to everything.
 - [Product](docs/obsidian/01%20Product/) · [Design](docs/obsidian/02%20Design/) · [Technical](docs/obsidian/03%20Technical/) · [Build Roadmap](docs/obsidian/04%20Build%20Roadmap/)
 - [app_walkthrough](docs/obsidian/10%20App%20Walkthrough/app_walkthrough.md) — how the code actually works.
 - Logs: [Build Logs](docs/obsidian/06%20Build%20Logs/) · [Decision Log](docs/obsidian/08%20Decisions/Decision%20Log.md) · [Bugs](docs/obsidian/07%20Bugs/) · [Feature Specs](docs/obsidian/12%20Feature%20Specs/)
@@ -159,7 +192,7 @@ After meaningful work, Claude must update:
 - **`app_walkthrough`** — `docs/obsidian/10 App Walkthrough/app_walkthrough.md` (if meaningful).
 - **Decision log** if a product/architecture decision was made — `docs/obsidian/08 Decisions/Decision Log.md`.
 - **Bug log** if a bug was found/fixed — `docs/obsidian/07 Bugs/`.
-- **Command Center** if current/next task or phase changed — `docs/obsidian/00 Start Here/Watchdog Command Center.md`.
+- **Command Center** if current/next task or phase changed — `docs/obsidian/00 Start Here/Frontline Command Center.md`.
 
 Logging is handled by the `/finish-task` and `/log-session` skills — **not** by hooks.
 
@@ -171,7 +204,7 @@ where the code lives, how the code works, how data flows, how the user interacts
 what's mock vs production, and how to extend it later.
 
 **Moderate/meaningful** = new screen · feature folder · user flow · state logic · API/backend
-logic · DB schema · navigation structure · design-system implementation · reusable component
+logic · data schema · navigation structure · design-system implementation · reusable component
 pattern · important refactor · a bug fix that changes how a flow works. **Not** for typos,
 formatting-only, or trivial copy changes.
 
@@ -215,7 +248,7 @@ multi-agent correctness reviews.
 
 - Do not work directly on `main` for feature work.
 - Prefer one task per branch.
-- Branch names should be clear, such as `feature/phase-1-navigation` or `fix/map-alert-empty-state`.
+- Branch names should be clear, such as `feature/guided-need-flow` or `fix/resource-card-empty-state`.
 - Do not commit or push unless explicitly asked.
 - Do not force push.
 - Do not create or change remote repo settings without approval.
@@ -225,9 +258,7 @@ multi-agent correctness reviews.
 - Meaningful feature/code additions must update `docs/obsidian/10 App Walkthrough/app_walkthrough.md`.
 
 GitHub workflow docs live in [docs/github/](docs/github/) (Branching Strategy, PR Checklist,
-Release Process, GitHub Setup). Git is initialized locally on `main` (no commits/remote yet);
-`gh` v2.96+ is installed at `~/.local/bin/gh` but **not** authenticated — creating the remote
-needs approval.
+Release Process, GitHub Setup).
 
 ## Quality Checks
 
@@ -235,6 +266,6 @@ A `PostToolUse` hook (`.claude/hooks/quality-check.sh`, configured in `.claude/s
 runs after every `Edit`/`Write`/`MultiEdit`. It runs the project's `typecheck`, `lint`, and
 `test` scripts **only if they exist**, never modifies files, and fails loudly if a real check
 fails. It is a **checks-only** hook — logging is done by `/finish-task` and `/log-session`, not
-by the hook. Until `package.json` exists it is a no-op. See
+by the hook. See
 [.claude/hooks/README.md](.claude/hooks/README.md) and
 [Quality Gates](docs/obsidian/03%20Technical/Quality%20Gates.md).

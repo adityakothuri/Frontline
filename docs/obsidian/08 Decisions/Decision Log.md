@@ -1,14 +1,16 @@
 ---
 tags: [decisions, source-of-truth]
 status: active
-updated: 2026-07-05
+updated: 2026-07-07
 ---
 
 # Decision Log
 
-Running log of notable product, design, and technical decisions (lightweight ADRs). Add a new
-entry (newest at top) whenever a meaningful choice is made. Each entry: context → decision →
-consequences.
+Running log of notable product, design, and technical decisions (lightweight ADRs). Add a new entry
+(newest at top) whenever a meaningful choice is made. Each entry: context → decision → consequences.
+
+> Reset on 2026-07-07 when the project was reframed from Watchdog to Frontline. Watchdog-era
+> decisions were intentionally not carried over; they applied to a product that no longer exists.
 
 ## Entry template
 
@@ -23,88 +25,33 @@ consequences.
 
 ---
 
-### 2026-07-06 — Phase 1 app shell: expo-router navigation + Manrope + typed design tokens
-- **Status:** accepted (resolves the open "Navigation approach" decision below)
-- **Context:** Phase 1 needed the first navigation, screens, and visual identity. Two forks were
-  open: expo-router vs React Navigation ([[Folder Structure]]) and the typeface. Both were
-  confirmed with the user before building.
-- **Decision:**
-  - **Navigation → expo-router** (file-based `app/` routing, built on React Navigation). Entry is
-    `expo-router/entry`; root **Stack** (`app/_layout.tsx`) → welcome (`app/index.tsx`) → bottom
-    **Tabs** (`app/(tabs)/`: home, cameras, map, review, profile). `experiments.typedRoutes` on;
-    `scheme: "watchdog"` for future deep links (e.g. open-alert links).
-  - **Typography → Manrope** via `@expo-google-fonts/manrope` (weights 400/500/600/700), loaded
-    behind an `expo-splash-screen` gate so the first frame is already in-typeface.
-  - **Design tokens → a plain typed module** (`src/theme/`, no context/provider — one static dark
-    theme in the MVP). Dark navy `#0B1220`, muted cards, ONE blue accent for primary actions only,
-    red/orange = alert, green = safe; `textMuted` set to `#7A8699` for WCAG AA on small text.
-  - **Reusable primitives only where every screen needs them now** (AppText, ScreenContainer,
-    Card, ScreenHeader, PrimaryButton, EmptyState, Loading, ErrorState). No `src/features`, no
-    state library, no gesture-handler/reanimated yet.
-- **Alternatives:** React Navigation bare (rejected — expo-router gives file routing + deep links
-  and is React Navigation underneath); Inter / IBM Plex / system font (rejected — Manrope is
-  premium and less overused); a React context theme (rejected — no runtime theme switch in the
-  MVP, a plain import is simpler and provider-free).
-- **Consequences:** Adding a screen = adding a file under `app/`. New feature folders, deps, and
-  screens still need approval ([[File Creation Policy]]). typedRoutes' strict types generate on
-  `expo start` (typecheck passes without them). Home uses a clearly-labeled *simulated* fetch to
-  exercise its loading/error states.
-
-### 2026-07-06 — Phase 0 app foundation: Expo SDK 57, blank-TypeScript, npm
+### 2026-07-07 — Reframe Watchdog → Frontline
 - **Status:** accepted
-- **Context:** Phase 0 needed the first real app source — a clean, minimal Expo + React
-  Native + TypeScript foundation that boots, typechecks, and lints — without building any
-  features or prejudging Phase 1's navigation choice. CI ([.github/workflows/ci.yml](../../../.github/workflows/ci.yml))
-  already assumes **npm** (Node 20) and a `verify` script; the quality hook and README already
-  expect `typecheck`/`lint`/`test`/`verify`.
-- **Decision:** Scaffolded with `create-expo-app --template blank-typescript` (Expo **SDK 57**,
-  verified via Context7), package manager **npm**. Entry is the template's `index.ts` → `App.tsx`
-  (untouched placeholder). Scripts: `start`/`android`/`ios`/`web`/`typecheck`/`lint`/`format`/
-  `test` (standard npm placeholder, detected & skipped by CI + hook)/`verify` (= typecheck + lint).
-  Tooling: ESLint 9 flat config via `eslint-config-expo@57` + Prettier + `eslint-config-prettier`,
-  both scoped to app code (ESLint `ignores` + `.prettierignore`). App version **0.0.1** (below the
-  ladder's `0.1.0` = first MVP demo). **No `src/` folders** created (deferred to Phase 1 per
-  [[Folder Structure]] — anti-slop forbids empty placeholders).
-- **Alternatives:** expo-router `default` template (rejected — ships example tabs/screens =
-  premature features and prejudges navigation); bare React Native (rejected — heavier, against
-  [[Technical Architecture]]); pnpm/yarn/bun (rejected — CI + hook are npm-based); dropping
-  Prettier (kept, but tightly scoped, since a complete pro setup was requested).
-- **Consequences:** `npm run verify` is the shared local+CI gate. The **navigation choice
-  (expo-router vs React Navigation) stays open** ([[Phase 1 App Shell]]) — the blank `index.ts`
-  entry keeps it neutral; adopting expo-router later flips `main` to `expo-router/entry`. New
-  Architecture is default-on in SDK 57 (fine with zero native deps; re-verify when maps/camera
-  arrive). Managed workflow → `/ios` and `/android` are git-ignored (regenerated by `expo prebuild`).
+- **Context:** The Watchdog neighborhood-safety product was scrapped. A new product, **Frontline**
+  (a veteran benefits/resource navigator with AI embedded in workflows), replaces it. The repo's
+  development framework (agents, hooks, rules, skills, MCP, Obsidian, workflow) and the reusable
+  RN+Expo design system are worth preserving.
+- **Decision:** Do a **documentation + framework + config reframe** — rewrite the Obsidian brain and
+  `CLAUDE.md` for Frontline, rename app config to `com.frontline.app`, delete Watchdog historical
+  records, and preserve the framework and design system. **Feature screens are not rewritten yet**;
+  they are the first coding milestone ([[Phase 2 Resource Data Model and Service]]).
+- **Alternatives:** (a) start a brand-new repo — loses the mature framework; (b) rewrite all code
+  now — too big, unreviewable, and premature before the product docs settle.
+- **Consequences:** The running app keeps its Watchdog *screens* until Phase 2–5 rebuild them; only
+  its native identity is now Frontline. The `ios/` native project must be regenerated.
 
-### 2026-07-05 — Obsidian vault as the project brain
+### 2026-07-07 — AI is interface-first, templated before real
 - **Status:** accepted
-- **Context:** Future Claude sessions had no product context; risk of scope creep and
-  AI-looking code. Needed a durable, human- and agent-readable source of truth.
-- **Decision:** Maintain a structured Obsidian vault at `docs/obsidian/` plus a product+workflow
-  `CLAUDE.md`, with logging enforced via `/finish-task` and `/log-session`.
-- **Alternatives:** Keep everything in `CLAUDE.md` (would bloat); rely on memory only (not shared
-  or durable).
-- **Consequences:** Every meaningful change must update the relevant logs. See
-  [[Production Workflow]].
-
-### 2026-07-05 — Anti-slop reviewer named `/slop-check`, not `/code-review`
-- **Status:** accepted
-- **Context:** A project skill named `code-review` would shadow Claude Code's powerful built-in
-  `/code-review` (multi-agent cloud reviewer).
-- **Decision:** Name the project anti-AI-slop reviewer **`/slop-check`**; keep the built-in
-  `/code-review` for deep correctness reviews.
-- **Alternatives:** Override `/code-review` (loses the bundled reviewer); no dedicated skill
-  (weaker enforcement).
-- **Consequences:** Two complementary review tools. See [[Code Review Prompt]].
-
----
-
-## Open decisions (to record when made)
-
-- ~~Navigation approach: expo-router vs React Navigation~~ → **decided: expo-router** (2026-07-06).
-- Poster identity model for public alerts (real vs anonymous/local) ([[Phase 4 Alert Posting]]).
-- Map library choice ([[Phase 5 Map Alerts]]).
-- Backend: Supabase vs Firebase ([[Phase 7 Backend Integration]]).
+- **Context:** Frontline's core AI (next-step plans, call scripts, benefit summaries) must be
+  "embedded in workflows, not a chatbot" — but a mobile client can't safely hold an LLM API key.
+- **Decision:** Define a typed **`AiService`** interface consumed by screens. Ship a **templated**
+  (offline, deterministic) implementation for the MVP; wire the real Claude API behind the same
+  interface later, via a **server-side proxy**. See [[AI Feature Design]].
+- **Alternatives:** call Claude directly from the client (leaks the key; needs a backend anyway);
+  mock-only forever (kills the "real AI" value).
+- **Consequences:** MVP is fully demoable offline; a proxy/backend is a prerequisite before any real
+  LLM call ships ([[Phase 10 Backend and Data Ingestion]], [[Environment Variables]]).
 
 ## Related
 
-[[Watchdog Command Center]] · [[Production Workflow]] · [[Technical Architecture]]
+[[Technical Architecture]] · [[AI Feature Design]] · [[Non-MVP Ideas]] · [[Frontline Command Center]]

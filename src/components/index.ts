@@ -6,3 +6,5 @@ export { PrimaryButton } from './PrimaryButton';
 export { EmptyState } from './EmptyState';
 export { Loading } from './Loading';
 export { ErrorState } from './ErrorState';
+export { AlertMarker } from './AlertMarker';
+export { CategoryBadge } from './CategoryBadge';

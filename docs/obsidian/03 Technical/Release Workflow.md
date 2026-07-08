@@ -6,13 +6,16 @@ updated: 2026-07-05
 
 # Release Workflow
 
-How Watchdog gets built and demoed. Owned by the `release-manager` agent (+ `github-actions`
+How Frontline gets built and demoed. Owned by the `release-manager` agent (+ `github-actions`
 skill). Kept minimal for the MVP; expands with real backend/AI.
 
 ## MVP "release" = a clean demo build
 
-- **Run locally / Expo Go** for development demos.
-- A **development build** (EAS dev client) when native modules appear.
+- **Development build (`expo-dev-client`)** is the primary runtime as of 2026-07-07 — built
+  locally via `expo run:ios` (managed/CNG prebuild). Expo Go stays a fallback while no native
+  module requires the dev build.
+- Built **locally** (Xcode + CocoaPods on macOS); no EAS account or `eas.json` yet — EAS cloud
+  builds are deferred until cloud builds / OTA updates are actually needed.
 - Goal: a reliably launchable, polished demo of the [[App Flow]] loop.
 
 ## Pre-release checklist (MVP)
@@ -32,4 +35,4 @@ skill). Kept minimal for the MVP; expands with real backend/AI.
 
 ## Related
 
-[[Git Workflow]] · [[Environment Variables]] · [[Phase 7 Backend Integration]] · [[Quality Gates]]
+[[Git Workflow]] · [[Environment Variables]] · [[Phase 10 Backend and Data Ingestion]] · [[Quality Gates]]

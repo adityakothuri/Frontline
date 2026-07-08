@@ -1,6 +1,6 @@
 # Release Process
 
-**Not active yet.** This documents the *future* release flow so it's ready when Watchdog is
+**Not active yet.** This documents the *future* release flow so it's ready when Frontline is
 demo-/ship-ready. Do not set up real releases without approval. Related:
 [GitHub Setup](GitHub%20Setup.md) ·
 [Branching Strategy](Branching%20Strategy.md) ·

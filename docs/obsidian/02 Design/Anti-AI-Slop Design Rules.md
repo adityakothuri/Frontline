@@ -6,7 +6,7 @@ updated: 2026-07-05
 
 # Anti-AI-Slop Design Rules
 
-Watchdog must not look AI-generated. This note describes what generic AI UI looks like and how
+Frontline must not look AI-generated. This note describes what generic AI UI looks like and how
 to avoid it. The `ui-reviewer` agent enforces this. Coding counterpart: [[Anti-AI-Slop Code Rules]].
 
 ## What AI-slop UI looks like (avoid)
@@ -21,12 +21,12 @@ to avoid it. The `ui-reviewer` agent enforces this. Coding counterpart: [[Anti-A
 - Cramped spacing or wildly inconsistent spacing.
 - Every screen looking like a settings list.
 - Emoji as UI iconography.
-- `Lorem ipsum` or `Camera 1 / Camera 2 / Item` placeholder data.
+- `Lorem ipsum` or `Resource 1 / Resource 2 / Item` placeholder data.
 
-## What Watchdog does instead
+## What Frontline does instead
 
-- A deliberate color system where **color means something** (red/orange = real alert, green =
-  safe). See [[UI Design System]].
+- A deliberate color system where **color means something** (green = verified/confirmed, amber =
+  unverified/outdated, red = emergency only) — never color alone. See [[UI Design System]].
 - Tinted darks (navy/charcoal), not pure black; muted gray cards, calm elevation.
 - One consistent, non-generic type family with a real scale and hierarchy.
 - One spacing scale, applied consistently.
@@ -38,7 +38,7 @@ to avoid it. The `ui-reviewer` agent enforces this. Coding counterpart: [[Anti-A
 ## Review test
 
 Before a screen passes `ui-reviewer`, ask: *"Would this look out of place in a serious,
-funded public-safety product?"* If yes, it's not done. Reviewers must cite the specific file
+funded veteran-services product?"* If yes, it's not done. Reviewers must cite the specific file
 and the specific spacing/type/hierarchy issue — no vague "make it pop."
 
 ## Related

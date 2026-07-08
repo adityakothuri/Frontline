@@ -1,6 +1,6 @@
 # GitHub Setup
 
-Recommended GitHub configuration for Watchdog. Nothing here changes the remote automatically —
+Recommended GitHub configuration for Frontline. Nothing here changes the remote automatically —
 these are steps/settings to apply **with approval**. Related:
 [Branching Strategy](Branching%20Strategy.md) ·
 [Pull Request Checklist](Pull%20Request%20Checklist.md) ·
@@ -9,14 +9,14 @@ these are steps/settings to apply **with approval**. Related:
 ## Repository visibility
 
 - **Private during early development.** Do not make the repo public without explicit approval.
-- Never expose secrets or private camera/security logic. `.env*` and `.mcp.json` are git-ignored.
+- Never expose secrets or the AI API key (see Environment Variables). `.env*` and `.mcp.json` are git-ignored.
 - The license is **proprietary** (see [LICENSE](../../LICENSE)) until a decision to open-source.
 
 ## Create the remote (deferred — needs approval; `gh` is installed)
 
 ```bash
 gh auth login                 # one-time GitHub authentication
-gh repo create watchdog-app --private --source=. --remote=origin
+gh repo create frontline --private --source=. --remote=origin
 # then, when you're ready to publish history:
 # git add -A && git commit -m "chore: initial project brain + repo workflow"
 # git push -u origin main
@@ -55,8 +55,9 @@ See [Branching Strategy](Branching%20Strategy.md).
 ```text
 type: feature      type: bug        type: docs      type: chore     type: refactor
 priority: high     priority: medium priority: low
-area: ui           area: backend    area: camera    area: ai-detection
-area: alerts       area: map        area: auth      area: docs
+area: ui           area: backend    area: ai        area: trust
+area: needs        area: resources  area: map       area: profile
+area: saved        area: docs
 status: blocked    status: needs-review           status: ready
 mvp                future           privacy         security
 ```

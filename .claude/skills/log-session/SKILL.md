@@ -1,6 +1,6 @@
 ---
 name: log-session
-description: Use to record a work session in the Watchdog Obsidian vault without the full finish-task flow. Creates/updates the build log and updates the app_walkthrough, decision log, bug log, and Command Center as needed.
+description: Use to record a work session in the Frontline Obsidian vault without the full finish-task flow. Creates/updates the build log and updates the app_walkthrough, decision log, bug log, and Command Center as needed.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash
 ---
@@ -23,7 +23,7 @@ session.
    `docs/obsidian/08 Decisions/Decision Log.md`.
 5. **Bug log — if a bug was found/fixed.** `docs/obsidian/07 Bugs/` (Bug Report Template).
 6. **Command Center — if phase/current/next task changed.**
-   `docs/obsidian/00 Start Here/Watchdog Command Center.md`.
+   `docs/obsidian/00 Start Here/Frontline Command Center.md`.
 
 ## Rules
 

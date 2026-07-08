@@ -1,15 +1,15 @@
 ---
 tags: [roadmap, phase-0]
-status: in-progress
-updated: 2026-07-05
+status: done
+updated: 2026-07-07
 ---
 
 # Phase 0 — Setup
 
 ## Purpose
 
-Set up the project so development is controlled, readable, and production-minded **before** any
-app features exist. Discipline first.
+Set up the project so development is controlled, readable, and production-minded **before** app
+features exist. Discipline first. (Carried over from the previous build and reframed for Frontline.)
 
 ## Included
 
@@ -24,29 +24,28 @@ app features exist. Discipline first.
 ## Excluded
 
 - Any app source code, screens, components, or dependencies.
-- Backend, AI, or camera integrations.
+- Backend, AI, or data-ingestion integrations.
 
-## Checklist
+## Status
 
-- [x] Obsidian vault structure created.
-- [x] `CLAUDE.md` has product context + workflow rules.
-- [x] Roadmap phases written.
+- [x] Obsidian vault structure created and (2026-07-07) **reframed to Frontline**.
+- [x] `CLAUDE.md` has Frontline product context + workflow rules.
+- [x] Roadmap phases written (Frontline).
 - [x] File-creation policy documented ([[File Creation Policy]]).
 - [x] Logging behavior documented ([[Production Workflow]]).
-- [x] Workflow skills created (`/start-task`, `/finish-task`, `/log-session`, `/slop-check`).
-- [ ] (Next) `git init` and first commit of the project brain — *approve as a task*.
+- [x] Workflow skills present (`/start-task`, `/finish-task`, `/log-session`, `/slop-check`).
 
 ## Definition of done
 
-- Vault has useful structure; `CLAUDE.md` is complete.
+- Vault has useful structure; `CLAUDE.md` is complete and Frontline-accurate.
 - Roadmap is clear; Claude knows not to create files without approval.
 - Future sessions know how to log changes.
 
 ## Risks
 
-- Over-documenting and never shipping — keep Phase 1 close behind.
+- Over-documenting and never shipping — keep feature phases close behind.
 - Docs drifting from reality — the `/finish-task` loop must keep them current.
 
 ## Related
 
-[[Watchdog Command Center]] · [[Phase 1 App Shell]] · [[File Creation Policy]] · [[Production Workflow]]
+[[Frontline Command Center]] · [[Phase 1 App Shell]] · [[File Creation Policy]] · [[Production Workflow]]

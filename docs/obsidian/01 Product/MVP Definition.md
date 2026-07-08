@@ -1,54 +1,65 @@
 ---
 tags: [product, mvp, source-of-truth]
-status: stable
-updated: 2026-07-05
+status: active
+updated: 2026-07-07
 ---
 
-# MVP Definition
+# MVP Scope
 
-The MVP is a **polished, believable demo of the core loop**: AI detects → human reviews →
-approved alert appears on a neighborhood map with expiration. Advanced integrations are
-**simulated**, and labeled honestly as such.
+The MVP is a **polished, trustworthy demo of the core loop**: a veteran picks **what they need
+help with** → answers a short **guided flow** → sees **nearby resources** on a **list + map** →
+opens a resource for a **plain-English AI summary, eligibility, documents, and next steps** →
+generates a **call script** → **saves / calls / gets directions**. Data is **simulated** in the MVP
+and labeled honestly. AI is **embedded in the workflow**, behind a typed `AiService` (templated
+first — see [[AI Feature Design]]).
 
 ## The MVP must prove
 
-1. User can enter the app (sign in or **demo mode**).
-2. User can view a polished home dashboard.
-3. User can view **simulated** cameras.
-4. A **simulated** AI detection can appear.
-5. User can review that detection.
-6. User can approve or reject it.
-7. An approved detection becomes a public alert.
-8. The alert appears on a neighborhood map.
-9. User can view alert details.
-10. The alert has expiration / auto-delete settings.
+1. User opens the app to a clean **"What do you need help with?"** home.
+2. User selects a **need category** (Food, Clothing, Housing, Healthcare, Disability, Education,
+   Jobs, Legal, Transportation, Family/Caregiver, Emergency, General VA benefits).
+3. User completes a short **guided flow** (what · urgency · in-person/online/either · documents on
+   hand · help type) producing a structured "need."
+4. User provides a **location or ZIP code**.
+5. User sees **top nearby resources** in **list and map** form, as **resource cards**.
+6. User opens a **resource detail** with a **plain-English AI summary**, eligibility, documents
+   needed, hours, contact, source/verification, and **AI next steps**.
+7. User taps **"Generate call script"** → a short, specific script + a shorter nervous-user variant.
+8. User can **save** a resource (and benefits / scripts / document checklists) for later.
+9. A lightweight **veteran profile** personalizes recommendations (optional-only fields).
+10. Every resource visibly shows **source type + last-checked + verification status** and a
+    "Frontline is a navigator, not the VA" disclaimer.
+
+Testable form: [[MVP Acceptance Criteria]].
 
 ## The MVP must NOT require
 
-- Real Ring / smart-camera integration
-- Real continuous live streaming
-- A real AI/vision model
-- Police / emergency-services integration
-- Advanced moderation
-- Payments / subscriptions
-- Comments or a social feed
+- A real backend / persistence beyond on-device storage (Priority 11: [[Phase 10 Backend and Data Ingestion]])
+- **Real LLM calls shipped from the client** (needs a proxy; templated responses in-app for the MVP)
+- Live official-source data ingestion / scraping (seeded verified-looking mock data for now)
+- VA **claims filing**, **login with VA credentials**, or sensitive **document upload**
+- Automated legal / medical / financial advice
+- Real device permissions beyond basic location / ZIP entry
 
-(See [[Non-MVP Ideas]] and priorities 9–12 in [[Feature Priority Order]].)
+(See [[Non-MVP Ideas]] and priorities 11+ in [[Feature Priority Order]].)
 
 ## Honesty rule
 
-Use clear internal naming — `mock`, `demo`, `simulated`, `prototype` — wherever a system is
-not real. **Never make a fake integration look like a real production integration** in code or
-docs. See [[Anti-AI-Slop Code Rules]].
+Use clear internal naming — `mock`, `demo`, `simulated`, `templated` — wherever a system is not
+real. **Never make a fake integration look like a real production integration** in code or docs.
+Never present AI output as legal/medical/financial/government-certified. See
+[[Anti-AI-Slop Code Rules]] and [[Trust Safety and Privacy]].
 
 ## MVP definition of done
 
-- The 10 "must prove" steps work end-to-end as a demo.
-- The UI looks **designed**, not templated (see [[UI Design System]]).
-- Simulated systems are clearly labeled.
+- The 10 "must prove" steps work end-to-end as a demo ([[MVP Acceptance Criteria]]).
+- The UI looks **designed**, not templated ([[UI Design System]]); accessible (large targets, contrast).
+- Simulated systems and templated AI are clearly labeled.
+- Trust/verification and disclaimers are visible on every resource.
 - Each shipped feature has a build log + [[app_walkthrough]] entry.
-- No unauthorized files or dependencies were introduced (see [[File Creation Policy]]).
+- No unauthorized files or dependencies were introduced ([[File Creation Policy]]).
 
 ## Related
 
-[[Product Overview]] · [[Feature Priority Order]] · [[Phase 1 App Shell]] · [[Quality Gates]]
+[[Product Overview]] · [[Feature Priority Order]] · [[MVP Acceptance Criteria]] ·
+[[Phase 2 Resource Data Model and Service]] · [[Quality Gates]]

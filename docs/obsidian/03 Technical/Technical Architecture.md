@@ -1,25 +1,34 @@
 ---
 tags: [technical, architecture, source-of-truth]
-status: stable
-updated: 2026-07-05
+status: active
+updated: 2026-07-07
 ---
 
 # Technical Architecture
 
 Target stack and shape of the app. **Nothing here is built without approval** (see
-[[File Creation Policy]]). This is the intended architecture, kept deliberately simple.
+[[File Creation Policy]]). Kept deliberately simple; the MVP is frontend + typed mock services
+behind interfaces a real backend/AI can later implement.
 
-## Stack (intended)
+## Stack
 
-- **React Native + Expo** (managed workflow), **TypeScript-first**.
-- **Navigation**: React Navigation (structure decided in [[Phase 1 App Shell]]; use the
-  `react-navigation` and `react-native-architect` skills; verify APIs with Context7).
-- **State**: start with local component state + lightweight context. Add a state library only
-  when a real need appears — record it in [[Decision Log]]. No premature Redux/Zustand.
-- **Data (MVP)**: in-memory / local **mock** modules with clearly typed models. No backend.
-- **Backend (post-MVP)**: Supabase or Firebase — Priority 9, not before the frontend loop is
-  clean. See [[Phase 7 Backend Integration]].
-- **AI/vision (post-MVP)**: simulated in MVP; real pipeline is Priority 10.
+- **React Native + Expo** (managed workflow / CNG), **TypeScript-first**. Runtime is a local
+  **development build** (`expo-dev-client`) built with `expo run:ios`; Expo Go is a fallback.
+- **Navigation**: `expo-router` (file-based, in `app/`), `expo-router/entry` as main — reused shell.
+- **State**: local component state + lightweight context. Add a state library only when a real need
+  appears — record it in [[Decision Log]]. No premature Redux/Zustand.
+- **Design system**: reused `src/theme/` tokens + generic components (see [[UI Design System]]).
+- **Data (MVP)**: in-memory / on-device **mock** modules behind a typed `resources` **service
+  interface** (see [[Resource Data Model]]). No backend.
+- **AI (MVP)**: a typed **`AiService`** interface with a **templated** implementation (deterministic,
+  offline). Real Claude API sits behind the same interface later — via a **proxy** (keys never ship
+  in the client). See [[AI Feature Design]].
+- **Maps (MVP)**: `react-native-maps` (Apple Maps on iOS, no API key), dark-styled from the design
+  tokens, category pins; ZIP or device location. See [[Map and Search Design]].
+- **Persistence (MVP)**: saved items + profile stored **on-device** (e.g. AsyncStorage), added with
+  approval when Phase 8 lands.
+- **Backend (post-MVP)**: real database + verified data ingestion + AI proxy — Priority 10, not
+  before the frontend loop is clean. See [[Phase 10 Backend and Data Ingestion]].
 
 ## Layering
 
@@ -30,21 +39,31 @@ UI (screens, components)
 Feature modules (hooks, view-models, domain logic)
       │  uses
       ▼
-Domain types + mock data (typed models, simulated services)
+Service interfaces:  resources  ·  ai   (typed contracts)
+      │  implemented by
+      ▼
+MVP: typed mock data (resources)  ·  templated responses (ai)
+Later: real backend / real Claude API (behind the SAME interfaces)
 ```
 
 - UI stays thin; logic lives in feature hooks/services.
-- Domain **types** are the contract. Mock services return typed data so swapping in a real
-  backend later is a drop-in, not a rewrite.
+- **Service interfaces are the contract.** Screens depend on `ResourceService` and `AiService`, not
+  on concrete implementations — so swapping mock → real is a drop-in, not a rewrite. (The previous
+  codebase imported mock data directly with no seam; Frontline fixes that in [[Phase 2 Resource Data Model and Service]].)
+
+## Directory intent
+
+`app/` routes · `src/theme` tokens · `src/components` shared UI · `src/features/*` feature modules ·
+`src/services/{resources,ai}` typed service seams · `src/types` domain types · `src/lib` utils. See
+[[Folder Structure]].
 
 ## Warnings (avoid premature complexity)
 
-- ❌ No backend, auth provider, database schema, or real model in the MVP.
-- ❌ No global state library, dependency-injection framework, or monorepo tooling "just in case."
+- ❌ No backend, auth provider, database schema, or **real LLM calls from the client** in the MVP.
+- ❌ No global state library, DI framework, or monorepo tooling "just in case."
 - ❌ No abstractions without a second concrete use. See [[Anti-AI-Slop Code Rules]].
-- ✅ Keep simulated services behind the same typed interface a real service would implement,
-   so the seam is honest and swappable.
+- ✅ Keep simulated services behind the same typed interface a real service would implement.
 
 ## Related
 
-[[Folder Structure]] · [[Environment Variables]] · [[Quality Gates]] · [[Phase 1 App Shell]] · [[File Creation Policy]]
+[[AI Feature Design]] · [[Resource Data Model]] · [[Folder Structure]] · [[Environment Variables]] · [[Quality Gates]] · [[File Creation Policy]]
