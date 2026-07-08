@@ -10,10 +10,10 @@ This file explains how **Frontline** works as the codebase grows. It is **not ju
 is a guided explanation of how the app actually works, so you can understand the codebase without
 digging through files blindly. Update it after every moderate or meaningful change.
 
-> **Reset on 2026-07-07 for the Watchdog → Frontline reframe.** At this point Frontline feature
-> code has **not** been built yet — only docs and app config changed. What's described as "real"
-> below is the **reused design system + app shell**. The legacy Watchdog feature screens still exist
-> in the repo but are **slated for replacement** and are not documented as Frontline behavior.
+> **Reset on 2026-07-07 for the Watchdog → Frontline reframe.** The **reused design system + app
+> shell** and the new **data/AI service layer** (Phase 2) are real; **no Frontline screens exist
+> yet** (Phase 3 next). The legacy Watchdog feature screens still exist in the repo but are
+> **slated for replacement** and are not documented as Frontline behavior.
 
 ## How to use this file
 
@@ -52,14 +52,35 @@ component pattern · important refactor · a bug fix that changes a flow. Not fo
 - `app.json` / `package.json` now identify the app as **Frontline** (`com.frontline.app`, slug/scheme
   `frontline`). The native `ios/` project is regenerated from this config.
 
+## Data & AI service layer — `src/types`, `src/services`, `src/lib` (Phase 2, real)
+
+The foundation the UI builds on. Screens will depend on these **interfaces**, never on the
+concrete mocks — so mock → real backend/AI is a drop-in later.
+
+- **Domain types** — `src/types/resource.ts` (canonical `Resource` + category meta),
+  `src/types/need.ts` (the `Need` from the guided flow + the 12 need categories, urgency/modality/
+  help-type/document enums, label maps). See [[Resource Data Model]].
+- **Utilities** — `src/lib/geo.ts` (Haversine `distanceMiles`, `formatDistance`) and
+  `src/lib/hours.ts` (`isOpenNow`, returning `true|false|null`).
+- **Resources service** — `src/services/resources/`. `ResourceService` interface (`search`,
+  `getById`); `mockResourceService` implements it over `seedResources.ts` (12 **simulated** LA-area
+  veteran resources, honestly labeled). `search` filters by need→category, radius, and modality,
+  derives distance + open-now per result, and sorts (for "today": open-now → nearest → verified).
+  Consumed via the singleton `resourceService`. Data flow: `Need` → `resourceService.search` →
+  `ResourceSearchResult[]` → (future) list/map screens.
+- **AI service** — `src/services/ai/`. `AiService` interface (`buildNextStepPlan`,
+  `buildCallScript`, `summarizeBenefit`) with a deterministic **templated** implementation
+  (`templatedAiService`, offline, category-specific, hedged, disclaimer on every output). Consumed
+  via the singleton `aiService`. A real Claude-backed implementation swaps in behind the same
+  interface later (via a proxy — keys never in the client). See [[AI Feature Design]].
+- **What's mock vs production:** all resource data is simulated; all AI is templated. Both are
+  labeled. The **interfaces** are production-shaped.
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:
-- **`src/types/` + `src/services/{resources,ai}`** — the typed `Resource` model, `ResourceService`,
-  and `AiService` seams ([[Phase 2 Resource Data Model and Service]], [[Resource Data Model]],
-  [[AI Feature Design]]).
-- **Feature folders** `src/features/{needs,resources,map,saved,profile}` — the guided need flow,
-  resource list/cards/detail, map discovery, saved items, and profile.
+- **Feature folders** `src/features/{needs,resources,map,saved,profile}` — the guided need flow
+  ([[Phase 3 Guided Need Flow]]), resource list/cards/detail, map discovery, saved items, profile.
 - Each feature will get its own walkthrough entry here as it's built.
 
 ## Related

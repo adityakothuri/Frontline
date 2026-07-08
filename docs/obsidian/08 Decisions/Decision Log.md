@@ -25,6 +25,18 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 
 ---
 
+### 2026-07-07 — Phase 2 service-interface shapes
+- **Status:** accepted
+- **Context:** [[Resource Data Model]] sketched `ResourceService.search` returning `Resource[]` and
+  `AiService.summarizeBenefit({ text })`. Building Phase 2 surfaced two better shapes.
+- **Decision:** `search` returns **`ResourceSearchResult[]`** (`resource` + query-derived
+  `distanceMiles` + `isOpenNow`) so the UI doesn't recompute; `summarizeBenefit` takes
+  **`{ resource }`** (the app always holds a `Resource`) instead of raw text.
+- **Alternatives:** return bare `Resource[]` and derive distance/open-now in every screen (duplication);
+  keep the raw-text summarizer (no caller needs it yet).
+- **Consequences:** screens consume ready-to-render results; the real Claude implementation still
+  fits behind the same interface. Docs updated to match.
+
 ### 2026-07-07 — Reframe Watchdog → Frontline
 - **Status:** accepted
 - **Context:** The Watchdog neighborhood-safety product was scrapped. A new product, **Frontline**

@@ -1,7 +1,7 @@
 ---
 tags: [command-center, start-here]
 status: active
-phase: "Reframe → Frontline (Phase 1 shell reused)"
+phase: "Phase 2 done — data/AI service seams (Phase 3 next)"
 updated: 2026-07-07
 ---
 
@@ -25,25 +25,28 @@ starting at Phase 2 — until then the running app shows legacy screens. The dev
 
 ## Current Phase
 
-**Reframe complete → foundation reused.** Done: [[Phase 0 Setup]] · [[Phase 1 App Shell]].
-Next feature work begins at **[[Phase 2 Resource Data Model and Service]]**.
+**Building the MVP.** Done: [[Phase 0 Setup]] · [[Phase 1 App Shell]] ·
+[[Phase 2 Resource Data Model and Service]] (data/AI seams). Next: **[[Phase 3 Guided Need Flow]]**
+(first visible screen).
 
 ## Current Active Task
 
-**✅ Done — Watchdog → Frontline reframe.** Rewrote the Obsidian brain and `CLAUDE.md` for the
-veteran-resources product, renamed app config to `com.frontline.app`, and regenerated the native
-project. Decision: [[Decision Log]] — "Reframe Watchdog → Frontline". The AI approach is
-**interface-first** (typed `AiService`, templated responses first, real Claude API behind the seam
-later via a proxy — keys never ship in the client). See [[AI Feature Design]].
+**✅ Done — Phase 2: Resource Data Model & Service seams.** Added typed domain models
+(`src/types/{resource,need}.ts`), the `ResourceService` interface + `mockResourceService` over 12
+simulated LA-area resources, the `AiService` interface + `templatedAiService`, and `src/lib/{geo,
+hours}.ts`. `npm run verify` passes; a headless smoke test exercised search/sort/radius/getById +
+AI plans/scripts/summary (incl. the stale-resource trust warning). No screens yet — by design. Build
+log: [[2026-07-07 Phase 2 Resource Model and Services]]. Walkthrough: [[app_walkthrough]].
+
+Prior: **✅ Done — Watchdog → Frontline reframe** (docs + `CLAUDE.md` + config `com.frontline.app` +
+native regen). Decision: [[Decision Log]] — "Reframe Watchdog → Frontline".
 
 ## Next Recommended Task
 
-**Phase 2 — Resource Data Model & Mock Service.** Add the canonical `Resource` type, a typed
-`resources` service + realistic seeded mock data across categories, and the `AiService` interface
-with a templated implementation. No new screens yet — this establishes the swappable data/AI seams
-every later screen builds against. ⚠️ Requires approval for each new app file/dependency
-([[File Creation Policy]]). See [[Phase 2 Resource Data Model and Service]], [[Resource Data Model]],
-and [[AI Feature Design]].
+**Phase 3 — "What do you need help with?" Guided Need Flow.** The first **visible** Frontline
+screen: a home category grid + a short guided flow (what · urgency · in-person/online · documents ·
+help type) + ZIP/location, producing a `Need` wired to `resourceService.search`. ⚠️ New screens
+need approval per [[File Creation Policy]]. See [[Phase 3 Guided Need Flow]] and [[App Flow|Core User Flows]].
 
 ---
 

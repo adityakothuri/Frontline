@@ -58,7 +58,9 @@ type VerificationStatus = 'verified' | 'needs_review' | 'unverified';
 
 ```ts
 interface ResourceService {
-  search(query: ResourceQuery): Promise<Resource[]>;   // by category, location/ZIP, radius, modality
+  // by need→category, location/ZIP, radius, modality; returns results with
+  // query-derived distanceMiles + isOpenNow (see Decision Log 2026-07-07).
+  search(query: ResourceQuery): Promise<ResourceSearchResult[]>;
   getById(id: string): Promise<Resource | null>;
 }
 ```
