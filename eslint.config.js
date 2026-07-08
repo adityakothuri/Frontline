@@ -10,7 +10,7 @@ module.exports = defineConfig([
   expoConfig,
   prettierConfig,
   {
-    // Lint Watchdog app source only. Build output, deps, and the vendored
+    // Lint Frontline app source only. Build output, deps, and the vendored
     // Claude/Codex tooling and Obsidian docs are not app code.
     ignores: [
       'node_modules/**',

@@ -2,7 +2,7 @@
 
 A practical guide to running the Frontline app locally. Frontline is a **React Native + Expo
 (TypeScript)** app that helps **veterans find benefits and local resources**. The project was just
-reframed from the previous "Watchdog" product: documentation, `CLAUDE.md`, and app config are now
+reframed from the previous product: documentation, `CLAUDE.md`, and app config are now
 Frontline, and the reusable design system + app shell carry over. **Frontline feature screens are
 built next** (starting with the resource data model + service) — until then the running app shows
 the reused shell and the legacy screens. There is no real backend or live AI yet.
