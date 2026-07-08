@@ -3,11 +3,11 @@ import { EmptyState, ScreenContainer, ScreenHeader } from '@/components';
 export default function ProfileScreen() {
   return (
     <ScreenContainer>
-      <ScreenHeader title="Profile" subtitle="Demo mode" />
+      <ScreenHeader title="Profile" subtitle="Optional — never required" />
       <EmptyState
         icon="person-outline"
-        title="You are in demo mode"
-        message="Watchdog is running with simulated cameras and alerts. Account, privacy, and auto-delete settings will live here."
+        title="Your preferences will live here"
+        message="Soon you'll be able to set your ZIP, search radius, and which documents you have — all optional, to personalize results. Frontline never asks for sensitive information."
       />
     </ScreenContainer>
   );

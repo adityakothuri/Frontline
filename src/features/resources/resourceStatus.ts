@@ -1,0 +1,60 @@
+import type { Resource, SourceType } from '@/types/resource';
+
+/**
+ * Presentation helpers for a resource's live status and trust signals — shared by
+ * the resource card (Phase 4 also reuses these on the detail page). Tones map to
+ * theme colors at the component (never color alone — always paired with text).
+ */
+
+export type StatusTone = 'success' | 'warning' | 'muted';
+
+/** Days after which a `last_checked` date is treated as possibly outdated. */
+const STALE_AFTER_DAYS = 90;
+
+export function openNowStatus(isOpenNow: boolean | null): {
+  label: string;
+  tone: StatusTone;
+} {
+  if (isOpenNow === true) return { label: 'Open now', tone: 'success' };
+  if (isOpenNow === false) return { label: 'Closed now', tone: 'muted' };
+  return { label: 'Hours unknown', tone: 'muted' };
+}
+
+const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
+  official: 'Official source',
+  directory: 'Directory listing',
+  nonprofit: 'Nonprofit',
+  community: 'Community-submitted',
+  unverified: 'Unverified',
+};
+
+export function isStale(lastChecked: string, now: Date = new Date()): boolean {
+  const checked = new Date(lastChecked).getTime();
+  if (Number.isNaN(checked)) return false;
+  const ageDays = (now.getTime() - checked) / (1000 * 60 * 60 * 24);
+  return ageDays > STALE_AFTER_DAYS;
+}
+
+/** A friendly date like `Jun 18, 2026` from an ISO `YYYY-MM-DD` string. */
+export function formatCheckedDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/** The trust badge: what the source is, how verified, and whether it's stale. */
+export function sourceStatus(resource: Resource): { label: string; tone: StatusTone } {
+  const stale = isStale(resource.last_checked);
+  const verified = resource.verification_status === 'verified' && !stale;
+
+  const base = SOURCE_TYPE_LABEL[resource.source_type];
+  const label = stale
+    ? `${base} · may be outdated`
+    : `${base} · checked ${formatCheckedDate(resource.last_checked)}`;
+
+  return { label, tone: verified ? 'success' : 'warning' };
+}

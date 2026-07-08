@@ -3,9 +3,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts } from '@/theme';
 
 // Bottom-tab shell. Icons come from one set (Ionicons) and labels use Manrope, so
-// the bar reads as designed rather than platform-default. The app centers on the
-// neighborhood Map + reporting; Cameras/Review are deferred to the end of the
-// roadmap and kept as hidden routes (href: null) so nothing links to a dead screen.
+// the bar reads as designed rather than platform-default. Frontline centers on the
+// "what do you need help with?" flow (Home); the Map arrives in Phase 5.
 export default function TabsLayout() {
   return (
     <Tabs
@@ -30,20 +29,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="map"
+        name="saved"
         options={{
-          title: 'Map',
+          title: 'Saved',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="alerts"
-        options={{
-          title: 'Alerts',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" color={color} size={size} />
+            <Ionicons name="bookmark-outline" color={color} size={size} />
           ),
         }}
       />
@@ -56,10 +46,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
-      {/* Deferred to the end of the roadmap — kept as routes, hidden from the tab bar. */}
-      <Tabs.Screen name="cameras" options={{ href: null }} />
-      <Tabs.Screen name="review" options={{ href: null }} />
     </Tabs>
   );
 }
