@@ -11,9 +11,9 @@ is a guided explanation of how the app actually works, so you can understand the
 digging through files blindly. Update it after every moderate or meaningful change.
 
 > **Reset on 2026-07-07 for the Watchdog → Frontline reframe.** The **reused design system + app
-> shell** and the new **data/AI service layer** (Phase 2) are real; **no Frontline screens exist
-> yet** (Phase 3 next). The legacy Watchdog feature screens still exist in the repo but are
-> **slated for replacement** and are not documented as Frontline behavior.
+> shell**, the **data/AI service layer** (Phase 2), and the **guided need flow** (Phase 3) are real
+> Frontline. The legacy Watchdog feature screens have been **removed**. Resource detail pages, AI
+> call scripts/summaries, and the map arrive in Phases 4–7.
 
 ## How to use this file
 
@@ -76,12 +76,36 @@ concrete mocks — so mock → real backend/AI is a drop-in later.
 - **What's mock vs production:** all resource data is simulated; all AI is templated. Both are
   labeled. The **interfaces** are production-shaped.
 
+## Guided need flow + resource discovery — `app/`, `src/features/resources` (Phase 3, real)
+
+The first tappable Frontline journey. **User flow:** open app → Home "What do you need help with?"
+→ tap a category → answer a few quick questions → see nearby resources → Call / Directions.
+
+- **Home** (`app/(tabs)/home.tsx`) — a 2-column grid of the 12 need categories from
+  `NEED_CATEGORY_META`. Tapping pushes `/need/[category]`.
+- **Guided flow** (`app/need/[category].tsx`) — chip questions (urgency · modality · help type ·
+  documents on hand) + optional ZIP, with sensible defaults pre-selected for speed. Builds a `Need`
+  and pushes `/results` with the fields as route params.
+- **Results** (`app/results.tsx`) — reconstructs the `Need`, calls `resourceService.search`, and
+  renders loading/error/empty/list. Data flow: `Need` → `resourceService.search` →
+  `ResourceSearchResult[]` → `ResourceCard`s in a `FlatList`.
+- **`ResourceCard`** (`src/features/resources/`) — category, distance, **open-now** pill,
+  description, **source/verification badge** (green verified / amber unverified-or-stale), and real
+  **Call** (`tel:`) + **Directions** (maps deep link) actions. Presentation helpers live in
+  `resourceStatus.ts`; device actions in `resourceActions.ts`.
+- **`Chip`** (`src/components/Chip.tsx`) — the reusable selectable pill (accent tint + check).
+- **Navigation** — tabs are Home · Saved · Profile; `need/[category]` + `results` push on top with a
+  themed header. Saved/Profile are polished placeholders for Phase 8.
+- **What's mock:** resource data + AI are still simulated/templated (Phase 2). ZIP isn't geocoded yet
+  (falls back to the seed city center).
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:
-- **Feature folders** `src/features/{needs,resources,map,saved,profile}` — the guided need flow
-  ([[Phase 3 Guided Need Flow]]), resource list/cards/detail, map discovery, saved items, profile.
-- Each feature will get its own walkthrough entry here as it's built.
+- **Resource detail page** + "Generate call script" ([[Phase 4 Resource List and Detail]],
+  [[Phase 6 AI Plans and Call Scripts]]) — the `aiService` is ready to wire in.
+- **Map** discovery ([[Phase 5 Map and Discovery]]), **saved** + **profile** ([[Phase 8 Saved and Profile]]).
+- Each feature gets its own walkthrough entry here as it's built.
 
 ## Related
 

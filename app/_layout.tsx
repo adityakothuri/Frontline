@@ -7,7 +7,7 @@ import { Manrope_400Regular } from '@expo-google-fonts/manrope/400Regular';
 import { Manrope_500Medium } from '@expo-google-fonts/manrope/500Medium';
 import { Manrope_600SemiBold } from '@expo-google-fonts/manrope/600SemiBold';
 import { Manrope_700Bold } from '@expo-google-fonts/manrope/700Bold';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 // Keep the native splash up until Manrope is ready, so the first frame the user
 // sees is already in the app's typeface (no font swap / flash of system font).
@@ -42,8 +42,30 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="report" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="alert/[id]" options={{ presentation: 'modal' }} />
+        {/* The guided flow + results push on top of the tabs with a themed header. */}
+        <Stack.Screen
+          name="need/[category]"
+          options={{
+            headerShown: true,
+            headerStyle: { backgroundColor: colors.background },
+            headerShadowVisible: false,
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: { fontFamily: fonts.semibold, color: colors.textPrimary },
+            headerBackTitle: 'Back',
+            title: '',
+          }}
+        />
+        <Stack.Screen
+          name="results"
+          options={{
+            headerShown: true,
+            headerStyle: { backgroundColor: colors.background },
+            headerShadowVisible: false,
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: { fontFamily: fonts.semibold, color: colors.textPrimary },
+            headerBackTitle: 'Back',
+          }}
+        />
       </Stack>
     </>
   );

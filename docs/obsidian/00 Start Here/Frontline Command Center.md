@@ -1,7 +1,7 @@
 ---
 tags: [command-center, start-here]
 status: active
-phase: "Phase 2 done — data/AI service seams (Phase 3 next)"
+phase: "Phase 3 done — guided need flow (Phase 4 next)"
 updated: 2026-07-07
 ---
 
@@ -14,39 +14,41 @@ updated: 2026-07-07
 
 ## Current Status
 
-🟡 **Reframed from Watchdog → Frontline.** The neighborhood-safety product was scrapped and
-replaced with **Frontline** — an app that helps **veterans find benefits, local resources, and
-practical next steps**. This pass reframed all product/technical documentation, `CLAUDE.md`, and the
-app **config** (`com.frontline.app`); the reusable **design system + app shell** (theme tokens,
-generic components, navigation) carry over from the previous build. The previous Watchdog **feature
-screens** (home/map/alerts/report) still physically exist and will be **replaced** feature-by-feature
-starting at Phase 2 — until then the running app shows legacy screens. The development framework
-(agents, hooks, rules, skills, MCP, Obsidian, workflow) is **preserved**.
+🟢 **Frontline MVP in progress.** The reframe (Watchdog → Frontline) is complete, and the core loop
+is coming together: a veteran opens the app, picks **what they need help with**, answers a few quick
+questions, and sees **nearby simulated resources** with working Call/Directions. Built on the reused
+design system + app shell, the Phase 2 **data/AI service seams**, and the Phase 3 **guided need
+flow**. Legacy Watchdog screens have been removed. Still to come: resource detail pages, AI call
+scripts/summaries, and the map (Phases 4–7). The dev framework (agents, hooks, rules, skills, MCP,
+Obsidian, workflow) is **preserved**.
 
 ## Current Phase
 
 **Building the MVP.** Done: [[Phase 0 Setup]] · [[Phase 1 App Shell]] ·
-[[Phase 2 Resource Data Model and Service]] (data/AI seams). Next: **[[Phase 3 Guided Need Flow]]**
-(first visible screen).
+[[Phase 2 Resource Data Model and Service]] (data/AI seams) · [[Phase 3 Guided Need Flow]] (first
+visible screens). Next: **[[Phase 4 Resource List and Detail]]** (detail page + call script).
 
 ## Current Active Task
 
-**✅ Done — Phase 2: Resource Data Model & Service seams.** Added typed domain models
-(`src/types/{resource,need}.ts`), the `ResourceService` interface + `mockResourceService` over 12
-simulated LA-area resources, the `AiService` interface + `templatedAiService`, and `src/lib/{geo,
-hours}.ts`. `npm run verify` passes; a headless smoke test exercised search/sort/radius/getById +
-AI plans/scripts/summary (incl. the stale-resource trust warning). No screens yet — by design. Build
-log: [[2026-07-07 Phase 2 Resource Model and Services]]. Walkthrough: [[app_walkthrough]].
+**✅ Done — Phase 3: Guided Need Flow (first visible screens).** Home "What do you need help with?"
+grid → guided questions (`app/need/[category].tsx`) → results list (`app/results.tsx`) wired to
+`resourceService.search`, with a `ResourceCard` (open-now + trust badge + working Call/Directions).
+Removed the legacy Watchdog screens; tabs are Home · Saved · Profile. `npm run verify` passes and
+`expo export` bundles cleanly. **Not yet eyeballed in the Simulator.** Build log:
+[[2026-07-07 Phase 3 Guided Need Flow]]. Walkthrough: [[app_walkthrough]].
 
-Prior: **✅ Done — Watchdog → Frontline reframe** (docs + `CLAUDE.md` + config `com.frontline.app` +
-native regen). Decision: [[Decision Log]] — "Reframe Watchdog → Frontline".
+Prior: **✅ Phase 2** (data/AI seams) · **✅ Reframe** Watchdog → Frontline. See [[Decision Log]].
 
 ## Next Recommended Task
 
-**Phase 3 — "What do you need help with?" Guided Need Flow.** The first **visible** Frontline
-screen: a home category grid + a short guided flow (what · urgency · in-person/online · documents ·
-help type) + ZIP/location, producing a `Need` wired to `resourceService.search`. ⚠️ New screens
-need approval per [[File Creation Policy]]. See [[Phase 3 Guided Need Flow]] and [[App Flow|Core User Flows]].
+**Phase 4 — Resource List, Cards & Detail Pages.** Make the card tappable → a **resource detail
+page** (full description, AI summary, eligibility, "what to bring" checklist, contact, trust) and
+wire **"Generate call script"** (the `aiService` is ready). ⚠️ New screens need approval per
+[[File Creation Policy]]. See [[Phase 4 Resource List and Detail]] and [[AI Feature Design]].
+
+> **Recommended before Phase 4:** run the app in the Simulator to eyeball Phase 3
+> (`open ios/Frontline.xcworkspace` → Run, or `npm run ios`) — the native identity is now Frontline
+> so the dev build needs a rebuild.
 
 ---
 

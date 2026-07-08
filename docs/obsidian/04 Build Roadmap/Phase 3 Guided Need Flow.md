@@ -1,6 +1,6 @@
 ---
 tags: [roadmap, phase-3, mvp]
-status: planned
+status: done
 updated: 2026-07-07
 ---
 

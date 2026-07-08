@@ -4,8 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PrimaryButton, ScreenContainer } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 
-// Entry screen. For the MVP this only offers demo mode — real sign-in is a later
-// phase. `replace` so the welcome screen isn't in the tab back stack.
+// Entry screen. No sign-in for the MVP — a veteran can start finding help right
+// away. `replace` so the welcome screen isn't in the tab back stack.
 export default function WelcomeScreen() {
   const router = useRouter();
 
@@ -13,25 +13,22 @@ export default function WelcomeScreen() {
     <ScreenContainer edges={['top', 'bottom']}>
       <View style={styles.body}>
         <View style={styles.brandMark}>
-          <Ionicons name="shield-checkmark" size={32} color={colors.accent} />
+          <Ionicons name="compass" size={32} color={colors.accent} />
         </View>
         <AppText variant="display" style={styles.wordmark}>
-          Watchdog
+          Frontline
         </AppText>
         <AppText variant="body" color="textSecondary" style={styles.tagline}>
-          Neighborhood safety, verified by people. AI watches for you — you
-          decide what the neighborhood sees.
+          Find your next step. Frontline helps veterans find benefits, local
+          resources, and a clear plan for what to do next.
         </AppText>
       </View>
 
       <View style={styles.footer}>
-        <PrimaryButton
-          label="Enter demo mode"
-          onPress={() => router.replace('/home')}
-        />
+        <PrimaryButton label="Get started" onPress={() => router.replace('/home')} />
         <AppText variant="caption" color="textMuted" style={styles.footNote}>
-          A guided demo with simulated cameras and alerts. Sign-in arrives with
-          the full release.
+          Frontline is a resource navigator — not the VA or a government agency.
+          No sign-in, and we never ask for sensitive information.
         </AppText>
       </View>
     </ScreenContainer>
