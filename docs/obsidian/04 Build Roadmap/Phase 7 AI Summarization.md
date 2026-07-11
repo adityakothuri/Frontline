@@ -1,10 +1,16 @@
 ---
 tags: [roadmap, phase-7, mvp, ai]
-status: planned
-updated: 2026-07-07
+status: done
+updated: 2026-07-08
 ---
 
 # Phase 7 — AI Summarization (Benefits & Documents)
+
+> ✅ **Done** (delivered across Phases 4 & 6). `aiService.summarizeBenefit` produces the full
+> structured summary (what it is · who it helps · who may qualify · documents · deadlines/warnings ·
+> what to do next · source · verification note), rendered on the resource detail page (concise by
+> default, hedged, "AI-generated — verify" labeled). Still templated/offline. Fuller in-page
+> expansion is a small future polish; the summarizer + honest hedging are in place.
 
 ## Purpose
 

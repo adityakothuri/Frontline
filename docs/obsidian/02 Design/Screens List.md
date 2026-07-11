@@ -19,9 +19,10 @@ during their roadmap phase — this list is the plan, not a build order to run u
 
 | Screen | Purpose | Phase |
 |--------|---------|-------|
-| Home — "What do you need help with?" | Category grid; the front door | [[Phase 3 Guided Need Flow]] |
+| Home | Personal landing: greeting + random message + "How was X?" review feed (or Explore-help CTA) | [[2026-07-08 Home Redesign Discover Tab Fullscreen Map]] ✅ redesigned 2026-07-08 |
+| Discover | Shell row (All/Food/Clothes/VA Help/Employment/Other) over all opportunities; Other → full category list | [[2026-07-08 Home Redesign Discover Tab Fullscreen Map]] ✅ built 2026-07-08 |
 | Resources (list) | Nearby resources as scannable cards | [[Phase 4 Resource List and Detail]] |
-| Map | Nearby resources as category pins | [[Phase 5 Map and Discovery]] |
+| Map | Nearby resources as category pins — a **dedicated bottom-nav tab** (`app/(tabs)/map.tsx`, all opportunities) **and** a List⇄Map toggle inside Results | [[Phase 5 Map and Discovery]] ✅ tab added 2026-07-08 |
 | Saved | Saved resources, benefits, scripts, checklists | [[Phase 8 Saved and Profile]] |
 | Profile | Optional-only veteran preferences | [[Phase 8 Saved and Profile]] |
 
@@ -30,10 +31,10 @@ during their roadmap phase — this list is the plan, not a build order to run u
 | Screen / element | Purpose | Phase |
 |------------------|---------|-------|
 | Guided need flow | Category → short questions → structured need + location/ZIP | [[Phase 3 Guided Need Flow]] |
-| Resource detail | Summary · eligibility · documents · contact · trust · next steps · call script | [[Phase 4 Resource List and Detail]] |
-| Call script sheet | Generated script + nervous-user variant | [[Phase 6 AI Plans and Call Scripts]] |
-| Benefit summary | AI plain-English summary of a benefit/document | [[Phase 7 AI Summarization]] |
-| "What should I bring?" checklist | Documents to bring for a resource | [[Phase 4 Resource List and Detail]] |
+| Resource detail | Summary · eligibility · documents · contact · trust · next steps · call script | [[Phase 4 Resource List and Detail]] ✅ built 2026-07-08 |
+| Call script sheet | Generated script + nervous-user variant | Inline (templated) in Phase 4; dedicated sheet [[Phase 6 AI Plans and Call Scripts]] |
+| Benefit summary | AI plain-English summary of a benefit/document | Inline (templated) in Phase 4 detail; deepened [[Phase 7 AI Summarization]] |
+| "What should I bring?" checklist | Documents to bring for a resource | [[Phase 4 Resource List and Detail]] ✅ built 2026-07-08 |
 | Empty / Loading / Error states | Every screen has all three | All phases |
 
 ## Later (post-MVP)

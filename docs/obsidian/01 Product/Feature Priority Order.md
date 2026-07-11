@@ -39,7 +39,8 @@ approval — later priorities depend on earlier ones being clean.
   Phase 2 service so the same data powers list and map.
 - **5 adds place** — the map reuses `react-native-maps` (already a dependency) with the same
   resource data as the list. See [[Map and Search Design]].
-- **6–7 are the AI heart**, embedded in the workflow: next-step plans and call scripts (6), then
+- **6–7 are the AI heart**, embedded in the workflow: next-step plans and call scripts (6), the
+n
   plain-English benefit/document summaries (7). Templated first, real API behind the same
   interface later. See [[AI Feature Design]].
 - **8** rounds out usefulness (save resources/benefits/scripts/checklists; a lightweight,

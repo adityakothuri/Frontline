@@ -6,7 +6,7 @@ export type {
   ResourceQuery,
   ResourceSearchResult,
 } from './ResourceService';
-export { needToResourceCategories } from './needMapping';
+export { needToResourceCategories, resourceToNeedCategory } from './needMapping';
 export { SEED_CENTER } from './seedResources';
 
 /** The app's resource service. Swap this out for a real backend in Phase 10. */

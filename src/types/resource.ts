@@ -77,64 +77,81 @@ export interface ResourceCategoryMeta {
   icon: IoniconName;
   /** One-line description of what this category covers. */
   blurb: string;
+  /** A category-coded accent used for its icon chip and map pin. */
+  color: string;
 }
 
-/** Display metadata for each resource category — one source of truth for UI. */
+/**
+ * Display metadata for each resource category — one source of truth for UI.
+ * Colors come from the app's olive/earth family and match the corresponding
+ * need category in NEED_CATEGORY_META (`types/need.ts`); keep the two in sync.
+ */
 export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMeta> = {
   food: {
     label: 'Food',
     icon: 'fast-food-outline',
     blurb: 'Food pantries, meals, and grocery assistance.',
+    color: '#A56E24',
   },
   clothing: {
     label: 'Clothing',
     icon: 'shirt-outline',
     blurb: 'Clothing closets and essential-item assistance.',
+    color: '#8A6A48',
   },
   housing: {
     label: 'Housing',
     icon: 'home-outline',
     blurb: 'Shelter, rent help, and housing programs.',
+    color: '#5F7326',
   },
   healthcare: {
     label: 'Healthcare',
     icon: 'medkit-outline',
     blurb: 'Clinics, mental health, and VA health services.',
+    color: '#4E7D5B',
   },
   benefits_help: {
     label: 'Benefits help',
     icon: 'document-text-outline',
     blurb: 'Help understanding and applying for VA benefits.',
+    color: '#46602A',
   },
   legal: {
     label: 'Legal',
     icon: 'shield-outline',
     blurb: 'Legal aid, discharge upgrades, and advocacy.',
+    color: '#587045',
   },
   jobs: {
     label: 'Jobs',
     icon: 'briefcase-outline',
     blurb: 'Employment support, training, and placement.',
+    color: '#A98E2E',
   },
   education: {
     label: 'Education',
     icon: 'school-outline',
     blurb: 'Education benefits, tuition, and training help.',
+    color: '#87702A',
   },
   transportation: {
     label: 'Transportation',
     icon: 'bus-outline',
     blurb: 'Rides to appointments and transit assistance.',
+    color: '#6F8F5A',
   },
   emergency: {
     label: 'Emergency',
     icon: 'alert-circle-outline',
     blurb: 'Crisis lines and urgent-need resources.',
+    color: '#B04A38',
   },
   community_support: {
     label: 'Community support',
     icon: 'people-outline',
     blurb: 'Peer groups, caregiver support, and local orgs.',
+    color: '#7E9146',
   },
 };
 

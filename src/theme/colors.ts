@@ -1,38 +1,50 @@
-// Frontline color tokens — dark, calm, premium. Color carries MEANING here:
-// green = verified/confirmed, amber = unverified/outdated, red = emergency only.
-// Never decorative. Direction: docs/obsidian/02 Design/UI Design System.md.
+// Frontline color tokens — warm "paper" light theme (Granola-inspired). Color
+// carries MEANING here: deep-emerald green = verified/confirmed, amber =
+// unverified/outdated, red = emergency only; muted olive accent = primary
+// action. Never decorative. Direction: docs/obsidian/02 Design/UI Design System.md.
 export const colors = {
-  // Foundation — tinted dark navy/charcoal (never pure black)
-  background: '#0B1220',
-  backgroundElevated: '#0F1826',
+  // Foundation — warm off-white "near-paper" (never pure white)
+  background: '#F5F1E8',
+  backgroundElevated: '#EFEADD',
 
-  // Surfaces — quiet muted cards sitting on the foundation
-  surface: '#151E2C',
-  surfaceMuted: '#1B2536',
-  border: '#26303F',
+  // Surfaces — soft paper cards lifting off the foundation
+  surface: '#FBF8F0',
+  surfaceMuted: '#EDE8DA',
+  border: '#DED8C7',
 
-  // Text
-  textPrimary: '#F4F7FB',
-  textSecondary: '#9BA8BC',
-  textMuted: '#7A8699', // WCAG AA (>=4.5:1) on all app surfaces for small text
-  textOnAccent: '#0B1220',
+  // Text — warm near-black on paper
+  textPrimary: '#1A1A17',
+  textSecondary: '#57564F',
+  textMuted: '#6F6D63', // WCAG AA (>=4.5:1) on all app surfaces for small text
+  textOnAccent: '#FBF8F0', // warm paper-white on olive (5.0:1)
 
-  // Accent — one restrained, trustworthy blue, for primary actions only
-  accent: '#4C8DFF',
-  accentPressed: '#3A6FD0',
-  accentSoft: 'rgba(76,141,255,0.14)',
+  // Accent — a real olive green (high chroma, never gray), primary actions only.
+  // 4.7:1 as text/icons on the background; textOnAccent passes AA on top of it.
+  accent: '#5F7326',
+  accentPressed: '#4C5C1E',
+  accentSoft: 'rgba(95,115,38,0.14)',
 
   // Semantic — used for meaning, never as chrome
-  danger: '#F0554A', // red — emergencies only
-  dangerSoft: 'rgba(240,85,74,0.14)',
-  warning: '#F5A623', // amber — unverified / outdated / caution
-  warningSoft: 'rgba(245,166,35,0.14)',
-  success: '#34C759', // green — verified / confirmed
-  successSoft: 'rgba(52,199,89,0.14)',
+  danger: '#C0392B', // red — emergencies only
+  dangerSoft: 'rgba(192,57,43,0.12)',
+  warning: '#B7791F', // amber — unverified / outdated / caution (dots + icons)
+  warningText: '#8F5D16', // amber as *text* — >=4.5:1 on all paper surfaces
+  warningSoft: 'rgba(183,121,31,0.14)',
+  success: '#2E7D32', // deep emerald — verified / confirmed (distinct from the olive accent)
+  successSoft: 'rgba(46,125,50,0.12)',
 
   // Utility
-  overlay: 'rgba(7,12,22,0.72)',
+  overlay: 'rgba(26,26,23,0.45)',
   transparent: 'transparent',
 } as const;
 
 export type ColorToken = keyof typeof colors;
+
+/** Build a translucent version of a solid hex color (e.g. for soft category tints). */
+export function withAlpha(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}

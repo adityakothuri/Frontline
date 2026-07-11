@@ -6,7 +6,7 @@
     "scheme": "frontline",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.frontline.app"
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.frontline.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0B1220",
+        "backgroundColor": "#F5F1E8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -31,9 +31,15 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B1220",
+          "backgroundColor": "#F5F1E8",
           "image": "./assets/splash-icon.png",
           "imageWidth": 200
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Frontline uses your location only to center the map on you. It is never stored or shared."
         }
       ]
     ],

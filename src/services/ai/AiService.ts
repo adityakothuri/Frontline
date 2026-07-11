@@ -55,6 +55,8 @@ export interface AiService {
     need: Need;
     resource: Resource;
     tone: CallScriptTone;
+    /** The veteran's first name, to personalize the standard script. Optional. */
+    firstName?: string;
   }): Promise<CallScript>;
   summarizeBenefit(input: { resource: Resource }): Promise<BenefitSummary>;
 }

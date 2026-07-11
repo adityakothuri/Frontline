@@ -1,10 +1,14 @@
 ---
 tags: [roadmap, phase-6, mvp, ai]
-status: planned
-updated: 2026-07-07
+status: done
+updated: 2026-07-08
 ---
 
 # Phase 6 — AI Workflow Layer: Next-Step Plans & Call Scripts
+
+> ✅ **Done 2026-07-08.** Core structure landed in Phase 4; deepened + finished here (specific
+> plans, name-personalized script, copy-to-clipboard, emergency fast-path). Still templated/offline.
+> See [[2026-07-08 Phase 6 Deepen AI Plans Call Scripts]].
 
 ## Purpose
 
@@ -28,11 +32,13 @@ same interface later.
 
 ## Checklist
 
-- [ ] Implement templated `buildNextStepPlan` + `buildCallScript` per [[AI Feature Design]].
-- [ ] Detail-page plan block + call-script sheet (both tones).
-- [ ] Guardrail labels + hedging verified in copy.
-- [ ] `ui-reviewer` + `/slop-check`; `npm run verify`.
-- [ ] `/finish-task`: build log + [[app_walkthrough]] + [[Decision Log]] (templated-first AI).
+- [x] Implement templated `buildNextStepPlan` + `buildCallScript` per [[AI Feature Design]]
+      (deepened: closing-time/walk-in/online signals; name-personalized standard script).
+- [x] Detail-page plan block + call script (both tones) — behind a "Get a call script" button;
+      **copy-to-clipboard** added; **emergency fast-path** (urgent call banner + short default tone).
+- [x] Guardrail labels + hedging verified in copy.
+- [ ] `ui-reviewer` + `/slop-check`; `npm run verify` ✅ (verify green; ui-reviewer/qa pending reset).
+- [x] Build log + [[app_walkthrough]] + [[Decision Log]] updated (templated-first AI).
 
 ## Definition of done
 

@@ -25,6 +25,339 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 
 ---
 
+### 2026-07-10 — Category colors move into the olive/earth family; call script is one script
+- **Status:** accepted (narrows the rainbow palette of [[Decision Log#2026-07-08 — Polish: category-color layer, tap motion, detail restructure|2026-07-08 category-color layer]])
+- **Context:** On device, the 12-hue category palette (blues, purples, pinks) clashed with the olive
+  app — Discover's "Other" grid looked like a different product. Separately, the standard ⇄ "keep it
+  simple" call-script toggle added a choice most veterans don't need at a stressful moment.
+- **Decision:** Category colors are now **variants within the olive/earth family** (olives, sages,
+  ochres, warm browns — still one distinct color per category; emergency alone leans rust-red).
+  `NEED_CATEGORY_META` and `RESOURCE_CATEGORY_META` must stay in sync per category. The call script
+  UI offers **one script** — the tone is picked by context (emergency resources get the shorter,
+  calmer script), not by the user. `CallScriptTone` stays in the `AiService` interface.
+- **Alternatives:** keep the rainbow (clashed); a single flat olive for all categories (loses the
+  category-coded scanability); removing the short tone from the service (would couple emergency
+  handling to the UI).
+- **Consequences:** category colors are family-constrained — new categories must pick an earth tone;
+  map pins/icon chips stay distinguishable mainly via icon + label, color is secondary. The tone
+  toggle can return later as a setting if users ask for it.
+
+### 2026-07-10 — Accent: acid lime → true olive `#5F7326` (+ text-grade amber)
+- **Status:** accepted (supersedes the lime of [[2026-07-07 Granola Reskin Light Paper Theme]])
+- **Context:** User asked for a Granola-feel overhaul with a **muted olive** accent; the lime read
+  harsh. A first low-chroma candidate (`#5A6440`) was rejected on device as "grayish".
+- **Decision:** `accent #5F7326` — a real olive with visible green chroma — with `textOnAccent`
+  flipped to paper-white (5.0:1) and `accentPressed #4C5C1E`. Alongside it, a **`warningText
+  #8F5D16`** token: the base amber failed AA (3.4:1) as small text on the trust labels, so
+  `STATUS_TONE_COLOR.warning` now uses the text-grade amber while dots/icons keep `#B7791F`.
+- **Alternatives:** keep lime (rejected by user); grayer olives (failed on device); lighter olives
+  like `#75814B` (fail 4.5:1 with any text color).
+- **Consequences:** dark-text-on-accent assumptions are gone; any future accent change must re-check
+  `textOnAccent`, accent-on-background, and accent-on-`accentSoft` contrast. Splash/app-icon artwork
+  still predates the palette.
+
+### 2026-07-10 — Detail page: action-row pills + call-script bottom sheet (footer removed)
+- **Status:** accepted
+- **Context:** The pinned Call/Directions footer read like giant nav tabs, and the inline call
+  script made the page long. User asked for compact in-page actions and a premium script reveal.
+- **Decision:** A compact **`ActionRow`** of auto-sized pills directly **under the header** (Call
+  olive-filled · Directions · Save · Share · Call script) — Call stays above the fold, Save moved
+  here from the route header (one Save control), Share via the built-in `Share` API. The script
+  opens in a new generic **`BottomSheet`** (RN `Modal` + `Animated`, **no new dependencies** —
+  `@gorhom/bottom-sheet` would have pulled reanimated + gesture-handler for one sheet). Script
+  trigger hidden for phone-less resources.
+- **Alternatives:** action row down at the Contact section (rejected — Call would fall below the
+  fold); full-width stretched action tiles (shipped first, rejected by user as "extended");
+  drag-to-dismiss on the sheet (deferred — needs PanResponder scoped to the grabber; backdrop tap +
+  close + Android back is complete).
+- **Consequences:** `BottomSheet` and `Skeleton` are reusable primitives; every resource action now
+  records/behaves identically from one place; add `KeyboardAvoidingView` to `BottomSheet` the day a
+  sheet hosts a text input.
+
+### 2026-07-09 — Official Online Sources widget on the category page
+- **Status:** accepted
+- **Context:** Veterans need trusted online backup (official forms, guidance, next steps) when local
+  opportunities aren't enough — without turning the app into a link library.
+- **Decision:** Add a **supporting widget** to each category (Results) page listing **3–5 curated
+  official/trusted sources** for that `NeedCategory` — VA.gov, federal pages, state/county veteran-
+  service directory pointers, verified nonprofits — each with a **trust badge** and an external link.
+  It sits **below** the local cards (and in the empty state); the **local finder stays primary**. Data
+  is **curated static** (`src/data/officialSources.ts`, original descriptions + real URLs), labeled by
+  trust — no scraping/API, no `Resource`/service-model change.
+- **Alternatives:** a separate "Resources" tab/library (rejected — the user wants a supporting widget,
+  not a new destination); pulling these into the mock `Resource` list (rejected — they're online
+  references, not local opportunities, and shouldn't mix into distance-sorted local results).
+- **Consequences:** every category now has an official backstop; the empty Results state is far more
+  useful. **State/county entries are generic directory pointers** (NASDVA/NACVSO) — deep-linking by
+  ZIP is a later enhancement. Build log: [[2026-07-09 Official Online Sources Widget]].
+
+### 2026-07-09 — First-run is a full account-creation pipeline; profile made concise
+- **Status:** accepted
+- **Context:** The setup should be a beautiful, first-impression **account-creation flow** (welcome →
+  prompts → "Create account"), and the Profile screen was cluttered (tall option rows made it very long).
+- **Decision:** Make **`index.tsx` a pure gate** (route to `/onboarding` or `/home`, no UI) and move the
+  **welcome into the onboarding flow** as step 0, so a fresh launch opens straight into a cohesive
+  pipeline: **Welcome → 5 prompts (progress) → Create account → saved → Home**. New `OnboardingWelcome`
+  (brand hero + halo + staggered entrance) and `OnboardingComplete` (success check + recap + "Create
+  account") components. The onboarding uses **spacious `row` options**; the **Profile uses compact
+  `pill` chips** + tighter spacing — a deliberate density contrast (focused flow vs dense settings).
+- **Alternatives:** keep the welcome on `index` as a separate screen (rejected — a single owned
+  pipeline gives consistent motion + one file); real accounts/auth (out of scope — "Create account" is
+  framing over the on-device profile); keep rows on Profile (rejected — too long/cluttered).
+- **Consequences:** the `OptionGroup` `variant` (row/pill) now carries its weight across both surfaces.
+  "Create account" saves the local profile (no backend). Build log:
+  [[2026-07-09 Welcome Flow and Concise Profile]].
+
+### 2026-07-08 — Extended profile + multi-step setup wizard
+- **Status:** accepted (finishes the profile half of [[Phase 8 Saved and Profile]])
+- **Context:** The user wanted the app to open into a real account-creation-style setup — multiple
+  screens, each with its own prompt — collecting an extended profile. Name + ZIP required; the rest
+  optional.
+- **Decision:** Rewrite `app/onboarding.tsx` as a **single-route step machine** (Name → ZIP → Role →
+  Documents → Radius → Done; no route-per-step) driving a draft saved once at the end. Extend
+  `VeteranProfile` with **role, documentsOnHand, preferredRadiusMiles** (all optional; ZIP required in
+  the UI but kept optional in the type for tolerant load). Widen `saveDetails` to a `ProfileDetails`
+  merge. New shared **`OptionGroup`** (single/multi chip group) + **`TextField`** (removed 4×
+  duplication) in `src/components/`, and an `OnboardingStep` scaffold. The **Profile tab becomes one
+  always-editable form** reusing those. **Preferred radius wired into search** from both `results.tsx`
+  and `ResourceDetail.tsx`.
+- **Alternatives:** route-per-step (rejected — pollutes typedRoutes, fragments the draft, breaks the
+  `replace` back-stack invariant); a generic config-driven step renderer (rejected — fake complexity
+  for 5 heterogeneous steps); reopening the wizard to edit (rejected — wizard owns first-run routing;
+  a settings form is the right edit surface); **disability rating** (rejected this pass — too
+  sensitive; privacy principle #5).
+- **Consequences:** option lists live once in the type files (`ROLE_OPTIONS`/`RADIUS_OPTIONS`/
+  `DOCUMENT_OPTIONS`). Role + documents are stored/shown (AI tie-ins later); radius personalizes
+  results now. `saveDetails`'s `??` merge can't clear role/radius (documents clear via empty array) —
+  acceptable for a form. Build log: [[2026-07-08 Extended Profile Multi-Step Setup]].
+
+### 2026-07-08 — Phase 8: Saved resources (ids, not snapshots; save in the route header)
+- **Status:** accepted
+- **Context:** Save was deferred through Phases 4–7. Phase 8's profile half already shipped, so this
+  is the Save feature. Key choices: what to store, and where the Save controls live.
+- **Decision:** New on-device `src/services/saved/` store mirroring profile/activity (AsyncStorage
+  key `frontline.saved.v1`, `SavedEntry {id, savedAt}`, `useSaved()`). **Store ids only** and
+  re-resolve live via `getById` (so trust signals aren't frozen), **not** resource snapshots. Save
+  UI: a **bookmark on the card** (top-row cluster) and a **`headerRight` bookmark on the
+  `/resource/[id]` route** (leaves `ResourceDetail` + the sticky footer untouched). Saved tab derives
+  its list from `savedIds` over an id-keyed resolve cache, so unsaving removes the row with no flash.
+  **Scope: resources only.**
+- **Alternatives:** store `Resource` snapshots (rejected — goes stale, violates live-trust);
+  Save in the detail footer/meta row (rejected — crowds the primary actions / reads oddly; header is
+  the platform-standard spot); a `SavedService` interface (rejected — on-device state, the context is
+  the API, like activity).
+- **Consequences:** the Saved tab is live; `SavedProvider` nests innermost in `_layout`. Saving
+  scripts/checklists and the extended optional profile (role/radius/docs → queries) remain a later
+  slice of Phase 8. **Phase 7** marked done (summarizer complete). Build log:
+  [[2026-07-08 Phase 8 Saved Resources]].
+
+### 2026-07-08 — Phase 6: deepen the AI, stay templated/offline
+- **Status:** accepted
+- **Context:** Phase 6 (AI plans + call scripts) was ~80% built in Phase 4. The roadmap's own risk is
+  "generic-sounding templates." Decision on direction + which extras.
+- **Decision:** Keep the AI **templated/offline** (no real Claude, no proxy, no keys) and make it
+  genuinely useful: specific next-step timing via a new `closingTimeToday` helper + walk-in/online
+  signals; **personalize the standard call script by first name** (optional `firstName?` on
+  `buildCallScript` only — not `Need`/`buildNextStepPlan`); **copy-to-clipboard** (`expo-clipboard`);
+  and an **emergency fast-path** — a contact-only urgent Call banner at the top of emergency-category
+  detail pages + the call script defaulting to the shorter calm tone.
+- **Alternatives:** wire real Claude now (rejected — needs a proxy + keys + infra; out of MVP);
+  scaffold a `ClaudeAiService` seam (deferred — no proxy yet); personalize the plan or tailor to the
+  veteran's documents (not selected — scope).
+- **Consequences:** `AiContentBlock` title is now optional (removed a duplicate heading). New
+  `EmergencyCallBanner` component (contact-only, no advice → no AI disclaimer). `expo-clipboard`
+  needed a native rebuild. Guardrails unchanged. The real-Claude swap stays a future drop-in behind
+  the same `AiService`. Build log: [[2026-07-08 Phase 6 Deepen AI Plans Call Scripts]].
+
+### 2026-07-08 — Polish: category-color layer, tap motion, detail restructure
+- **Status:** accepted
+- **Context:** User feedback — the UI felt "rigid" on tap, wanted "more color," and the opportunity
+  detail page "feels random." (Detail felt long and threw the call script at the user.)
+- **Decision:** (1) Add a **category color** to `RESOURCE_CATEGORY_META` + `NEED_CATEGORY_META` (a
+  categorization color layer, kept **distinct** from the semantic verified/warning/danger colors so
+  meaning is preserved) + a pure `withAlpha` tint helper; apply to icon chips and map pins. (2) Add
+  motion with RN `Animated` (**no new dep**): a `PressableScale` for cards and a spring-in for the
+  map preview. (3) Restructure the detail page top-down (what it is → what to do → what to bring →
+  contact → trust), move the simulated rating into the header, drop the redundant Eligibility section
+  and verbose summary lines, and put the **call script behind a "Get a call script" button** that
+  auto-generates on reveal.
+- **Alternatives:** react-native-reanimated for animation (rejected — native dep + rebuild for a
+  light polish; RN `Animated` suffices); full-color category cards (rejected — too busy for the calm
+  paper base; colored icon + soft tint only).
+- **Consequences:** [[UI Design System]] gains a category-color palette (icons/pins), alongside the
+  unchanged semantic colors. Detail page is shorter and clearer. Build log:
+  [[2026-07-08 Polish Color Motion Detail Structure]].
+
+### 2026-07-08 — Add a dedicated Map tab (reverses "toggle only, no map tab")
+- **Status:** accepted (revisits the Phase 5 "no map tab" decision)
+- **Context:** With the map only reachable via Discover → Other → a category → Results → the Map
+  toggle (four taps, non-obvious), the user couldn't find it — "I don't see a map anywhere."
+- **Decision:** Add a **dedicated Map bottom-nav tab** (`app/(tabs)/map.tsx`) showing **all** located
+  opportunities as category pins via `resourceService.listResources()`, reusing `ResourceMap`
+  (pins → preview → detail + recenter). Tabs are now **Home · Discover · Map · Saved · Profile**. The
+  Results List⇄Map toggle stays for category-scoped searches. `ResourceMap.needCategory` became
+  optional (derived per-pin via `resourceToNeedCategory` on the general tab).
+- **Alternatives:** a List⇄Map toggle on Discover (rejected — a real tab is more discoverable); a
+  "View on map" button (rejected — still buried).
+- **Consequences:** the map is one tap from anywhere. Also did a spacing-consistency pass
+  (`ui-reviewer`-checked) across Home/Discover/Map — uniform `xl` gutter, `lg` top inset, and the
+  Discover shell row now groups with its list. Build log:
+  [[2026-07-08 Home Redesign Discover Tab Fullscreen Map]] (follow-up).
+
+### 2026-07-08 — Map location: GPS + ZIP fallback, overlay-only, data stays LA
+- **Status:** accepted
+- **Context:** The map rendered LA seed pins but had no real location awareness (always centered on
+  `SEED_CENTER`). The user wanted it to actually use the veteran's location. Tension: all seed data
+  is LA-only, so re-anchoring the map to a real (non-LA) location would show an empty map.
+- **Decision:** Add `expo-location` and resolve location as **device GPS with a ZIP fallback**
+  (privacy-first, matches [[Map and Search Design]]): permission requested **only on a recenter tap**,
+  GPS `Balanced` fix, else geocode the profile ZIP (`geocodeAsync("<zip>, USA")`). Show the blue
+  "you are here" dot (`showsUserLocation`, gated on granted) + a floating recenter button. **Keep the
+  resource catalog, pins, and card distances anchored to LA** — location is overlay + camera only, it
+  does **not** re-anchor data (so the map is always populated; honest, it's the labeled LA demo set).
+- **Alternatives:** re-center search on the real location (rejected — empty map outside LA); device
+  GPS only, no ZIP (rejected — privacy + no-permission fallback wanted); a `LocationContext`
+  (rejected — session-only, single screen; a hook suffices); Google provider for styling (rejected —
+  needs an API key; Apple Maps default is fine).
+- **Consequences:** New `src/services/location/` seam (thin `userLocation.ts` wrappers +
+  `useUserLocation` hook + barrel); `@/lib/geo` stays pure (geocoding is a platform call).
+  **Native rebuild required** (`expo prebuild` + `run:ios`) for the Info.plist permission +
+  `ExpoLocation` pod. Precise location is never persisted. Build log:
+  [[2026-07-08 Map Location GPS ZIP Recenter]].
+
+### 2026-07-08 — Home/Discover redesign: Discover tab, fullscreen map, on-device activity + simulated ratings
+- **Status:** accepted (adds product surface beyond the documented MVP)
+- **Context:** The user wanted a more polished shape: the map as a real fullscreen view (not a
+  widget), a **Discover** tab so all help types aren't a long scroll on Home, and a personalized
+  Home with a greeting, a random message, and a "How was ___?" rating feed for opportunities the
+  veteran engaged with. This introduces **activity history + community ratings** — new concepts the
+  MVP (verification-based trust; Phase 8 saved/profile) didn't have.
+- **Decision:** Build it in three architect-reviewed pieces. (1) **Fullscreen map** — the Results map
+  view goes edge-to-edge with a floating toggle. (2) **Discover tab** (Home · Discover · Saved ·
+  Profile): a shell row (All · Food · Clothes · VA Help · Employment · Other) over all opportunities
+  via a new **`listResources(category?)`** browse seam; the category grid moves off Home. (3) **Home
+  feed**: greeting + stable-per-day random message + a "How was X?" card driven by a new **on-device
+  activity store** (`frontline.activity.v1`, mirroring the profile store) recording engagement when a
+  resource is opened/called; 👍/👎 feeds a **deterministic simulated** community rating
+  (`src/lib/ratings.ts`, derived from the resource id — no data-model change).
+- **Alternatives:** map as a bottom-nav tab (rejected in Phase 5 — chose the toggle); looping
+  `search()` for browse (rejected — wrong semantics + 12× latency; added `listResources`); a real
+  ratings backend (out of scope — local + simulated); blending the user's vote into the shown average
+  (**rejected on honesty grounds** — the vote is shown as a separate fact, the average is labeled
+  "simulated (demo)"); an `ActivityService` interface (rejected — on-device state, not a backend seam).
+- **Consequences:** New product surface is shipped as an **explicitly-simulated, on-device** demo;
+  the verification-based trust model is unchanged and the simulated rating always carries an adjacent
+  "simulated (demo)" label. `resourceActions.ts`/`ResourceCard.tsx` stayed pure (recording lives at
+  the detail call sites). Engagement log is deduped-by-resource and capped. Build log:
+  [[2026-07-08 Home Redesign Discover Tab Fullscreen Map]].
+
+### 2026-07-08 — Phase 5 map: toggle-in-Results, Apple Maps default, no map style / no location dep
+- **Status:** accepted
+- **Context:** Phase 5 shows the same resources on a map. Three choices: (1) map as a standalone
+  bottom-nav tab vs a view of the current result set; (2) how to style the map to the paper theme;
+  (3) how to center it.
+- **Decision:** (1) Ship the map as a **List⇄Map toggle inside Results** — the design doc's "two
+  synchronized views… switching preserves context." Both views share one result set (via a new
+  `useResourceSearch` hook) and one lifted `selectedId`; state is local so **typedRoutes is
+  untouched** (no new route — the pin preview reuses `/resource/[id]`). (2) **Accept Apple Maps'
+  default styling on iOS** — verified via Context7 that Apple Maps ignores `customMapStyle`; a paper
+  style would require `PROVIDER_GOOGLE` + a Google Maps iOS key + native rebuild. So **no
+  `src/theme/mapStyle.ts`** (it would only style Android and reads as slop). (3) Center by
+  **`fitToCoordinates` to the pins** (fallback `SEED_CENTER`) — **no `expo-location`** dependency
+  (privacy + scope).
+- **Alternatives:** a Map bottom-nav tab (rejected — no category context without its own picker);
+  `PROVIDER_GOOGLE` + Maps key for a styled map (rejected — config/entitlement cost + ships a key,
+  not worth it for a demo); device GPS via expo-location (rejected — fitting to pins suffices);
+  clustering (deferred — only 12 seed resources).
+- **Consequences:** custom Ionicon markers must set `tracksViewChanges={false}` after first paint
+  (perf). Location-independent resources (null coords, e.g. the Veterans Crisis Line) never get a
+  pin — they stay in the list and are surfaced as a count note, with a dedicated empty-map state
+  when a category has only such resources. `ResourceMap.web.tsx` keeps web usable (maps is
+  iOS/Android only). Build log: [[2026-07-08 Phase 5 Map and Discovery]].
+
+### 2026-07-08 — Phase 4 detail page: defer Save, thread need category, share the Need builder
+- **Status:** accepted
+- **Context:** Building the resource detail page surfaced three choices. (1) Phase 4's card/detail
+  spec lists a Save action, but real saved-resource persistence is [[Phase 8 Saved and Profile]].
+  (2) The AI calls need a `Need`, but `getById(id)` returns only a `Resource`, whose `category` is
+  the 11-value `ResourceCategory` — not the 12-value `NeedCategory` the AI expects. (3) The default
+  `Need` literal already lived inline in `results.tsx` and was about to be copied onto the detail.
+- **Decision:** (1) **Defer Save to Phase 8** — no Save button now, so we don't ship a dead stub;
+  detail actions are Call · Directions · View details · Generate call script. (2) Carry the
+  veteran's original **`NeedCategory` as a route param** (`/resource/[id]?category=…`) from the card,
+  falling back to `general_benefits` on a bare deep link — avoids a lossy `ResourceCategory →
+  NeedCategory` reverse map. (3) Add **`defaultNeedForCategory(category, zip)`** to `types/need.ts`
+  and build the `Need` through it in both `results.tsx` and the detail page.
+- **Alternatives:** a minimal AsyncStorage saved store now (rejected — pulls Phase 8 forward,
+  out of scope); a reverse category map (rejected — lossy and only cosmetic, since the templated AI
+  keys off `resource.category`, not `need.category`); duplicating the `Need` literal (rejected — slop).
+- **Consequences:** `StatusPill` was extracted and `STATUS_TONE_COLOR` centralized in
+  `resourceStatus.ts` (card + pill + detail trust row read one map). No `NextStepPlan`/`BenefitSummary`
+  component files — rendered inline in `AiContentBlock`. Structure pre-approved by
+  `react-native-architect`. Build log: [[2026-07-08 Phase 4 Resource Detail Page]].
+
+### 2026-07-07 — Re-skin to a warm light "paper" theme (Granola-inspired)
+- **Status:** accepted (supersedes the dark navy direction in [[UI Design System]])
+- **Context:** The user wanted Frontline to adopt the look of [granola.ai](https://www.granola.ai) —
+  a modern, unconventional aesthetic — specifically its color scheme and font. Granola's 2026 rebrand
+  is a warm off-white "paper" background, an acid-lime accent, near-black text, and a slab-serif
+  display / neutral-sans body pairing (*Quadrant* + *Melange*).
+- **Decision:** Flip the whole theme from dark navy to a warm light **paper** palette
+  (`background #F5F1E8`, lime `accent #B5C832`, `textPrimary #1A1A17`) and swap the typeface to
+  **Fraunces** (serif, display/title headers) + **Inter** (UI/body). All changes are centralized in
+  `src/theme/colors.ts` + `typography.ts` + font loading in `app/_layout.tsx` + `app.json` chrome —
+  no per-screen edits, since every screen consumes tokens and renders through `AppText`.
+- **Alternatives:** keep dark and only borrow the lime accent (rejected — user wanted the full
+  Granola look); a dual light/dark theme (rejected — more scope than asked); use Granola's actual
+  fonts (rejected — Quadrant/Melange are proprietary and can't be embedded legally, so the closest
+  free Google-Fonts look-alikes were chosen); white text on the lime button (rejected — fails
+  contrast at 1.9:1; dark text on lime is 9.4:1).
+- **Consequences:** `success` is a **deep emerald `#2E7D32`**, deliberately distinct from the lime
+  accent, so the "color has meaning" rule holds (lime = primary action, emerald = verified). All
+  text tokens verified WCAG AA on paper. Splash/adaptive-icon **artwork** may still read as dark-era
+  and is flagged as a non-blocking follow-up. Font packages swapped in `package.json`
+  (`@expo-google-fonts/manrope` → `inter` + `fraunces`). Docs updated: [[UI Design System]].
+
+### 2026-07-07 — Stage 4: drop the guided need-flow screen; set-once details + one-tap resources
+- **Status:** accepted (revisits the Phase 3 guided flow)
+- **Context:** The user found the app unfriendly — a cramped 2-column home grid, and every category
+  forced a multi-question guided flow (urgency/modality/help type/documents/ZIP) before showing any
+  help. They wanted details captured once at setup and a category tap to go straight to resources.
+- **Decision:** Remove `app/need/[category].tsx` entirely. Capture **first name + ZIP** in the
+  one-time setup (ZIP now persisted on the profile). Tapping a category pushes straight to
+  `/results`, which builds the `Need` from the category + the profile's ZIP + sensible defaults
+  (`urgency: 'this_week'`, `modality: 'either'`, `helpType: 'understand'`, no documents, radius 15).
+  Redesign the home screen **warmer**: a time-aware greeting hero + **single-column** category cards
+  (icon chip + label + one-line description + chevron), keeping the dark navy base.
+- **Alternatives:** Keep the guided flow as an optional "refine" (rejected — user wants immediacy);
+  per-category colors or a light theme (rejected — chose warm-within-dark); a radius picker at setup
+  (deferred — defaults to 15).
+- **Consequences:** The `Need` model and `resourceService.search` are unchanged — only the input
+  path changed (defaults + profile instead of a questions screen). Results loses per-search urgency
+  tuning (all searches are "this_week" ordering by distance) until optional filters are added later.
+  Design docs updated: [[UI Design System]] (warmer direction, single-column cards) and
+  [[App Flow|Core User Flows]] (setup captures ZIP; category → resources directly). This revisits the
+  Phase 3 [[2026-07-07 Phase 3 Guided Need Flow]] guided-questions approach.
+
+### 2026-07-07 — Onboarding + on-device profile (name only), pulled ahead of Phase 8
+- **Status:** accepted
+- **Context:** The user wanted the app to feel personal — a one-time setup and a home screen that
+  greets them by name. This is the onboarding/profile slice of [[Phase 8 Saved and Profile]], wanted
+  now rather than after the documented Phase 4 (resource detail pages).
+- **Decision:** Build it as its own step. Introduce the app's **first persistence layer**
+  (`@react-native-async-storage/async-storage`, the documented Phase 8 choice) behind a small typed
+  store (`src/services/profile/profileStorage.ts`), and the app's **first shared state** as a light
+  React Context (`ProfileProvider` / `useProfile`) so the greeting updates reactively and returning
+  users are recognized on launch. Collect **first name only** — nothing sensitive. Greeting is
+  **time-aware** (`src/lib/greeting.ts`). Profile tab gains edit + reset.
+- **Alternatives:** A full service-singleton seam like `resources`/`ai` (overkill for reactive UI
+  state); per-screen AsyncStorage reads with `useState` (greeting would flash / not stay in sync);
+  a global state library (explicitly out of MVP scope).
+- **Consequences:** `VeteranProfile` starts minimal (`firstName`, `onboardingComplete`, `createdAt`)
+  and is forward-compatible — Phase 8 can add optional ZIP/role/radius/documents to the same store
+  and extend `useProfile` without a rewrite. `index.tsx` is now a hydration-gated first-run router.
+  Typed routes must be regenerated (Metro start) whenever a top-level route file is added.
+
 ### 2026-07-07 — Phase 2 service-interface shapes
 - **Status:** accepted
 - **Context:** [[Resource Data Model]] sketched `ResourceService.search` returning `Resource[]` and

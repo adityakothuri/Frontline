@@ -11,20 +11,20 @@ The core MVP journey, end to end. Mirrors the [[MVP Definition|MVP Scope]] "must
 
 ## Primary loop — "I need help"
 
+> **Stage 4 update (2026-07-07):** details are captured **once at account setup** (first name + ZIP),
+> and tapping a category goes **straight to resources** — the per-category guided-questions screen was
+> removed. The structured `Need` still exists; it's now built from the tapped category + the profile's
+> ZIP + sensible defaults. Rationale in [[Decision Log]].
+
 ```
 Open Frontline
+      │  (first launch only)
+      ▼
+One-time setup:  first name  ·  ZIP (optional)
       │
       ▼
-Home: "What do you need help with?"  (12 need categories)
-      │  select a category
-      ▼
-Guided flow:  what · urgency (today/this week/info)
-              in-person / online / either
-              documents on hand · help type (call/visit/apply/understand)
-      │
-      ▼
-Location or ZIP
-      │
+Home: warm greeting ("Good morning, {name}") + single-column category cards (12 needs)
+      │  tap a category  → straight to resources (no questions)
       ▼
 Results ── list ⇄ map ──► Resource cards (name · category · distance · open? · next action)
       │
@@ -47,8 +47,8 @@ Act:  Call  ·  Directions  ·  Save
 - **Understand a benefit:** Home → General VA / Education → benefit summary → **AI summarizer**
   (hedged: "you *may* qualify… confirm with the source") → **Save** benefit + checklist.
 - **Saved:** revisit saved resources, benefits, call scripts, and document checklists.
-- **Profile:** optional-only fields (ZIP, role, needs, radius, documents on hand) that personalize
-  results — never required, never gatekeeping.
+- **Profile:** optional-only fields (first name + ZIP today; role, radius, documents later) that
+  personalize results — never required, never gatekeeping. Edit details or reset setup here.
 - **Emergency:** the Emergency category surfaces crisis resources (988 press 1, 911) directly.
 
 ## Key transitions & guarantees

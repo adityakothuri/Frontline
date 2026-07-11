@@ -101,3 +101,29 @@ export function isOpenNow(hours: string | null, now: Date = new Date()): boolean
     (interval) => interval.day === day && minutes >= interval.start && minutes < interval.end,
   );
 }
+
+const formatMinutes = (mins: number): string => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const period = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${h12} ${period}` : `${h12}:${String(m).padStart(2, '0')} ${period}`;
+};
+
+/**
+ * If the resource is open right now, the time it closes today (e.g. "5 PM"),
+ * else `null`. Reuses the same parser so time-format knowledge stays in one place.
+ */
+export function closingTimeToday(hours: string | null, now: Date = new Date()): string | null {
+  if (!hours) return null;
+
+  const intervals = parseHours(hours);
+  if (!intervals) return null;
+
+  const day = now.getDay();
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const current = intervals.find(
+    (interval) => interval.day === day && minutes >= interval.start && minutes < interval.end,
+  );
+  return current ? formatMinutes(current.end) : null;
+}

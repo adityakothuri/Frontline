@@ -1,6 +1,8 @@
+import { useRef } from 'react';
 import {
-  Pressable,
   ActivityIndicator,
+  Animated,
+  Pressable,
   StyleSheet,
   type StyleProp,
   type ViewStyle,
@@ -17,7 +19,9 @@ type PrimaryButtonProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-// One obvious primary action per screen. `secondary` is the quiet outline variant.
+// One obvious primary action per screen. `secondary` is the quiet outline
+// variant. Presses get both a color shift and a slight spring-down, so every
+// CTA in the app feels tactile the same way cards do (PressableScale).
 export function PrimaryButton({
   label,
   onPress,
@@ -27,32 +31,40 @@ export function PrimaryButton({
   style,
 }: PrimaryButtonProps) {
   const isSecondary = variant === 'secondary';
+  const inactive = disabled || loading;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const spring = (toValue: number) =>
+    Animated.spring(scale, { toValue, useNativeDriver: true, speed: 40, bounciness: 5 }).start();
+
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || loading }}
-      disabled={disabled || loading}
+      accessibilityState={{ disabled: inactive }}
+      disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.base,
-        isSecondary ? styles.secondary : styles.primary,
-        pressed &&
-          (isSecondary ? styles.secondaryPressed : styles.primaryPressed),
-        (disabled || loading) && styles.disabled,
-        style,
-      ]}
+      onPressIn={() => spring(0.97)}
+      onPressOut={() => spring(1)}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={isSecondary ? colors.textPrimary : colors.textOnAccent}
-        />
-      ) : (
-        <AppText
-          variant="subtitle"
-          color={isSecondary ? 'textPrimary' : 'textOnAccent'}
+      {({ pressed }) => (
+        <Animated.View
+          style={[
+            styles.base,
+            isSecondary ? styles.secondary : styles.primary,
+            pressed && (isSecondary ? styles.secondaryPressed : styles.primaryPressed),
+            inactive && styles.disabled,
+            style,
+            { transform: [{ scale }] },
+          ]}
         >
-          {label}
-        </AppText>
+          {loading ? (
+            <ActivityIndicator color={isSecondary ? colors.textPrimary : colors.textOnAccent} />
+          ) : (
+            <AppText variant="subtitle" color={isSecondary ? 'textPrimary' : 'textOnAccent'}>
+              {label}
+            </AppText>
+          )}
+        </Animated.View>
       )}
     </Pressable>
   );

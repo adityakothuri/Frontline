@@ -1,98 +1,125 @@
 import { View, Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Card } from '@/components';
+import { AppText, Card, PressableScale } from '@/components';
 import { formatDistance } from '@/lib/geo';
 import { colors, radii, spacing } from '@/theme';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
+import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
+import { useSaved } from '@/services/saved';
 import { callPhone, openDirections } from './resourceActions';
-import { openNowStatus, sourceStatus, type StatusTone } from './resourceStatus';
+import { openNowStatus, sourceStatus, STATUS_TONE_COLOR } from './resourceStatus';
+import { StatusPill } from './StatusPill';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
-const TONE_COLOR: Record<StatusTone, string> = {
-  success: colors.success,
-  warning: colors.warning,
-  muted: colors.textMuted,
-};
-
 type ResourceCardProps = {
   result: ResourceSearchResult;
+  /** The need category the veteran searched — carried to the detail page so its
+   *  AI guidance keeps the same context. */
+  needCategory: NeedCategory;
 };
 
 // The scannable unit of the results list: what it is, how close, whether it's
-// open, how trustworthy the info is, and the two actions that matter most.
-export function ResourceCard({ result }: ResourceCardProps) {
+// open, how trustworthy the info is, the two actions that matter most, and a tap
+// anywhere else to open the full detail page.
+export function ResourceCard({ result, needCategory }: ResourceCardProps) {
+  const router = useRouter();
+  const { isSaved, toggleSave } = useSaved();
   const { resource, distanceMiles, isOpenNow } = result;
   const meta = RESOURCE_CATEGORY_META[resource.category];
   const open = openNowStatus(isOpenNow);
   const source = sourceStatus(resource);
+  const saved = isSaved(resource.id);
   const hasDirections =
     resource.address !== null || (resource.latitude !== null && resource.longitude !== null);
 
+  const openDetail = () =>
+    router.push({
+      pathname: '/resource/[id]',
+      params: { id: resource.id, category: needCategory },
+    });
+
   return (
-    <Card style={styles.card}>
-      <View style={styles.topRow}>
-        <View style={styles.categoryChip}>
-          <Ionicons name={meta.icon} size={14} color={colors.accent} />
-          <AppText variant="caption" color="textSecondary">
-            {meta.label}
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={`View details for ${resource.name}`}
+      onPress={openDetail}
+    >
+      <Card style={styles.card}>
+        <View style={styles.topRow}>
+          <View style={styles.categoryChip}>
+            <Ionicons name={meta.icon} size={14} color={meta.color} />
+            <AppText variant="caption" color="textSecondary">
+              {meta.label}
+            </AppText>
+          </View>
+          <View style={styles.rightCluster}>
+            <StatusPill label={open.label} tone={open.tone} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
+              onPress={() => toggleSave(resource.id)}
+              hitSlop={8}
+              style={({ pressed }) => pressed && styles.bookmarkPressed}
+            >
+              <Ionicons
+                name={saved ? 'bookmark' : 'bookmark-outline'}
+                size={18}
+                color={saved ? colors.accent : colors.textMuted}
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        <AppText variant="subtitle" style={styles.name}>
+          {resource.name}
+        </AppText>
+
+        <AppText variant="caption" color="textMuted">
+          {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
+        </AppText>
+
+        <AppText variant="body" color="textSecondary" numberOfLines={2} style={styles.desc}>
+          {resource.description}
+        </AppText>
+
+        <View style={styles.sourceRow}>
+          <Ionicons
+            name={source.tone === 'success' ? 'shield-checkmark-outline' : 'alert-circle-outline'}
+            size={13}
+            color={STATUS_TONE_COLOR[source.tone]}
+          />
+          <AppText variant="caption" style={{ color: STATUS_TONE_COLOR[source.tone] }}>
+            {source.label}
           </AppText>
         </View>
-        <StatusPill label={open.label} tone={open.tone} />
-      </View>
 
-      <AppText variant="subtitle" style={styles.name}>
-        {resource.name}
-      </AppText>
-
-      <AppText variant="caption" color="textMuted">
-        {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
-      </AppText>
-
-      <AppText variant="body" color="textSecondary" numberOfLines={2} style={styles.desc}>
-        {resource.description}
-      </AppText>
-
-      <View style={styles.sourceRow}>
-        <Ionicons
-          name={source.tone === 'success' ? 'shield-checkmark-outline' : 'alert-circle-outline'}
-          size={13}
-          color={TONE_COLOR[source.tone]}
-        />
-        <AppText variant="caption" style={{ color: TONE_COLOR[source.tone] }}>
-          {source.label}
-        </AppText>
-      </View>
-
-      <View style={styles.actions}>
-        {resource.phone ? (
-          <ActionButton
-            icon="call-outline"
-            label="Call"
-            onPress={() => callPhone(resource.phone as string)}
-          />
-        ) : null}
-        {hasDirections ? (
-          <ActionButton
-            icon="navigate-outline"
-            label="Directions"
-            onPress={() => openDirections(resource)}
-          />
-        ) : null}
-      </View>
-    </Card>
-  );
-}
-
-function StatusPill({ label, tone }: { label: string; tone: StatusTone }) {
-  return (
-    <View style={styles.pill}>
-      <View style={[styles.dot, { backgroundColor: TONE_COLOR[tone] }]} />
-      <AppText variant="caption" style={{ color: TONE_COLOR[tone] }}>
-        {label}
-      </AppText>
-    </View>
+        <View style={styles.actions}>
+          {resource.phone ? (
+            <ActionButton
+              icon="call-outline"
+              label="Call"
+              onPress={() => callPhone(resource.phone as string)}
+            />
+          ) : null}
+          {hasDirections ? (
+            <ActionButton
+              icon="navigate-outline"
+              label="Directions"
+              onPress={() => openDirections(resource)}
+            />
+          ) : null}
+          <View style={styles.detailHint}>
+            <AppText variant="label" color="textSecondary">
+              View details
+            </AppText>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </View>
+        </View>
+      </Card>
+    </PressableScale>
   );
 }
 
@@ -111,7 +138,7 @@ function ActionButton({
       onPress={onPress}
       style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
     >
-      <Ionicons name={icon} size={16} color={colors.textPrimary} />
+      <Ionicons name={icon} size={16} color={colors.accent} />
       <AppText variant="label">{label}</AppText>
     </Pressable>
   );
@@ -125,8 +152,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dot: { width: 7, height: 7, borderRadius: radii.pill },
+  rightCluster: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  bookmarkPressed: { opacity: 0.5 },
   name: { marginTop: spacing.xs },
   desc: { marginTop: spacing.xs },
   sourceRow: {
@@ -135,7 +162,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.xs,
   },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   action: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -148,4 +175,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   actionPressed: { opacity: 0.7 },
+  detailHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginLeft: 'auto',
+  },
 });

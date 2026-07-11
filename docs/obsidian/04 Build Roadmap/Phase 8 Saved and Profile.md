@@ -1,10 +1,15 @@
 ---
 tags: [roadmap, phase-8, mvp]
-status: planned
-updated: 2026-07-07
+status: in-progress
+updated: 2026-07-08
 ---
 
 # Phase 8 — Saved Resources & Veteran Profile
+
+> **Status 2026-07-08:** **Saved resources ✅ done** (on-device store + bookmark on cards/detail +
+> Saved tab — [[2026-07-08 Phase 8 Saved Resources]]). **Profile:** the lightweight core shipped
+> early (first name + ZIP, onboarding, edit/reset). The **extended optional profile** (role, radius,
+> documents-on-hand, needs → wired into `ResourceService` queries) is **not built** — a later slice.
 
 ## Purpose
 
@@ -27,12 +32,15 @@ sensitive data.
 
 ## Checklist
 
-- [ ] Approve store + screen files with `react-native-architect`.
-- [ ] Implement on-device save/unsave across item types.
-- [ ] Profile form (all optional); wire radius/needs into `ResourceService` queries.
-- [ ] Privacy copy + data-minimization review ([[Trust Safety and Privacy]]).
-- [ ] `ui-reviewer` + `/slop-check`; `npm run verify`.
-- [ ] `/finish-task`: build log + [[app_walkthrough]].
+- [x] Approve store + screen files with `react-native-architect` (saved store approved 2026-07-08).
+- [x] On-device save/unsave for **resources** (bookmark on cards + detail header; Saved tab).
+      *(Scripts/checklists/benefits as savable item types = later.)*
+- [x] Extended profile (role/radius/docs, all optional) via a **multi-step setup wizard** + an
+      always-editable Profile form; **radius wired into `ResourceService` queries**
+      ([[2026-07-08 Extended Profile Multi-Step Setup]]). *(Disability rating omitted — too sensitive.)*
+- [x] Privacy: on-device only, nothing sensitive (ids in AsyncStorage; live re-resolve).
+- [ ] `ui-reviewer` + `/slop-check`; `npm run verify` ✅ (verify green; ui-reviewer/qa pending reset).
+- [x] Build log + [[app_walkthrough]] updated.
 
 ## Definition of done
 
