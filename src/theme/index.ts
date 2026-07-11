@@ -3,6 +3,7 @@ import { spacing, radii } from './spacing';
 import { fonts, textVariants } from './typography';
 
 export { colors, spacing, radii, fonts, textVariants };
+export { withAlpha } from './colors';
 export type { ColorToken } from './colors';
 export type { SpacingToken } from './spacing';
 export type { TextVariant } from './typography';

@@ -17,8 +17,9 @@ type AppTextProps = TextProps & {
   style?: StyleProp<TextStyle>;
 };
 
-// Every piece of text in the app goes through here, so the Manrope family and
-// the type scale stay consistent — screens pick a `variant`, never a raw size.
+// Every piece of text in the app goes through here, so the Inter/Fraunces
+// families and the type scale stay consistent — screens pick a `variant`, never
+// a raw size.
 export function AppText({
   variant = 'body',
   color = 'textPrimary',

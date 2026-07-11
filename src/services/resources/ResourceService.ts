@@ -1,4 +1,4 @@
-import type { Need } from '@/types/need';
+import type { Need, NeedCategory } from '@/types/need';
 import type { Resource } from '@/types/resource';
 
 /**
@@ -24,6 +24,12 @@ export interface ResourceSearchResult {
 export interface ResourceService {
   /** Nearby resources matching the need, sorted by relevance then distance. */
   search(query: ResourceQuery): Promise<ResourceSearchResult[]>;
+  /**
+   * Browse opportunities without a full need — all of them, or one category —
+   * for the Discover tab. Sorted by distance then verification; no modality or
+   * radius filtering (browsing shows everything).
+   */
+  listResources(category?: NeedCategory): Promise<ResourceSearchResult[]>;
   /** A single resource by id, or null if not found. */
   getById(id: string): Promise<Resource | null>;
 }

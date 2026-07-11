@@ -1,12 +1,22 @@
+import { colors } from '@/theme';
 import type { Resource, SourceType } from '@/types/resource';
 
 /**
  * Presentation helpers for a resource's live status and trust signals — shared by
- * the resource card (Phase 4 also reuses these on the detail page). Tones map to
- * theme colors at the component (never color alone — always paired with text).
+ * the resource card and the detail page. Tones map to theme colors here so the
+ * card, the status pill, and the detail trust row all read from one source
+ * (never color alone — always paired with text).
  */
 
 export type StatusTone = 'success' | 'warning' | 'muted';
+
+/** The single tone→color map for every status/trust surface. Warning uses the
+ * text-grade amber — these strings are the trust layer and must stay legible. */
+export const STATUS_TONE_COLOR: Record<StatusTone, string> = {
+  success: colors.success,
+  warning: colors.warningText,
+  muted: colors.textMuted,
+};
 
 /** Days after which a `last_checked` date is treated as possibly outdated. */
 const STALE_AFTER_DAYS = 90;

@@ -25,3 +25,26 @@ const NEED_TO_RESOURCE_CATEGORIES: Record<NeedCategory, ResourceCategory[]> = {
 export function needToResourceCategories(need: NeedCategory): ResourceCategory[] {
   return NEED_TO_RESOURCE_CATEGORIES[need];
 }
+
+/**
+ * The reverse best-fit: a resource's category → the closest user-facing need
+ * category. Used when browsing *all* opportunities (Discover), where a card has
+ * no originating need, so its detail page still opens with sensible AI context.
+ */
+const RESOURCE_TO_NEED_CATEGORY: Record<ResourceCategory, NeedCategory> = {
+  food: 'food',
+  clothing: 'clothing',
+  housing: 'housing',
+  healthcare: 'healthcare',
+  benefits_help: 'general_benefits',
+  legal: 'legal',
+  jobs: 'jobs',
+  education: 'education_benefits',
+  transportation: 'transportation',
+  emergency: 'emergency',
+  community_support: 'family_caregiver',
+};
+
+export function resourceToNeedCategory(category: ResourceCategory): NeedCategory {
+  return RESOURCE_TO_NEED_CATEGORY[category];
+}

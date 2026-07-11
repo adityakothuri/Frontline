@@ -1,4 +1,4 @@
-import { isOpenNow } from '@/lib/hours';
+import { isOpenNow, closingTimeToday } from '@/lib/hours';
 import { humanizeDocument } from '@/types/need';
 import type { Need } from '@/types/need';
 import { RESOURCE_CATEGORY_META, type Resource, type ResourceCategory } from '@/types/resource';
@@ -89,12 +89,15 @@ class TemplatedAiService implements AiService {
     const open = isOpenNow(resource.hours);
 
     // 1. Make contact.
+    const closesAt = open === true ? closingTimeToday(resource.hours) : null;
     if (resource.phone) {
       const timing =
         open === true
-          ? 'They appear to be open now, so this is a good time to call.'
+          ? closesAt
+            ? `They’re open now — try to call before ${closesAt} today.`
+            : 'They appear to be open now, so this is a good time to call.'
           : resource.hours
-            ? `Try during their hours: ${resource.hours}.`
+            ? `They’re closed right now. Try during their hours: ${resource.hours}.`
             : 'Call to check their hours and availability.';
       steps.push({
         title: `Call ${resource.name}`,
@@ -106,6 +109,11 @@ class TemplatedAiService implements AiService {
         detail: resource.hours
           ? `Stop by during their hours: ${resource.hours}.`
           : 'Stop by during business hours.',
+      });
+    } else if (resource.website) {
+      steps.push({
+        title: `Start online with ${resource.name}`,
+        detail: `This resource is online — visit ${resource.website} to get started.`,
       });
     }
 
@@ -151,17 +159,20 @@ class TemplatedAiService implements AiService {
   async buildCallScript({
     resource,
     tone,
+    firstName,
   }: {
     need: Need;
     resource: Resource;
     tone: CallScriptTone;
+    firstName?: string;
   }): Promise<CallScript> {
     await simulateLatency();
 
+    const name = firstName?.trim() ? firstName.trim() : '______';
     const script =
       tone === 'short'
         ? `Hi, I’m a veteran and I need help with ${CATEGORY_SHORT_NEED[resource.category]}. Can you tell me what I need to do?`
-        : `Hi, my name is ______. I’m a veteran looking for ${CATEGORY_NEED_PHRASE[resource.category]}. ${CATEGORY_CALL_ASK[resource.category]}`;
+        : `Hi, my name is ${name}. I’m a veteran looking for ${CATEGORY_NEED_PHRASE[resource.category]}. ${CATEGORY_CALL_ASK[resource.category]}`;
 
     const tips =
       tone === 'short'

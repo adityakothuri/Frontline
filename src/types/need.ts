@@ -61,22 +61,31 @@ export interface Need {
 export interface NeedCategoryMeta {
   label: string;
   icon: IoniconName;
+  /** One-line helper shown under the label on the home cards. */
+  description: string;
+  /** A category-coded accent used for its icon chip. */
+  color: string;
 }
 
-/** Display metadata for the 12 need categories — one source of truth for the home grid. */
+/**
+ * Display metadata for the 12 need categories — one source of truth for the home grid.
+ * Category colors stay inside the app's olive/earth family (olives, sages, ochres,
+ * warm browns) so category-coded UI reads as one palette; emergency alone leans
+ * rust-red. Keep in sync with RESOURCE_CATEGORY_META in `types/resource.ts`.
+ */
 export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
-  food: { label: 'Food', icon: 'fast-food-outline' },
-  clothing: { label: 'Clothing', icon: 'shirt-outline' },
-  housing: { label: 'Housing', icon: 'home-outline' },
-  healthcare: { label: 'Healthcare', icon: 'medkit-outline' },
-  disability_benefits: { label: 'Disability benefits', icon: 'ribbon-outline' },
-  education_benefits: { label: 'Education benefits', icon: 'school-outline' },
-  jobs: { label: 'Job / employment', icon: 'briefcase-outline' },
-  legal: { label: 'Legal help', icon: 'shield-outline' },
-  transportation: { label: 'Transportation', icon: 'bus-outline' },
-  family_caregiver: { label: 'Family / caregiver', icon: 'people-outline' },
-  emergency: { label: 'Emergency help', icon: 'alert-circle-outline' },
-  general_benefits: { label: 'General VA benefits', icon: 'document-text-outline' },
+  food: { label: 'Food', icon: 'fast-food-outline', description: 'Meals, pantries, and SNAP help', color: '#A56E24' },
+  clothing: { label: 'Clothing', icon: 'shirt-outline', description: 'Free and low-cost clothing', color: '#8A6A48' },
+  housing: { label: 'Housing', icon: 'home-outline', description: 'Shelter, rent, and homeless services', color: '#5F7326' },
+  healthcare: { label: 'Healthcare', icon: 'medkit-outline', description: 'Clinics, mental health, and VA care', color: '#4E7D5B' },
+  disability_benefits: { label: 'Disability benefits', icon: 'ribbon-outline', description: 'Claims, ratings, and compensation', color: '#77804C' },
+  education_benefits: { label: 'Education benefits', icon: 'school-outline', description: 'GI Bill, tuition, and training', color: '#87702A' },
+  jobs: { label: 'Job / employment', icon: 'briefcase-outline', description: 'Hiring, resumes, and job training', color: '#A98E2E' },
+  legal: { label: 'Legal help', icon: 'shield-outline', description: 'Free legal aid and advice', color: '#587045' },
+  transportation: { label: 'Transportation', icon: 'bus-outline', description: 'Rides to appointments and errands', color: '#6F8F5A' },
+  family_caregiver: { label: 'Family / caregiver', icon: 'people-outline', description: 'Support for families and caregivers', color: '#7E9146' },
+  emergency: { label: 'Emergency help', icon: 'alert-circle-outline', description: 'Crisis lines and urgent support', color: '#B04A38' },
+  general_benefits: { label: 'General VA benefits', icon: 'document-text-outline', description: 'Explore other VA benefits', color: '#46602A' },
 };
 
 /** Stable display order for the home grid. */
@@ -131,5 +140,31 @@ export function humanizeDocument(doc: string): string {
   return doc.replace(/_/g, ' ');
 }
 
+/** Document options for the setup wizard + profile form (single source). */
+export const DOCUMENT_OPTIONS: { value: VeteranDocument; label: string }[] = (
+  Object.keys(VETERAN_DOCUMENT_LABELS) as VeteranDocument[]
+).map((value) => ({ value, label: VETERAN_DOCUMENT_LABELS[value] }));
+
 /** A sensible default search radius when the veteran hasn't set one. */
 export const DEFAULT_RADIUS_MILES = 15;
+
+/**
+ * Builds a `Need` from just a tapped category + the veteran's ZIP, filling the
+ * rest with sensible defaults. Since Stage 4 removed the per-category questions,
+ * both the results list and the resource detail page derive their `Need` this way
+ * — keep it the single source so the two views always agree.
+ */
+export function defaultNeedForCategory(
+  category: NeedCategory,
+  zip?: string,
+  radiusMiles: number = DEFAULT_RADIUS_MILES,
+): Need {
+  return {
+    category,
+    urgency: 'this_week',
+    modality: 'either',
+    helpType: 'understand',
+    documentsOnHand: [],
+    location: { zip: zip || undefined, radiusMiles },
+  };
+}
