@@ -8,15 +8,15 @@ type AiContentBlockProps = {
   /** Optional heading; omit when a surrounding section already titles the block. */
   title?: string;
   loading?: boolean;
-  /** The AI disclaimer from the service return, shown in the footer. */
-  disclaimer?: string;
   children?: ReactNode;
 };
 
 // Presentational chrome that sets AI output visibly apart from official/source
 // text, so guidance is never mistaken for the source. It owns no data — the
-// caller loads content and passes it (or `loading`) in.
-export function AiContentBlock({ title, loading = false, disclaimer, children }: AiContentBlockProps) {
+// caller loads content and passes it (or `loading`) in. The "AI-generated" tag
+// is the block's one label; the longer not-advice disclaimer is deliberately
+// not repeated per block.
+export function AiContentBlock({ title, loading = false, children }: AiContentBlockProps) {
   return (
     <View style={styles.block}>
       {title ? (
@@ -45,12 +45,6 @@ export function AiContentBlock({ title, loading = false, disclaimer, children }:
       ) : (
         <View style={styles.body}>{children}</View>
       )}
-
-      {disclaimer && !loading ? (
-        <AppText variant="caption" color="textSecondary" style={styles.disclaimer}>
-          {disclaimer}
-        </AppText>
-      ) : null}
     </View>
   );
 }
@@ -69,5 +63,4 @@ const styles = StyleSheet.create({
   tag: { marginBottom: spacing.xs },
   loading: { minHeight: 72, justifyContent: 'center', gap: spacing.sm, marginTop: spacing.xs },
   body: { gap: spacing.sm, marginTop: spacing.xs },
-  disclaimer: { marginTop: spacing.sm },
 });

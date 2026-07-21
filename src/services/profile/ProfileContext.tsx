@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { ProfileDetails, VeteranProfile } from '@/types/profile';
 import { clearProfile, loadProfile, saveProfile } from './profileStorage';
+import { clearProfileBackup, pushProfile, restoreProfile } from '../sync/backupSync';
 
 // The app's single source of truth for the on-device veteran profile. A small
 // Context (not a global state library) so the home greeting updates reactively
@@ -33,11 +34,20 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    loadProfile().then((stored) => {
-      if (!active) return;
-      setProfile(stored);
-      setIsHydrated(true);
-    });
+    // Restore from the backup when there's no local profile (e.g. a reinstall);
+    // local wins when present. If a restore happened, mirror it straight back so
+    // the backup's updated_at advances. No-op when sync is off.
+    loadProfile()
+      .then((stored) => restoreProfile(stored))
+      .then((resolved) => {
+        if (!active) return;
+        setProfile(resolved);
+        setIsHydrated(true);
+        if (resolved) {
+          saveProfile(resolved);
+          pushProfile(resolved);
+        }
+      });
     return () => {
       active = false;
     };
@@ -59,12 +69,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       };
       await saveProfile(next);
       setProfile(next);
+      pushProfile(next); // mirror the edit to the backup (no-op when sync is off)
     },
     [profile],
   );
 
   const resetProfile = useCallback(async () => {
     await clearProfile();
+    clearProfileBackup(); // so restore can't undo the reset on next launch
     setProfile(null);
   }, []);
 

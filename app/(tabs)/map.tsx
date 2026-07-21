@@ -16,6 +16,7 @@ import { resourceService, type ResourceSearchResult } from '@/services/resources
 import { useProfile } from '@/services/profile';
 import { ResourceMap } from '@/features/resources/ResourceMap';
 import { RESOURCE_CATEGORY_META, type ResourceCategory } from '@/types/resource';
+import { DEFAULT_RADIUS_MILES } from '@/types/need';
 
 type MapState =
   | { status: 'loading' }
@@ -35,12 +36,16 @@ export default function MapScreen() {
   const load = useCallback(async () => {
     setState({ status: 'loading' });
     try {
-      const results = await resourceService.listResources();
+      const results = await resourceService.listResources(
+        undefined,
+        profile?.zip,
+        profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES,
+      );
       setState({ status: 'ready', results });
     } catch {
       setState({ status: 'error' });
     }
-  }, []);
+  }, [profile?.zip, profile?.preferredRadiusMiles]);
 
   useEffect(() => {
     load();

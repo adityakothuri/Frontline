@@ -1,9 +1,10 @@
 import { distanceMiles, type Coordinates } from '@/lib/geo';
 import { isOpenNow } from '@/lib/hours';
 import type { Need, NeedCategory } from '@/types/need';
-import type { Resource, VerificationStatus } from '@/types/resource';
+import type { Resource } from '@/types/resource';
 
 import { needToResourceCategories } from './needMapping';
+import { compareByDistanceThenVerification, sortSearchResults } from './sortResults';
 import {
   type ResourceQuery,
   type ResourceSearchResult,
@@ -31,32 +32,6 @@ const originOf = (need: Need): Coordinates => {
     return { latitude, longitude };
   }
   return SEED_CENTER;
-};
-
-const VERIFICATION_RANK: Record<VerificationStatus, number> = {
-  verified: 0,
-  needs_review: 1,
-  unverified: 2,
-};
-
-/** null distances (location-independent resources, e.g. a crisis line) sort last. */
-const distanceKey = (distance: number | null): number =>
-  distance === null ? Number.POSITIVE_INFINITY : distance;
-
-/** Open now sorts before unknown, which sorts before closed. */
-const openNowKey = (isOpen: boolean | null): number => (isOpen === true ? 0 : isOpen === null ? 1 : 2);
-
-/** Nearest first, then most-verified. Shared by search's tail and browse. */
-const compareByDistanceThenVerification = (
-  a: ResourceSearchResult,
-  b: ResourceSearchResult,
-): number => {
-  const distanceDelta = distanceKey(a.distanceMiles) - distanceKey(b.distanceMiles);
-  if (distanceDelta !== 0) return distanceDelta;
-  return (
-    VERIFICATION_RANK[a.resource.verification_status] -
-    VERIFICATION_RANK[b.resource.verification_status]
-  );
 };
 
 class MockResourceService implements ResourceService {
@@ -95,10 +70,16 @@ class MockResourceService implements ResourceService {
       });
     }
 
-    return this.sort(results, need);
+    return sortSearchResults(results, need.urgency);
   }
 
-  async listResources(category?: NeedCategory): Promise<ResourceSearchResult[]> {
+  // `zip` is part of the interface for the real backend; the mock has no
+  // geocoder and keeps its documented demo-only seed-city origin.
+  async listResources(
+    category?: NeedCategory,
+    _zip?: string,
+    radiusMiles?: number,
+  ): Promise<ResourceSearchResult[]> {
     await simulateLatency();
 
     const filter = category ? new Set(needToResourceCategories(category)) : null;
@@ -108,10 +89,14 @@ class MockResourceService implements ResourceService {
     for (const resource of this.resources) {
       if (filter && !filter.has(resource.category)) continue;
       const coords = coordsOf(resource);
+      // Distance is from the demo seed city (no geocoder). Mirror the backend's
+      // radius scoping: drop located resources outside it; null-coord resources
+      // (crisis lines) always pass through.
+      const distance = coords ? distanceMiles(SEED_CENTER, coords) : null;
+      if (distance !== null && radiusMiles !== undefined && distance > radiusMiles) continue;
       results.push({
         resource,
-        // Browsing has no "searcher" beyond the seed city, and no radius filter.
-        distanceMiles: coords ? distanceMiles(SEED_CENTER, coords) : null,
+        distanceMiles: distance,
         isOpenNow: isOpenNow(resource.hours, now),
       });
     }
@@ -122,22 +107,6 @@ class MockResourceService implements ResourceService {
   async getById(id: string): Promise<Resource | null> {
     await simulateLatency(150);
     return this.resources.find((resource) => resource.id === id) ?? null;
-  }
-
-  /**
-   * Explainable ordering: for "today" needs, open-now first; then nearest,
-   * then most-verified. For less urgent needs, distance leads.
-   */
-  private sort(results: ResourceSearchResult[], need: Need): ResourceSearchResult[] {
-    const prioritizeOpen = need.urgency === 'today';
-
-    return [...results].sort((a, b) => {
-      if (prioritizeOpen) {
-        const openDelta = openNowKey(a.isOpenNow) - openNowKey(b.isOpenNow);
-        if (openDelta !== 0) return openDelta;
-      }
-      return compareByDistanceThenVerification(a, b);
-    });
   }
 }
 

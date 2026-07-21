@@ -3,20 +3,29 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, Card } from '@/components';
 import { colors, radii, spacing } from '@/theme';
-import { simulatedRating } from '@/lib/ratings';
 import { useActivity } from '@/services/activity';
+import { ratingsService } from '@/services/ratings';
+import { getDeviceId } from '@/services/sync/deviceId';
 import { resourceToNeedCategory } from '@/services/resources';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
-import type { EngagementEntry } from '@/types/activity';
+import type { EngagementEntry, Rating } from '@/types/activity';
 
 // "How was ___?" — surfaces the veteran's most recent unrated opportunity so they
-// can leave a quick thumbs vote. The community rating shown is SIMULATED (demo)
-// and their own vote is kept as a separate fact, never blended into it.
+// can leave a quick thumbs vote. The vote is recorded on-device and, when a
+// backend is configured, added to the resource's real community count.
 export function ReviewPrompt({ engagement }: { engagement: EngagementEntry }) {
   const router = useRouter();
   const { rate } = useActivity();
   const meta = RESOURCE_CATEGORY_META[engagement.category];
-  const rating = simulatedRating(engagement.resourceId);
+
+  const vote = async (choice: Rating) => {
+    rate(engagement.resourceId, choice);
+    const deviceId = await getDeviceId();
+    if (!deviceId) return;
+    ratingsService.submitVote(engagement.resourceId, deviceId, choice).catch(() => {
+      // The local vote still counts; the shared total catches up on next open.
+    });
+  };
 
   const openDetail = () =>
     router.push({
@@ -35,13 +44,9 @@ export function ReviewPrompt({ engagement }: { engagement: EngagementEntry }) {
 
       <AppText variant="subtitle">How was {engagement.resourceName}?</AppText>
 
-      <AppText variant="caption" color="textMuted">
-        ★ {rating.average.toFixed(1)} · {rating.count} ratings · simulated (demo)
-      </AppText>
-
       <View style={styles.votes}>
-        <VoteButton icon="thumbs-up-outline" label="Helpful" onPress={() => rate(engagement.resourceId, 'up')} />
-        <VoteButton icon="thumbs-down-outline" label="Not helpful" onPress={() => rate(engagement.resourceId, 'down')} />
+        <VoteButton icon="thumbs-up-outline" label="Helpful" onPress={() => vote('up')} />
+        <VoteButton icon="thumbs-down-outline" label="Not helpful" onPress={() => vote('down')} />
       </View>
 
       <Pressable accessibilityRole="link" onPress={openDetail} hitSlop={6}>

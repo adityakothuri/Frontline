@@ -20,6 +20,8 @@ module.exports = defineConfig([
       '.claude/**',
       '.codex/**',
       'docs/**',
+      // Deno-flavored TS (npm: specifiers, Deno globals) — not app code.
+      'supabase/functions/**',
     ],
   },
 ]);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
-import { EmptyState, Loading, ScreenContainer, ScreenHeader } from '@/components';
+import { EmptyState, ErrorState, Loading, ScreenContainer, ScreenHeader } from '@/components';
 import { spacing } from '@/theme';
 import { isOpenNow } from '@/lib/hours';
 import { resourceService, type ResourceSearchResult } from '@/services/resources';
@@ -15,12 +15,16 @@ export default function SavedScreen() {
   const { savedIds, isHydrated } = useSaved();
   const [resolved, setResolved] = useState<Record<string, Resource>>({});
   const [resolving, setResolving] = useState(false);
+  const [resolveFailed, setResolveFailed] = useState(false);
+  // Bumped by the error-state retry to re-run the resolve effect.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     const missing = savedIds.filter((id) => !(id in resolved));
     if (missing.length === 0) return;
     let active = true;
     setResolving(true);
+    setResolveFailed(false);
     Promise.all(missing.map((id) => resourceService.getById(id)))
       .then((results) => {
         if (!active) return;
@@ -30,15 +34,19 @@ export default function SavedScreen() {
           return next;
         });
       })
+      .catch(() => {
+        // A real backend can fail here — surface it instead of hanging forever.
+        if (active) setResolveFailed(true);
+      })
       .finally(() => {
         if (active) setResolving(false);
       });
     return () => {
       active = false;
     };
-    // Resolve only the ids we don't have yet.
+    // Resolve only the ids we don't have yet (or when a retry is requested).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedIds]);
+  }, [savedIds, attempt]);
 
   const items = useMemo<ResourceSearchResult[]>(
     () =>
@@ -60,6 +68,8 @@ export default function SavedScreen() {
       <ScreenHeader title="Saved" subtitle="Your resources, in one place" />
       {firstLoad ? (
         <Loading label="Loading your saved resources…" />
+      ) : resolveFailed && items.length === 0 && savedIds.length > 0 ? (
+        <ErrorState onRetry={() => setAttempt((n) => n + 1)} />
       ) : items.length === 0 ? (
         <EmptyState
           icon="bookmark-outline"

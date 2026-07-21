@@ -26,10 +26,18 @@ export interface ResourceService {
   search(query: ResourceQuery): Promise<ResourceSearchResult[]>;
   /**
    * Browse opportunities without a full need — all of them, or one category —
-   * for the Discover tab. Sorted by distance then verification; no modality or
-   * radius filtering (browsing shows everything).
+   * for the Discover and Map tabs. Sorted by distance then verification, no
+   * modality filter. `zip` is the browse origin (the profile ZIP); distances
+   * are null without one. When `radiusMiles` and an origin are both known,
+   * browse is scoped to that radius so the tabs stay "near you" instead of
+   * returning every resource nationwide; location-independent resources (crisis
+   * lines) always pass through. Without an origin, everything is returned.
    */
-  listResources(category?: NeedCategory): Promise<ResourceSearchResult[]>;
+  listResources(
+    category?: NeedCategory,
+    zip?: string,
+    radiusMiles?: number,
+  ): Promise<ResourceSearchResult[]>;
   /** A single resource by id, or null if not found. */
   getById(id: string): Promise<Resource | null>;
 }

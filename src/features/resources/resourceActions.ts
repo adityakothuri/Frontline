@@ -1,11 +1,17 @@
-import { Linking, Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import type { Resource } from '@/types/resource';
 
 /** Real device actions on a resource — reused by the card and the detail page. */
 
 export async function callPhone(phone: string): Promise<void> {
   const digits = phone.replace(/[^0-9+]/g, '');
-  await Linking.openURL(`tel:${digits}`);
+  try {
+    await Linking.openURL(`tel:${digits}`);
+  } catch {
+    // No dialer here (tablet, simulator, web) — show the number instead of
+    // failing silently; on a crisis line that silence would be the worst UX.
+    Alert.alert('Calling isn’t available on this device', `Dial ${phone} from a phone.`);
+  }
 }
 
 export async function openDirections(resource: Resource): Promise<void> {
