@@ -2,9 +2,9 @@ import type { Need, NeedCategory } from '@/types/need';
 import type { Resource } from '@/types/resource';
 
 /**
- * The contract screens depend on. The MVP ships an in-memory mock
- * (`mockResourceService`); a real backend later implements the same interface,
- * so swapping mock → real is a drop-in. See
+ * The contract screens depend on. Implemented by `SupabaseResourceService`
+ * against the real backend — resources come exclusively from the live ingestion
+ * pipeline; there is no simulated implementation. See
  * `docs/obsidian/03 Technical/Technical Architecture.md`.
  */
 

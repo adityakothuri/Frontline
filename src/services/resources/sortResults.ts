@@ -3,10 +3,9 @@ import type { VerificationStatus } from '@/types/resource';
 import type { ResourceSearchResult } from './ResourceService';
 
 /**
- * The "explainable ordering" shared by every ResourceService implementation
- * (mock and Supabase), so the two can never drift: for "today" needs, open-now
- * first; then nearest; then most-verified. Sorting lives client-side because
- * it depends on client-computed open-now state.
+ * The "explainable ordering" applied to Supabase results: for "today" needs,
+ * open-now first; then nearest; then most-verified. Sorting lives client-side
+ * because it depends on client-computed open-now state.
  */
 
 const VERIFICATION_RANK: Record<VerificationStatus, number> = {

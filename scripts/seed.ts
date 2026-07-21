@@ -1,15 +1,15 @@
 /**
- * Frontline Phase 10 seed script — upserts the curated resource rows and the
- * Census ZCTA zip centroids into Supabase via PostgREST.
+ * Frontline Phase 10 seed script — upserts the Census ZCTA zip centroids into
+ * Supabase via PostgREST. Real REFERENCE data only (used to turn a ZIP into a
+ * lat/long for radius search).
  *
  * Run (Node >= 22):  node --experimental-strip-types scripts/seed.ts
  * Requires env:      SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *                    (shell env or a git-ignored .env.seed — never EXPO_PUBLIC_*)
  *
- * Curation honesty: every row in resources.la.json carries its own
- * human-verified last_checked / verification_status. This script uploads them
- * VERBATIM — it never stamps now() on anything. To mark a resource verified,
- * a human edits the JSON (date + status) and re-runs the seed.
+ * Resources are NOT seeded here — they come exclusively from the real ingestion
+ * pipeline (`ingestion/run.ts`: VA, HRSA, SAMHSA, HUD, USAJOBS, College
+ * Scorecard). There is no simulated resource data anywhere.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -54,14 +54,7 @@ async function upsert(table: string, conflictKey: string, rows: unknown[]): Prom
   }
 }
 
-// 1. Curated resources (12 rows today; grows city by city).
-const resources = JSON.parse(
-  readFileSync(resolve(root, 'supabase/seed-data/resources.la.json'), 'utf8'),
-);
-await upsert('resources', 'id', resources);
-console.log(`resources: upserted ${resources.length} rows`);
-
-// 2. ZIP centroids (~33k rows), batched to keep request bodies small.
+// ZIP centroids (~33k rows), batched to keep request bodies small.
 const csv = readFileSync(resolve(root, 'supabase/seed-data/zcta_centroids.csv'), 'utf8');
 const centroids = csv
   .split('\n')

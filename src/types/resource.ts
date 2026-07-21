@@ -8,9 +8,9 @@ import type { Ionicons } from '@expo/vector-icons';
  * contract every screen, card, map pin, and the trust surfacing depend on. See
  * `docs/obsidian/03 Technical/Resource Data Model.md`.
  *
- * With a backend configured, resources are REAL, ingested from official sources
- * (VA, HRSA, SAMHSA, HUD, USAJOBS, College Scorecard). Offline (no backend env),
- * the app falls back to `seedResources.ts` — clearly-labeled local sample data.
+ * All resources are REAL, ingested from official sources (VA, HRSA, SAMHSA, HUD,
+ * USAJOBS, College Scorecard) via `ingestion/`. There is no simulated resource
+ * data anywhere in the app.
  */
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
