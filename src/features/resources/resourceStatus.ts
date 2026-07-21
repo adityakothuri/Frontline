@@ -56,6 +56,19 @@ export function formatCheckedDate(iso: string): string {
   });
 }
 
+/**
+ * One hedged sentence of guidance when info is stale or not verified; null when
+ * trusted. Derived from the same stale + verification check as `sourceStatus`,
+ * so the warning and the badge tone can never disagree.
+ */
+export function trustWarning(resource: Resource): string | null {
+  const stale = isStale(resource.last_checked);
+  if (!stale && resource.verification_status === 'verified') return null;
+  return stale
+    ? 'This info hasn’t been confirmed recently — call ahead or check the official source.'
+    : 'This info isn’t verified yet — call ahead or check the official source.';
+}
+
 /** The trust badge: what the source is, how verified, and whether it's stale. */
 export function sourceStatus(resource: Resource): { label: string; tone: StatusTone } {
   const stale = isStale(resource.last_checked);

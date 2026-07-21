@@ -21,7 +21,6 @@ export const seedResources: Resource[] = [
     category: 'food',
     description:
       'Weekly food pantry for veterans and their families, run by U.S.VETS. Walk-ins welcome during pantry hours; groceries and hot meals available.',
-    ai_summary: null,
     address: '733 S Hindry Ave, Inglewood, CA 90301',
     latitude: 33.9615,
     longitude: -118.3689,
@@ -46,7 +45,6 @@ export const seedResources: Resource[] = [
     category: 'food',
     description:
       'Monthly grocery distribution partnering with local veteran organizations. Bring your own bags. No appointment required.',
-    ai_summary: null,
     address: '1734 E 41st St, Los Angeles, CA 90058',
     latitude: 34.0025,
     longitude: -118.2436,
@@ -71,7 +69,6 @@ export const seedResources: Resource[] = [
     category: 'clothing',
     description:
       'Free professional and everyday clothing for veterans, including interview attire. Appointment recommended for the veteran closet.',
-    ai_summary: null,
     address: '342 San Fernando Rd, Los Angeles, CA 90031',
     latitude: 34.0722,
     longitude: -118.2201,
@@ -96,7 +93,6 @@ export const seedResources: Resource[] = [
     category: 'housing',
     description:
       'Transitional and supportive housing programs for veterans experiencing or at risk of homelessness. Intake by phone to check current openings.',
-    ai_summary: null,
     address: '11303 Wilshire Blvd, Los Angeles, CA 90073',
     latitude: 34.0522,
     longitude: -118.4569,
@@ -121,7 +117,6 @@ export const seedResources: Resource[] = [
     category: 'healthcare',
     description:
       'Confidential readjustment counseling, mental health support, and referrals for veterans and their families. Community-based, separate from the VA hospital.',
-    ai_summary: null,
     address: '1045 W Redondo Beach Blvd, Gardena, CA 90247',
     latitude: 33.8895,
     longitude: -118.2954,
@@ -146,7 +141,6 @@ export const seedResources: Resource[] = [
     category: 'benefits_help',
     description:
       'Free help from Disabled American Veterans service officers to understand and file VA disability and pension claims. By appointment.',
-    ai_summary: null,
     address: '11500 Gilmore St, North Hollywood, CA 91606',
     latitude: 34.1866,
     longitude: -118.3831,
@@ -171,7 +165,6 @@ export const seedResources: Resource[] = [
     category: 'legal',
     description:
       'Free legal help for veterans facing eviction, benefits denials, or discharge-upgrade issues. Intake screening by phone.',
-    ai_summary: null,
     address: '1309 E 7th St, Los Angeles, CA 90021',
     latitude: 34.0345,
     longitude: -118.2318,
@@ -196,7 +189,6 @@ export const seedResources: Resource[] = [
     category: 'jobs',
     description:
       'Priority employment services for veterans: resume help, job placement, and training referrals. Walk-ins accepted; appointments preferred for one-on-one help.',
-    ai_summary: null,
     address: '2601 Wilshire Blvd, Los Angeles, CA 90057',
     latitude: 34.0578,
     longitude: -118.2812,
@@ -221,7 +213,6 @@ export const seedResources: Resource[] = [
     category: 'education',
     description:
       'Help using GI Bill and education benefits, enrollment support, and veteran student services. Drop in or schedule an advising session.',
-    ai_summary: null,
     address: '5151 State University Dr, Los Angeles, CA 90032',
     latitude: 34.0665,
     longitude: -118.1686,
@@ -246,7 +237,6 @@ export const seedResources: Resource[] = [
     category: 'transportation',
     description:
       'Free volunteer-driven rides to and from VA medical appointments. Reserve a ride by phone at least 48 hours in advance.',
-    ai_summary: null,
     address: '11301 Wilshire Blvd, Los Angeles, CA 90073',
     latitude: 34.0524,
     longitude: -118.4561,
@@ -272,7 +262,6 @@ export const seedResources: Resource[] = [
     category: 'emergency',
     description:
       'Free, confidential crisis support for veterans and their families, 24/7. Call, then press 1. Text 838255 or chat online. For immediate danger, call 911.',
-    ai_summary: null,
     address: null,
     latitude: null,
     longitude: null,
@@ -296,7 +285,6 @@ export const seedResources: Resource[] = [
     category: 'community_support',
     description:
       'Local Veterans of Foreign Wars post offering peer connection, benefits pointers, and community events. Drop by during open hours to talk with fellow veterans.',
-    ai_summary: null,
     address: '4117 S Western Ave, Los Angeles, CA 90062',
     latitude: 33.9931,
     longitude: -118.3092,

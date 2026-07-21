@@ -1,8 +1,8 @@
 ---
 tags: [command-center, start-here]
 status: active
-phase: "MVP loop built (Phases 0–8) — Granola UI overhaul done; on-device QA next"
-updated: 2026-07-10
+phase: "Phase 10 backend LIVE; Phase 12 data ingestion LIVE (WS-7: 2,261 real VA facilities NATIONWIDE + 100 USAJOBS federal jobs, official/verified, via the unchanged ResourceService — any ZIP returns real distance-ranked results, verified on-device for ZIP 75034). WS-6 Google auth deliberately skipped — local-device sync stays."
+updated: 2026-07-15
 ---
 
 # Frontline Command Center
@@ -14,26 +14,133 @@ updated: 2026-07-10
 
 ## Current Status
 
-🟢 **Frontline MVP in progress.** The reframe is complete, and the core loop
-is coming together: a veteran opens the app, picks **what they need help with**, answers a few quick
-questions, and sees **nearby simulated resources** with working Call/Directions. Built on the reused
-design system + app shell, the Phase 2 **data/AI service seams**, and the Phase 3 **guided need
-flow**. Legacy screens have been removed. Still to come: resource detail pages, AI call
-scripts/summaries, and the map (Phases 4–7). The dev framework (agents, hooks, rules, skills, MCP,
-Obsidian, workflow) is **preserved**.
+🟢 **Frontline MVP loop feature-complete (Phases 0–9).** A veteran opens the app, picks **what
+they need help with**, and sees **nearby simulated resources** (list + map) with working
+Call/Directions, detail pages, AI next-step plans, call scripts, and summaries (templated, labeled),
+saved resources, an optional on-device profile — and, as of Phase 9, a consistent **trust layer**:
+source badges everywhere, stale/unverified warnings, the persistent "not the VA" disclaimer, and
+crisis routing (988 press 1 / 911) on the Emergency path. Remaining before the MVP is "done": the
+accumulated **on-device QA pass** and splash/app-icon artwork. The dev framework (agents, hooks,
+rules, skills, MCP, Obsidian, workflow) is **preserved**.
 
 ## Current Phase
 
-**Building the MVP.** Done: [[Phase 0 Setup]] · [[Phase 1 App Shell]] ·
-[[Phase 2 Resource Data Model and Service]] (data/AI seams) · [[Phase 3 Guided Need Flow]] (first
-visible screens) · **[[Phase 4 Resource List and Detail]]** (detail page + templated call script) ·
-**[[Phase 5 Map and Discovery]]** (List⇄Map toggle in Results). Next: **[[Phase 6 AI Plans and Call
-Scripts]]** (deepen the AI layer) — or a real device tap-through + `ui-reviewer`/`qa-tester` pass on
-Phases 4–5 first.
+**MVP loop complete (Phases 0–9).** Done: [[Phase 0 Setup]] · [[Phase 1 App Shell]] ·
+[[Phase 2 Resource Data Model and Service]] · [[Phase 3 Guided Need Flow]] ·
+[[Phase 4 Resource List and Detail]] · [[Phase 5 Map and Discovery]] ·
+[[Phase 6 AI Plans and Call Scripts]] · [[Phase 7 AI Summarization]] ·
+[[Phase 8 Saved and Profile]] · **[[Phase 9 Trust and Verification]]** (disclaimer, crisis
+routing, badge convergence — 2026-07-11). Remaining: the accumulated **on-device QA pass**, then
+[[Phase 10 Backend and Data Ingestion]] (post-MVP, needs explicit approval).
 
 ## Current Active Task
 
-**✅ Done — Profile view/edit split** ([[2026-07-11 Profile View Edit Split]]): the Profile tab is now
+**🟢 Phase 12 / WS-7 — real data ingestion LIVE & app returns real results by ZIP (2026-07-20).**
+Standalone `ingestion/` tooling (not app-bundle) pulls two official sources through the **unchanged
+`ResourceService`**: **VA Facilities** (nationwide — `--national` sweeps all usable types) and
+**USAJOBS** (federal jobs, location-scoped). Migration **0008** (`resource_sources` lineage +
+`external_id`/`source_provider`/`ingested_at` + dedup index; advisors clean). `resources` now
+**2,373**: 12 curated + **2,261 VA nationwide** (1,816 healthcare + 445 benefits) + **100 jobs near
+Dallas** — all `official`/`verified`, idempotent re-runs. **Fixed the reported bug**: ZIP 75034 was
+showing LA placeholders because the first VA load was LA-only; nationwide load means **any ZIP gets
+real distance-ranked results** — **verified on the simulator** (75034 healthcare = Sam Johnson VA
+Clinic 8.3 mi, Dallas/Denton/Garland, "Official source" badges). Keys (VA sandbox, USAJOBS,
+service-role) in git-ignored `.env.seed`. `npm run verify` green. **WS-6 Google auth deliberately
+skipped**. See [[2026-07-15 WS-7 VA Facilities Ingestion]].
+
+**Bug fixed (2026-07-20):** Discover + Map were showing **nationwide** (incl. LA) results ignoring
+the ZIP, because browse (`listResources`) had **no radius filter** — invisible at 12 seed rows,
+broken at 2,373. Now radius-scoped to the profile ZIP (default 15 mi); verified on device (Map
+centered on DFW, 0 LA rows near 75034). See [[2026-07-20 Browse tabs show nationwide results ignoring ZIP]].
+
+**Card copy + polish (2026-07-20):** de-jargoned card descriptions (VA `describeVaFacility()` — no
+more "CBOC"; Vet Centers read as counseling; jobs salary formatted + dupes collapsed) and **hid the
+"Hours unknown" pill for jobs** (`ResourceCard`/`ResourceDetail`/`ResourcePreview`). The full
+next-sources roadmap (HUD, HRSA, SAMHSA, College Scorecard, CareerOneStop, 211/findhelp — with how to
+get each key) is **[[Resource Source Integration Plan]]**.
+
+**AI speed + data audit (2026-07-21):** all AI tasks moved to **Haiku** for faster inference (env
+secrets, `ai` redeployed; reversible — see [[Decision Log]]). Full data audit of all 2,362 rows:
+**0 errors** (descriptions, names, coords, categories all clean; the 23 non-CONUS coords are
+legitimate overseas/territory VA facilities). Sparse categories degrade gracefully (empty state +
+official-sources fallback). Data is demo-ready; real coverage still needs the [[Resource Source Integration Plan]] sources.
+
+**Next:** (a) **more sources for breadth** (Tier-1 free/official: **HUD** housing, **HRSA** health
+centers, **SAMHSA** treatment, **College Scorecard** education, **VA Benefits/Forms**; then
+directory-grade **211/findhelp** → `needs_review`) — this fills food/clothing/housing/legal/
+transportation, the categories still empty; (b) **USAJOBS for more metros** + a **freshness/purge**
+job for expired postings; (c) request VA **production** access (a demo, ~1–3 months) to lift the
+sandbox limit before public launch; (d) pre-launch polish (WS-2/3/4/5). Owner hygiene: consider
+rotating the `service_role` key post-demo (pasted in chat). Prior: **🟢 Phase 10 backend LIVE** —
+migrations 0001–0006, `zip_centroids` (33,791), `ai`+`sync` ACTIVE, cost controls
+([[2026-07-15 Backend Go-Live Cost Controls and Production Plan]]).
+
+<details><summary>Prior — Phase 10 backend slice 2: saved/profile backup sync</summary>
+
+([[2026-07-12 Phase 10 Supabase Backend and Claude Proxy]] → slice 2, branch
+`feature/phase-10-backend`, uncommitted). Server-side backup of the on-device saved list + profile
+so they survive a reinstall — **no login** (privacy by default). Identity is a random UUID in the
+iOS keychain / Android keystore via **`expo-secure-store`** (survives app deletion on iOS →
+reinstall-restore; **Android is backup-only** — wiped on uninstall, recovery code is a later slice).
+The UUID is a bearer secret, so the `saved_backups`/`profile_backups` tables are **deny-all**,
+reached only through a service-role **`sync` edge function** (anon-key gated, rate-limited,
+`updated_at`-monotonic). New `src/services/sync/{deviceId,backupClient,backupSync}` + migration 0005;
+`SavedContext`/`ProfileContext` restore-before-hydrate and mirror on change with their public APIs
+**unchanged** — and **every sync call is a no-op offline**, so mock mode is byte-for-byte identical.
+Merge: saved = union, profile = local-wins-else-restore; reset clears the backup. `npm run verify`
+green; iOS bundle exports clean; qa-tester run. **⚠️ Needs a native rebuild** (secure-store plugin)
+before the next dev build, and deploy adds `functions deploy sync`. See [[Decision Log]].
+
+Prior: **🟡 Phase 10 backend slice 1: Supabase + Claude proxy**
+([[2026-07-12 Phase 10 Supabase Backend and Claude Proxy]], branch
+`feature/phase-10-backend`, uncommitted). Real resources (Supabase Postgres) and real Claude AI
+(Supabase Edge Function proxy) implemented **behind the unchanged `ResourceService`/`AiService`
+interfaces** — the swap the seams were built for. New `supabase/` scaffold (migrations mirroring the
+`Resource` type + `zip_centroids` + one nullable-arg `search_resources` RPC + rate-limit table;
+Deno `ai` edge function using `claude-opus-4-8` with structured outputs; 12 curated LA rows extracted
+verbatim from the seed; `scripts/seed.ts`), and client `src/services/supabase/` + `SupabaseResourceService`
++ `ClaudeAiService`. **Env-gated factory switch**: no `.env` → full offline mock/templated mode
+(verified on sim); config present → real backend. Failure honesty: resource failures → error/retry
+UI (never silent mock data); AI failures → per-call templated fallback. `npm run verify` green; iOS
+bundle exports clean; qa-tester **PASS** (its one deploy blocker — newer `sb_publishable_` keys
+aren't JWTs — fixed in `client.ts` + the AI function now self-verifies the anon key; 3 hardenings
+applied); slop-check pass. **⚠️ Deploy is a user step** — see the runbook in the build log (create
+Supabase project + Anthropic key, `db push`, seed, deploy function, set secrets), then live E2E.
+
+Prior: **✅ Backend-readiness audit + hardening**
+([[2026-07-12 Backend Readiness Audit and Hardening]], branch
+`feature/phase-9-trust-verification`, uncommitted): full audit ahead of Phase 10 — seams
+verified airtight (one-line `resourceService`/`aiService` singleton swaps; zero UI imports of
+seeds/mocks; AsyncStorage confined to the 3 storage modules; zero `fetch`/env usage;
+`.mcp.json` ignored & never committed; iOS Hermes bundle exports clean). Five gaps found and
+fixed: error+retry states on the detail route (`error` ≠ `notFound`), Saved resolve, and the
+detail AI blocks (one retry card, engagement split so retries don't double-count); dead
+`Resource.ai_summary` removed (type + 12 seeds); `SEED_CENTER` de-exported (map first-paint
+now derives from the first pin). `npm run verify` green; bundle re-exported clean. ⚠️ Error
+branches are unreachable with the never-throwing mock — exercise them when the first real
+service lands. See [[Decision Log]].
+
+Prior: **✅ Phase 9: Trust & Verification surfacing**
+([[2026-07-11 Phase 9 Trust and Verification Surfacing]], branch
+`feature/phase-9-trust-verification`, uncommitted): the audit showed Phases 4–8 had already
+shipped most trust UI; Phase 9 filled the four real gaps. New **`NavigatorDisclaimer`** ("not
+the VA or a government agency") on Results + detail (initially Home too — removed same day on
+user feedback; two placements is the ceiling). Same-day trim: the AI blocks' footer not-advice
+disclaimer was removed as redundant — the "AI-generated — verify with the source" tag is each
+block's one label (service contract unchanged). New **`CrisisBanner`** on Emergency results — 911 **text-only** (mis-tap safety),
+tappable **"Call 988, then press 1"** — hoisted above the results state machine so it survives
+loading/error/empty/list, plus the map branch. Trust chrome converged: new shared **`SourceRow`**
+badge (card + detail + map preview — the preview was the last badge-less surface; two inline
+duplicates deleted), **`DangerCallBanner`** shell wrapped by both danger banners, and
+**`trustWarning()`** amber guidance on detail (same predicate as `sourceStatus`, so badge and
+warning can't disagree). New **`colors.dangerText`** AA token; `callPhone` now alerts instead of
+failing silently with no dialer. `npm run verify` green; qa-tester **PASS** on
+[[MVP Acceptance Criteria]] §F; all ui-reviewer P1/P2/P3s fixed in-task; `/slop-check` pass.
+3 approved new files, 0 new deps, pure-JS. ⚠️ Needs an on-device pass (Emergency banner in all
+branches, 988 button + no-dialer alert, disclaimer at large text, SourceRow wrap in the map
+preview).
+
+Prior: **✅ Profile view/edit split** ([[2026-07-11 Profile View Edit Split]]): the Profile tab is now
 a **read-only at-a-glance screen** (shared `ScreenHeader` + avatar hero + one info card with ZIP /
 radius / document names, Reset pinned at the bottom) with editing behind a **top-right pencil
 button** — the old summary-over-always-editable-form stack is gone. `ScreenHeader` gained a trailing
@@ -149,16 +256,20 @@ Prior: **✅ Phase 5 map + discovery** ([[2026-07-08 Phase 5 Map and Discovery]]
 ⚠️ splash/app-icon artwork still dark-era) ·
 **✅ Stage 4 / Onboarding / Phase 3 / Phase 2 / Reframe.** See [[Decision Log]].
 
+</details>
+
 ## Next Recommended Task
 
-**On-device QA of the overhaul + profile rework.** Tap through the new Profile (view ⇄ edit toggle,
-dirty-check discard confirm, save, reset, large accessibility text sizes), then the olive theme pass:
-open a resource → **ActionRow** (Call records, Directions records, Save toggles once, Share opens
-the OS sheet, pills wrap on a small screen) → **Call script** opens the bottom sheet (backdrop tap,
-X, and Android back all animate closed; content scrolls on a short phone) → Results list⇄map ease →
-onboarding progress bar forward **and back**. Confirm the trust labels read clearly in the new
-text-grade amber. Then: **[[Phase 9 Trust and Verification]]** surfacing, or splash/app-icon artwork
-(still pre-palette).
+**The accumulated on-device QA pass** — it now covers Phase 9 too: pick **Emergency** in Discover →
+the crisis banner shows above the list, the map view, the empty state, *and* the error state; tap
+**"Call 988, then press 1"** (on a device without a dialer the fallback alert shows the number);
+confirm 911 is plain text. Check the **navigator disclaimer** sits at the bottom of Results and
+resource detail (not Home — removed on feedback) and stays quiet at large accessibility text sizes; check the **trust badge** in the
+map pin preview wraps rather than overflows; open a stale resource (transportation) and an
+unverified one (community support) to see the amber warning sentence. Plus the still-pending items:
+Profile view ⇄ edit toggle + discard confirm, ActionRow/Share/call-script sheet, Results list⇄map
+ease, onboarding progress bar both directions. Then: **splash/app-icon artwork** (still
+pre-palette), or [[Phase 10 Backend and Data Ingestion]] planning (post-MVP, needs approval).
 
 ---
 

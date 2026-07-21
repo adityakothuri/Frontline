@@ -77,7 +77,7 @@ export function CallScriptCard({ need, resource, firstName, tone = 'standard' }:
   }
 
   return (
-    <AiContentBlock loading={loading} disclaimer={script?.disclaimer}>
+    <AiContentBlock loading={loading}>
       {script ? (
         <>
           <View style={styles.scriptBlock}>

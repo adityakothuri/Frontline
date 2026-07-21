@@ -137,11 +137,17 @@ back on Home, **rate what you tried**.
   resource, capped) + **ratings**. `useActivity()` → `recordEngagement` / `rate` / `getRating` /
   derived **`pendingReview`**. `ActivityProvider` wraps the app inside `ProfileProvider`.
   `ResourceDetail` records `'viewed'` on open and `'called'`/`'directions'` on the action-row pills —
-  this is what feeds Home's `ReviewPrompt`. The 👍/👎 rating and the **simulated** community rating
-  (`src/lib/ratings.ts`, deterministic from id, always labeled "simulated (demo)") are shown as
-  **separate facts**, never blended.
-- **What's mock:** resource data + AI are still simulated/templated (Phase 2). ZIP isn't geocoded yet
-  (falls back to the seed city center).
+  this is what feeds Home's `ReviewPrompt`. The 👍/👎 vote is the veteran's **own** on-device vote
+  (drives button state + the review prompt).
+- **Ratings service** (`src/services/ratings/`, 2026-07-21) — the **real community rating** that
+  replaced the deleted `simulatedRating`. `RatingsService` (factory keyed on `supabaseConfig`, like
+  resources/ai): `SupabaseRatingsService` calls the `get_resource_rating` / `submit_resource_vote`
+  RPCs (backend `resource_votes` table, deny-all, `SECURITY DEFINER`); `LocalRatingsService` returns
+  an honest **0** offline. `<ResourceRating>` shows **"N of M found this helpful"** + thumbs; a vote is
+  recorded locally (ActivityContext) *and* submitted to the shared aggregate (keyed to the device
+  UUID). Starts at 0, grows as veterans vote — never simulated. See [[Decision Log]].
+- **What's mock:** with a backend configured, resources + ratings are **real**; offline they fall back
+  to the labeled seed set / 0 counts. AI is templated until the Claude proxy is deployed.
 
 ### Resource detail page — `app/resource/[id].tsx`, `src/features/resources` (Phase 4, real)
 
@@ -161,8 +167,10 @@ calls `resourceService.getById(id)`, and shows loading / **not-found** / ready (
   ≥44pt; `ResourceDetail` passes `onCall`/`onDirections` so `recordEngagement` wiring stays with the
   page.
 - **`AiContentBlock`** — presentational chrome that sets AI apart with an "AI-generated — verify with
-  the source" label + disclaimer + a **skeleton** loading slot (no data of its own; **title
-  optional**). Wraps the summary, plan, and call script.
+  the source" label + a **skeleton** loading slot (no data of its own; **title optional**). Wraps the
+  summary, plan, and call script. Since 2026-07-11 (user feedback) the tag is the block's **only**
+  label — the longer not-advice disclaimer footer was removed as redundant per block (the service
+  contract still returns `disclaimer`; the UI just doesn't repeat it).
 - **`DocumentChecklist`** — "What should I bring?" checkable rows from `documents_needed` (local
   state, not persisted).
 - **`CallScriptCard`** — auto-generates **one script** (`aiService.buildCallScript`) with tips, a
@@ -208,7 +216,10 @@ padding) with the `ViewToggle` floating over it.
   (Info.plist permission via the `expo-location` config plugin). See [[Decision Log]].
 - **`ResourceMap.web.tsx`** — placeholder (maps is iOS/Android only; Metro auto-resolves `.web.tsx`).
 - **`ResourcePreview.tsx`** — compact overlay card → `/resource/[id]?category=`.
-- **Map tab** (`app/(tabs)/map.tsx`) — all located resources as pins, no category scope. Since
+- **Map tab** (`app/(tabs)/map.tsx`) — located resources **near the profile ZIP** as pins, no
+  category scope. (Browse is radius-scoped as of 2026-07-20 — before that it plotted every resource
+  nationwide, which broke once real data scaled past the demo seed; see
+  [[2026-07-20 Browse tabs show nationwide results ignoring ZIP]].) Since
   2026-07-10/11 the map sits in a **framed rounded card** (margins, hairline border, whisper shadow)
   under a proper header, with a **category legend strip** above it (one tinted pill per pinned
   category — its olive-family color, icon, and count; skeleton pills while loading, fixed-height
@@ -256,12 +267,192 @@ required, a few optional preferences, on-device, nothing sensitive.
 - **What's mock:** nothing — real on-device storage. **Extend later:** wire role/documents into the
   AI/what-to-bring; disability rating deliberately omitted (sensitive).
 
+## Trust & verification layer — `src/features/resources`, `src/components` (Phase 9, real)
+
+Trust made explicit and consistent on every surface ([[Phase 9 Trust and Verification]],
+2026-07-11). **Why it exists:** trust is the product for a veteran-facing navigator — every
+resource must show where its info came from, how fresh it is, and the app must never read as
+the VA. Most signals shipped inside Phases 4–8; Phase 9 converged them and filled four gaps.
+
+- **`SourceRow`** (`src/features/resources/SourceRow.tsx`) — **the** trust badge: shield/alert
+  icon + tone-tinted label from `sourceStatus()` ("Official source · checked Jun 18, 2026" /
+  "Community-submitted · may be outdated"). One component now used by `ResourceCard`,
+  `ResourceDetail` (`size="body"`), and `ResourcePreview` (the map callout, previously the only
+  badge-less surface); the two older inline copies were deleted. Text always carries the
+  meaning — never color alone; `flexShrink` lets long labels wrap.
+- **`trustWarning()`** (`resourceStatus.ts`) — one hedged amber sentence on the detail page's
+  Trust section when info is stale (>90 days) or not `verified` ("…call ahead or check the
+  official source."). Deliberately derived from the same predicate as `sourceStatus()` so the
+  badge tone and the warning can never disagree. Rendered in `colors.warningText`.
+- **`NavigatorDisclaimer`** (`src/components/NavigatorDisclaimer.tsx`) — the required copy
+  ("Frontline helps you find resources. It is not the VA or a government agency…") owned by one
+  quiet caption component. Rendered on **Results** (list footer under the official-sources widget
+  + empty state) and the **detail page** bottom — i.e. on the resource surfaces themselves.
+  Initially also on Home, removed 2026-07-11 on user feedback. Deliberately *not* floated over
+  the fullscreen map (comment in `results.tsx`); two placements is the ceiling — don't add more
+  (disclaimer fatigue).
+- **`CrisisBanner`** (`src/features/resources/CrisisBanner.tsx`) — category-level crisis
+  routing at the top of **Emergency results**: "If you're in immediate danger, call 911"
+  (**text-only by design** — a mis-tap must never dial 911) + a tappable **"Call 988, then
+  press 1"** (988 dialed plain; "press 1" lives in the copy because post-dial pauses are
+  unreliable across dialers). Hoisted **above the results state machine** in `results.tsx` so
+  it survives loading, error, empty, and list branches, and rendered above the map branch
+  (map + floating toggle wrapped in `mapWrap` so the toggle stays anchored to the map).
+- **`DangerCallBanner`** (in `EmergencyCallBanner.tsx`) — the shared danger-tinted shell
+  (alert title, one context line, 52pt call button) wrapped by both `EmergencyCallBanner`
+  (per-resource, detail page) and `CrisisBanner`, so the treatment can't drift. Titles use the
+  new **`colors.dangerText`** (`#A93226`) token — danger as *text*, ≥4.5:1 on the tinted
+  banner (the parallel of the existing `warning`/`warningText` split).
+- **`callPhone`** (`resourceActions.ts`) — now catches the `tel:` rejection thrown where no
+  dialer exists (simulator, iPad, web) and shows the number in an Alert instead of failing
+  silently — on a crisis line, silence would be the worst UX.
+- **How data flows:** everything derives from the `Resource` trust fields (`source_type`,
+  `verification_status`, `last_checked`) via `resourceStatus.ts`; no new state or services.
+- **What's mock:** the trust *data* is seeded (`seedResources.ts`) — the surfacing is real.
+  988/911 are real numbers. **Extend later:** a real verification pipeline feeds the same
+  fields ([[Phase 10 Backend and Data Ingestion]]); the AI-label layer is `AiContentBlock`
+  (see the discovery section).
+
+## Real backend — `supabase/`, `src/services/supabase` (Phase 10 slice 1, built 2026-07-12)
+
+The mock era's exit ramp. **Why it exists:** real, curated resource data and real Claude guidance,
+behind the *unchanged* `ResourceService`/`AiService` interfaces — the swap the seams were built for.
+
+- **The switch** (`src/services/supabase/config.ts`): both service `index.ts` factories read
+  `supabaseConfig` — null (no `EXPO_PUBLIC_SUPABASE_*` env) → mock + templated, the full offline
+  demo mode; present → `SupabaseResourceService` + `ClaudeAiService`. Env reads are literal
+  property accesses because Expo inlines `EXPO_PUBLIC_*` at bundle time (restart the dev server
+  after editing `.env`).
+- **Data path**: `supabase/migrations/` define `resources` (1:1 with the `Resource` type),
+  `zip_centroids` (Census ZCTA — ZIP→origin without a geocoding API), and one nullable-arg
+  `search_resources` RPC used for both search and browse. RLS makes the anon key strictly
+  read-only. `SupabaseResourceService` calls it via the ~50-line fetch helper
+  (`src/services/supabase/client.ts` — both auth headers, 8s timeout, error mapping); open-now and
+  the explainable ordering stay client-side in the shared `sortResults.ts` (extracted from the
+  mock, which remains the executable spec). Unknown origin → **null distances, honestly** — the
+  fake-center fallback lives only in the mock. `listResources(category?, zip?, radiusMiles?)` takes a
+  browse origin **and radius**; Discover and the Map tab pass the profile ZIP + `preferredRadiusMiles`
+  (default 15) so browse stays near the user instead of returning every row nationwide.
+- **AI path**: `supabase/functions/ai/` is the Claude proxy (the ONLY place the Anthropic key
+  exists). It validates, sanitizes `firstName`, rate-limits (per-IP-hash, hourly, fail-open), then
+  calls `claude-opus-4-8` with structured outputs so responses are shape-exact
+  `NextStepPlan`/`CallScript`/`BenefitSummary`. `ClaudeAiService` (client) calls it with a 30s
+  timeout and **falls back per-call to `TemplatedAiService`** on any failure — AI never
+  hard-fails — and re-stamps `AI_NOT_ADVICE_DISCLAIMER` so the wording has one source of truth.
+- **Failure honesty**: resource-path failures surface the existing error/retry UI — never silent
+  mock data (simulated orgs must not be presented as real places). AI-path failures degrade to
+  templated invisibly.
+- **Curation**: `supabase/seed-data/resources.la.json` (the 12 LA rows, per-row human
+  `last_checked`/`verification_status`) is uploaded verbatim by `scripts/seed.ts`
+  (`node --experimental-strip-types`, service-role key from git-ignored `.env.seed`).
+  No timestamp is ever auto-stamped; verifying a resource = a human edits the JSON + re-seeds.
+- **What's mock:** nothing in this layer — but until the user deploys (runbook in
+  [[2026-07-12 Phase 10 Supabase Backend and Claude Proxy]]) the app runs in offline mock mode.
+  **Extend later:** accounts/sync, ingestion, `timezone` column (10.1); the RPC argument names are
+  a public API contract.
+
+## Backup sync — `src/services/sync`, `supabase/functions/sync` (Phase 10 slice 2, 2026-07-13)
+
+Saved resources + profile, backed up server-side so they survive a reinstall — **no login**.
+
+- **Identity** (`src/services/sync/deviceId.ts`): a random UUID in the platform keychain via
+  `expo-secure-store` (`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`). It survives app deletion on **iOS**
+  (→ reinstall-restore) but is wiped on **Android** uninstall (→ server backup only). It's a bearer
+  capability secret, so nothing sensitive is stored under it and the backup tables are deny-all.
+- **The seam** (`src/services/sync/backupSync.ts` + `backupClient.ts`): `SavedContext` and
+  `ProfileContext` keep their exact public API. On hydrate they call `reconcileSaved` /
+  `restoreProfile` (one cached pull/launch) *before* marking hydrated — a reinstall restores here.
+  Writes call debounced, fire-and-forget `pushSaved`/`pushProfile`. **Every sync call is a no-op
+  when the backend is unconfigured or the device id is unavailable**, so offline mode is unchanged.
+- **Merge rules**: saved = union by id (earliest `savedAt` wins); profile = local-wins-else-restore
+  (same-device only). Restored profile blobs go through the shared tolerant `parseProfile`
+  (extracted from `profileStorage`). "Reset setup" also deletes the backup so restore can't undo it.
+- **Isolation + safety** (`supabase/functions/sync`, `migrations/0005`): deny-all tables reached
+  only via a service-role edge function (anon-key gated, rate-limited). `updated_at` monotonicity +
+  the client's `isHydrated` gate together close the empty-reinstall clobber race.
+- **What's mock:** nothing — but it's dormant until the user deploys + a native rebuild picks up
+  the secure-store plugin. **Extend later:** a recovery code for Android reinstall + cross-device.
+
+## Resource Ingestion Pipeline (WS-7: VA Facilities + USAJOBS)
+
+### Date Added
+2026-07-15 (VA); extended 2026-07-20 (nationwide + USAJOBS jobs); 2026-07-21 (HUD housing, HRSA +
+SAMHSA healthcare, College Scorecard education — 6 sources, 8 of 11 categories covered)
+
+### Purpose
+Replace the 12 hand-curated LA rows with **real, verified, nationwide** resources. Pulls the
+**VA Lighthouse Facilities API** (official VA health, benefits, Vet Centers → `healthcare` /
+`benefits_help`) and the **USAJOBS API** (official federal job openings → `jobs`) and writes them
+into the same `resources` table the app already reads — so the app gains real coverage with **zero
+app-code change**. A nationwide VA load means **any ZIP returns real, distance-ranked results**
+(e.g. ZIP 75034 → real Dallas-area VA clinics + federal jobs, not LA placeholders). This is the #1
+"ready to send to real veterans" gap in the [[Backend to Production Master Plan]] (§WS-7).
+
+### User Flow
+No user-facing UI. It's operator tooling: an engineer runs `ingestion/run.ts` (dry-run first, then a
+pilot load). Veterans simply see more real resources in search/discover/detail, each carrying an
+official source badge and a `last_checked` date — the existing trust layer, now backed by live data.
+
+### Important Files
+| File | Purpose |
+|---|---|
+| `supabase/migrations/0008_provenance.sql` | Adds `external_id`/`source_provider`/`ingested_at` to `resources`, a partial dedup unique index, and the `resource_sources` lineage table (deny-all, service-role only). |
+| `ingestion/types.ts` | The source-agnostic contract: `IngestionSource`, `NormalizedResource`, `SourceFactory`. |
+| `ingestion/sources/vaFacilities.ts` | VA adapter — `apikey` fetch, `--national`/geo/state scopes, VA-hours → controlled format. |
+| `ingestion/sources/usaJobs.ts` | USAJOBS adapter — `Authorization-Key`+`User-Agent` fetch, location-scoped federal jobs. |
+| `ingestion/sources/hudCounseling.ts` | HUD housing-counseling adapter (keyless geo locator) → `housing`. Service-code jargon → plain English. |
+| `ingestion/sources/hrsaHealthCenters.ts` | HRSA adapter (keyless **national CSV**, RFC-4180 parse, Active sites only) → `healthcare`. 18.9k sites. |
+| `ingestion/sources/samhsaTreatment.ts` | SAMHSA FindTreatment adapter (keyless national export) → `healthcare`. Filters out HRSA-typed dup rows; keeps SA/MH/OTP. |
+| `ingestion/sources/collegeScorecard.ts` | College Scorecard adapter (`DATA_GOV_API_KEY`, 0-indexed paging) → `education`. ~6.2k schools. |
+| `ingestion/upsert.ts` | Service-role, idempotent PostgREST upsert of `resources` + `resource_sources`. |
+| `ingestion/run.ts` | CLI orchestrator: per-source env config → fetch → validate → (dry-run or upsert). |
+| `ingestion/README.md` | How to get the free VA/USAJOBS keys and run each mode. |
+
+### How The Code Works
+`run.ts` loads env from `.env.seed`, picks a source from a registry (`va-facilities`, `usajobs`) —
+each registry entry has a `resolveConfig()` that reads its own provider's keys — and calls
+`source.fetch(query)`. USAJOBS pages `GET /search?LocationName=&Radius=` and maps each posting to a
+`jobs` `Resource` (remote postings at `(0,0)` → null coords, so they rank last like crisis lines;
+postings expire, so it's a location-scoped snapshot). The VA adapter pages through `GET /facilities`
+(by `--national` type-sweep, `--state`, or `--lat/--long/--radius`), and for each facility: maps
+`facilityType` → our `ResourceCategory`
+(cemeteries and unknown types are **skipped**, not padded), checks coordinates are sane, builds the
+address, and converts VA's per-day hours (`800AM-430PM`) into the app's **controlled** hours string
+(`Mon-Fri 08:00-16:30`) that `src/lib/hours.ts` parses for "open now" — falling back to `null`
+("unknown") rather than emit a misleading time. Because VA is an **official** API, rows are stamped
+`source_type: 'official'`, `verification_status: 'verified'`, with `last_checked` = the fetch date.
+`run.ts` then validates (defense-in-depth) and, unless `--dry-run`, `upsert.ts` writes resources
+(merge on the deterministic id `va:<facility_id>`) and their raw payloads to `resource_sources`
+(merge on provider+external_id) — so re-running is idempotent and never duplicates.
+
+### Data Flow
+VA Facilities API → adapter `normalize()` → `NormalizedResource[]` → validate → service-role upsert
+→ `resources` (read by the unchanged `search_resources` RPC / `SupabaseResourceService`) + raw
+lineage in `resource_sources`. Secrets (`VA_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) live only in the
+git-ignored `.env.seed`; nothing ingestion-related ships in the app bundle.
+
+### Important Types / Components / Functions
+`NormalizedResource` (extends `Resource` with `external_id`/`source_provider`/`ingested_at`/`raw`);
+`IngestionSource` + `SourceFactory` (the extension point); `createVaFacilitiesSource`;
+`upsertResources`. Trust boundary mirrors `scripts/seed.ts` — service-role writes only.
+
+### Temporary or Mock Parts
+**Live as of 2026-07-20** — not mocked. Keys (VA sandbox, USAJOBS, service-role) are in `.env.seed`.
+`resources` now holds **2,373 rows**: 12 curated + **2,261 VA facilities nationwide** (1,816
+healthcare + 445 benefits) + **100 federal jobs near Dallas** — all `official`/`verified`, appearing
+in search by distance from any ZIP. Caveats: VA runs on the **sandbox** (real-but-fixed dataset,
+rate-limited → adapter throttles + 429-backoff); a VA **production** key (a demo, ~1–3 months) lifts
+the limit + guarantees current nationwide coverage for launch. USAJOBS postings **expire**, so jobs
+are a location-scoped snapshot needing periodic re-ingest. **Extend later:** more sources under
+`ingestion/sources/` (HUD housing, USAJOBS more metros, 211/findhelp → `needs_review`), freshness
+automation + purge of closed postings, cross-provider geo-dedup.
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:
-- **Map** discovery — a List⇄Map toggle in Results ([[Phase 5 Map and Discovery]]).
-- Deeper **AI plans + call scripts** ([[Phase 6 AI Plans and Call Scripts]]) and **saved resources**
-  ([[Phase 8 Saved and Profile]], where the deferred Save action lands).
+- **[[Backend to Production Master Plan]]** — WS-7 later slices (more sources + freshness automation),
+  and pre-launch polish (WS-2/3/4/5) + release (WS-8). WS-6 Google auth is **deliberately skipped**
+  (anonymous device sync stays the identity model).
 - Each feature gets its own walkthrough entry here as it's built.
 
 ## Related

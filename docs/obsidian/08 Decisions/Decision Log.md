@@ -1,7 +1,7 @@
 ---
 tags: [decisions, source-of-truth]
 status: active
-updated: 2026-07-07
+updated: 2026-07-11
 ---
 
 # Decision Log
@@ -24,6 +24,160 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 ```
 
 ---
+
+### 2026-07-21 — All AI tasks on Haiku (speed over the Opus cost-split)
+- **Status:** accepted (secrets set + `ai` redeployed; env-reversible)
+- **Context:** Opening a resource auto-loads an AI summary **and** plan; the plan ran on Opus with
+  adaptive thinking, which felt too slow.
+- **Decision:** Route **all** AI tasks (summary/plan/script) to **`claude-haiku-4-5`** via the
+  function's env knobs — `ANTHROPIC_MODEL`, `ANTHROPIC_MODEL_PLAN`, `ANTHROPIC_MODEL_SCRIPT` — no code
+  change. The function already gates off Haiku-incompatible fields (`thinking`/`effort`) by model.
+  Verified: a `plan` call returns ~10s (cold) with good content; summaries were already Haiku.
+- **Alternatives:** keep the WS-1 Haiku-summary/Opus-plan split (better plan quality, slower);
+  Sonnet middle ground (untried). Rejected for now — latency was the complaint.
+- **Consequences:** Faster detail-page AI and lower cost; slightly less depth on plans/scripts. Fully
+  reversible: `supabase secrets set ANTHROPIC_MODEL=claude-opus-4-8 …`. Supersedes the model half of
+  the [[2026-07-15 Backend Go-Live Cost Controls and Production Plan]] WS-1 split.
+
+### 2026-07-15 — WS-7 ingestion: pipeline architecture + official-source freshness; skip WS-6 auth
+- **Status:** accepted (slice 1 **live** 2026-07-17 — 41 real VA facilities loaded near LA via a VA sandbox key)
+- **Context:** The 12 curated LA rows are a demo, not coverage — the #1 "ship it" gap. Starting real
+  data ingestion (Master Plan §WS-7), and the owner directed **skipping Google auth** in favor of the
+  existing local-device identity.
+- **Decision:** (1) Ingestion is **standalone backend tooling** (`ingestion/`, run like
+  `scripts/seed.ts`), **not** app-bundle code; one adapter per source behind a `SourceFactory`
+  contract, writing through the service-role key. The app's `ResourceService` is unchanged. (2) First
+  source is the **VA Facilities API** (official). (3) **Official-source rows get `last_checked` = the
+  fetch date** — for an official API the fetch *is* the confirmation (non-official sources will
+  default to `needs_review`). (4) Provenance lives in a new `resource_sources` lineage table +
+  `external_id`/`source_provider`/`ingested_at` columns; dedup on a deterministic id `va:<id>`. (5)
+  **WS-6 Google auth is skipped** — anonymous device-UUID sync stays the identity model.
+- **Alternatives:** ingest inside the app / an edge function (rejected — keys + volume belong
+  server-side); a shared `normalize.ts` now (rejected — premature for one source, folded into the
+  adapter per anti-slop); stamping only `ingested_at` and leaving `last_checked` conservative
+  (rejected — dishonestly hides that an official source just confirmed the row).
+- **Consequences:** New sources = one module + a registry line; trust fields stay honest;
+  `resources_needing_review` remains the curator queue for non-official data. Live load blocked on a
+  real `VA_API_KEY` + the real `service_role` key in `.env.seed`. Apple "Sign in with Apple" concern
+  is moot while no third-party sign-in ships.
+
+### 2026-07-15 — AI cost controls: per-task models + hourly spend budget; publishable key
+- **Status:** accepted (implemented + verified live)
+- **Context:** Real Claude went live. Need to keep the app good while bounding cost, and the app's
+  AI/sync were silently failing.
+- **Decision:** (1) **Per-task model split** — Haiku for summaries (auto-load, cheap), Opus for
+  plans/scripts (user-triggered, quality). (2) **Global hourly spend budget** in the `ai` function
+  (`AI_HOURLY_BUDGET_USD`, default $5): pre-call gate → 429 → templated fallback; post-call records
+  actual `usage`×price; **fail-open** with the **Anthropic console cap as the hard backstop**.
+  (3) The app must use the **publishable key** (`sb_publishable_…`), not the legacy anon JWT — the
+  functions gate on it (the JWT was 401'd, silently disabling AI/sync).
+- **Alternatives:** single model for all tasks (simpler, ~8× summary cost); token-exact metering
+  (more complex, marginal gain); fail-closed budget (safer cost, worse availability — rejected since
+  the console cap already guarantees the ceiling).
+- **Consequences:** AI costs are bounded and observable (`ai_spend`); models tunable via env with no
+  redeploy; `[[Backend to Production Master Plan]]` WS-1 is the reference. Haiku can't take
+  `thinking:adaptive`/`effort` — request shape is gated on the model.
+
+### 2026-07-13 — Backup sync: device UUID over anonymous auth; iOS-only reinstall-restore
+- **Status:** accepted (user-approved; slice 2 of Phase 10)
+- **Context:** Saved/profile are on-device only — lost on reinstall. Wanted a backup that survives
+  reinstall **without a login** (privacy by default). Two identity options: (a) Supabase anonymous
+  auth (GoTrue) → real `auth.uid()` RLS; (b) a client-generated device UUID in secure storage.
+- **Decision:** **(b).** The deciding fact: reinstall survival of a device-local secret is
+  **iOS-keychain-only for both options** (`expo-secure-store` survives app deletion on iOS but is
+  wiped on Android uninstall — Expo's own docs). So (a)'s only real benefit — true per-user
+  isolation — buys nothing extra, while adding token-expiry/refresh-rotation to hand-roll over
+  plain fetch for non-sensitive data, and reopening the no-supabase-js decision. Store a random
+  UUID in `expo-secure-store` (`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`, off iCloud so it stays
+  single-device). It's a bearer capability secret → the `saved_backups`/`profile_backups` tables
+  are **deny-all**, reached only through a service-role `sync` edge function (anon-key gated,
+  rate-limited, `updated_at`-monotonic). Local stays source of truth; restore-before-hydrate;
+  saved = union merge, profile = local-wins-else-restore; reset clears the backup. **Scope: iOS
+  reinstall-restore + universal server backup only** — Android reinstall-restore and cross-device
+  both need an explicit recovery code (a later slice).
+- **Alternatives:** GoTrue anonymous auth (token lifecycle for no gain); supabase-js (dead-weight);
+  UUID in AsyncStorage (wiped on reinstall — loses the whole point); a login/account now
+  (contradicts privacy-by-default); PostGREST header-GUC RLS keyed to the UUID (fragile, and the
+  UUID would be guessable without the deny-all + service-role boundary).
+- **Consequences:** one new native dep (`expo-secure-store`) → a dev rebuild is required before the
+  next build; `useSaved`/`useProfile` and all screens unchanged; offline mode byte-for-byte
+  identical; deploy runbook gains `functions deploy sync`. Android users get backup but must not be
+  told their data survives a reinstall — documented explicitly.
+
+### 2026-07-12 — Phase 10 backend architecture: Supabase, plain fetch, honest fallbacks
+- **Status:** accepted (plan approved by user; slice 1 = read-only resources + AI proxy)
+- **Context:** Phase 10 needed a platform, a client integration style, and failure semantics.
+  User chose Supabase, resources+AI-only scope, real Claude now, curated data first.
+- **Decision:** **Supabase** (Postgres + PostgREST + Edge Functions, one vendor). Client talks
+  **plain `fetch`** — no supabase-js (we need none of auth/realtime/storage; zero new client deps).
+  **No PostGIS** — plain haversine SQL at <10k rows. **One nullable-arg RPC** serves both search
+  and browse; ZIP→origin via a Census ZCTA centroid table (no geocoding API). Unknown origin →
+  **null distances, never a fake center** (the mock's SEED_CENTER fallback stays demo-only).
+  Sorting stays client-side; comparators extracted to `sortResults.ts` so mock = executable spec.
+  **Failure semantics are asymmetric by design:** missing env → wholesale mock/templated (offline
+  demo mode); runtime resource failure → error/retry UI, **never silent mock resources** (showing
+  simulated orgs as real places would betray veteran trust); runtime AI failure → per-call fallback
+  to the templated service (safe, was the shipped product). The Claude key lives only in the edge
+  function (`claude-opus-4-8`, structured outputs guaranteeing the exact AiService shapes; the
+  client re-stamps `AI_NOT_ADVICE_DISCLAIMER`). Coarse per-IP-hash hourly rate limit, fail-open.
+  Curation honesty: seed uploads `last_checked`/`verification_status` verbatim; no server-side
+  staleness flips (client's 90-day `isStale` stays the single derivation; curator gets a view).
+- **Alternatives:** Firebase (weak geo, NoSQL mismatch); custom Node+Postgres (most work);
+  supabase-js (dead-weight deps); PostGIS (indexing we don't need); silent mock fallback (trust
+  violation); server-side `needs_review` flips (conflates elapsed time with human judgment).
+- **Consequences:** swapping to any future backend remains a two-factory change; the RPC argument
+  names are a public API contract; `supabase/functions/**` is Deno-land (excluded from app
+  tooling); deploy requires the user's Supabase project + Anthropic key (runbook in the build log).
+
+### 2026-07-12 — Backend-readiness contract cleanups (pre-Phase 10)
+- **Status:** accepted
+- **Context:** A full backend-readiness audit confirmed the service seams are clean (one-line
+  singleton swaps, no UI bypasses, storage contained), but found two contract warts and three
+  consumers that would hang forever on a real network failure (the mock never rejects).
+- **Decision:** (1) `Resource.ai_summary` **removed** — it was dead (summaries come from
+  `AiService`); a backend schema should not inherit a phantom field. (2) `SEED_CENTER` is **no
+  longer exported** from the resource service's public API — the map's first-paint region now
+  derives from the first pinned result, so no mock concept leaks into the service contract.
+  (3) Every service consumer now has an error + retry path: detail route (`error` distinct from
+  `notFound`), Saved resolve, and the detail page's AI blocks (one retry card for both, styled
+  after `CallScriptCard`'s failed state); engagement recording was split from the AI effect so
+  retries never double-count views.
+- **Alternatives:** keep `ai_summary` as a server-cached summary slot (rejected — speculative;
+  add it back when a backend actually caches summaries); a global error boundary instead of
+  per-surface retries (rejected — worse UX, hides which call failed).
+- **Consequences:** Phase 10 is now genuinely "swap two singletons + geocode + AI proxy"; the
+  failure UX already exists and mock→real cannot regress the happy path. Error branches remain
+  demo-unreachable until a service can actually fail — test them when it can.
+
+### 2026-07-11 — Phase 9 trust surfacing: 911 is never tappable; one badge, one banner shell
+- **Status:** accepted
+- **Context:** Phase 9 required a persistent navigator disclaimer, crisis routing on the
+  Emergency path, and trust badges on every surface. Two safety/consistency choices came up:
+  how to present 911, and how to stop the trust/danger UI from duplicating (the card and the
+  detail page already carried byte-identical inline trust rows; a second danger banner would
+  have cloned `EmergencyCallBanner`'s styles).
+- **Decision:** In `CrisisBanner`, **911 is plain text, never a button** — a mis-tap must not
+  place an emergency call; the tappable action is **"Call 988, then press 1"**, dialing plain
+  `tel:988` with "press 1" in the copy (post-dial pause syntax is unreliable across dialers).
+  The banner is hoisted **above the results state machine** so it survives loading/error/empty,
+  not just success. Trust chrome converged into single owners: `SourceRow` (badge, used by
+  card + detail + map preview), `DangerCallBanner` (danger shell wrapped by both banners),
+  `trustWarning()` (derived from the same predicate as `sourceStatus()` so badge tone and
+  warning text can never disagree). New `colors.dangerText` (#A93226) mirrors the
+  `warning`/`warningText` split for AA contrast on tinted banners. `callPhone` now alerts with
+  the number when no dialer exists instead of failing silently. The disclaimer appears on
+  Results + detail — **two placements is the ceiling** (disclaimer fatigue). *Same-day
+  user-feedback trim:* the Home placement was removed (disclaimer lives where resources are
+  shown, not the greeting screen), and the AI blocks' footer not-advice disclaimer was dropped
+  as redundant — the "AI-generated — verify with the source" tag is each block's single label;
+  the `AiService` contract still returns `disclaimer` for a future surface that wants it.
+- **Alternatives:** tappable 911 (mis-tap liability); `tel:988,1` post-dial pause
+  (inconsistent); crisis banner as FlatList header (scrolls away) or only on the success
+  branch (vanishes exactly when the search fails); a third inline copy of the trust row
+  (anti-slop violation).
+- **Consequences:** any new resource surface gets trust via `SourceRow`, any new danger banner
+  wraps `DangerCallBanner`; trust copy/treatment changes are single-file edits. A real
+  verification pipeline (Phase 10) only needs to feed the existing `Resource` trust fields.
 
 ### 2026-07-10 — Category colors move into the olive/earth family; call script is one script
 - **Status:** accepted (narrows the rainbow palette of [[Decision Log#2026-07-08 — Polish: category-color layer, tap motion, detail restructure|2026-07-08 category-color layer]])
@@ -396,6 +550,21 @@ Running log of notable product, design, and technical decisions (lightweight ADR
   mock-only forever (kills the "real AI" value).
 - **Consequences:** MVP is fully demoable offline; a proxy/backend is a prerequisite before any real
   LLM call ships ([[Phase 10 Backend and Data Ingestion]], [[Environment Variables]]).
+
+### 2026-07-21 — Real community ratings replace the simulated rating
+- **Status:** accepted
+- **Context:** A `simulatedRating()` helper showed deterministic fake stars (3.8–4.8) on every
+  resource detail — even with the real backend live — so simulated data leaked into the production
+  experience. That violates "trust by verification / no simulated data shown as real."
+- **Decision:** Delete the simulated rating. Add a **real thumbs rating** aggregated across devices via
+  the backend (`resource_votes` table + deny-all + two `SECURITY DEFINER` RPCs), shown as
+  **"N of M found this helpful,"** starting at **0** and growing as veterans vote. Keyed to the
+  existing anonymous device UUID (no login/PII). Offline (no backend) honestly shows 0.
+- **Alternatives:** (a) 1–5 star average — more subjective, needs a new vote control; (b) on-device
+  only — never accumulates across users, so the count is meaningless.
+- **Consequences:** Migration `0009_resource_votes.sql` must be pushed before ratings work live. The
+  veteran's own vote stays on-device (ActivityContext) for button state + the review prompt; the
+  shared count is server-authoritative. See [[2026-07-21 College Scorecard plus Real Ratings and Simulated-Data Purge]].
 
 ## Related
 

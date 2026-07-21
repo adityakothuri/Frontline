@@ -16,28 +16,38 @@ const parseDocuments = (v: unknown): VeteranDocument[] | undefined => {
   return valid.length ? valid : undefined;
 };
 
+/**
+ * Tolerantly parse an untrusted profile value into a usable `VeteranProfile`,
+ * or null. Shared by the on-device loader and the backup-restore path, so a
+ * restored remote blob gets exactly the same guarding as stored data.
+ */
+export function parseProfile(value: unknown): VeteranProfile | null {
+  if (!value || typeof value !== 'object') return null;
+  const parsed = value as Record<string, unknown>;
+  // A profile is only usable with a name.
+  if (typeof parsed.firstName !== 'string' || parsed.firstName.length === 0) {
+    return null;
+  }
+  return {
+    firstName: parsed.firstName,
+    zip: typeof parsed.zip === 'string' && parsed.zip ? parsed.zip : undefined,
+    role: isRole(parsed.role) ? parsed.role : undefined,
+    documentsOnHand: parseDocuments(parsed.documentsOnHand),
+    preferredRadiusMiles:
+      typeof parsed.preferredRadiusMiles === 'number' && Number.isFinite(parsed.preferredRadiusMiles)
+        ? parsed.preferredRadiusMiles
+        : undefined,
+    onboardingComplete: parsed.onboardingComplete === true,
+    createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : new Date().toISOString(),
+  };
+}
+
 /** Load the saved profile, or null if none exists or the stored value is unreadable. */
 export async function loadProfile(): Promise<VeteranProfile | null> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    // Guard against corrupt/legacy values — a profile is only usable with a name.
-    if (typeof parsed.firstName !== 'string' || parsed.firstName.length === 0) {
-      return null;
-    }
-    return {
-      firstName: parsed.firstName,
-      zip: typeof parsed.zip === 'string' && parsed.zip ? parsed.zip : undefined,
-      role: isRole(parsed.role) ? parsed.role : undefined,
-      documentsOnHand: parseDocuments(parsed.documentsOnHand),
-      preferredRadiusMiles:
-        typeof parsed.preferredRadiusMiles === 'number' && Number.isFinite(parsed.preferredRadiusMiles)
-          ? parsed.preferredRadiusMiles
-          : undefined,
-      onboardingComplete: parsed.onboardingComplete === true,
-      createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : new Date().toISOString(),
-    };
+    return parseProfile(JSON.parse(raw));
   } catch {
     // Never let a storage/parse failure block the app from opening.
     return null;

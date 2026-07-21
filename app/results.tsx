@@ -5,12 +5,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AppText,
   ErrorState,
+  NavigatorDisclaimer,
   PrimaryButton,
   ScreenContainer,
   Skeleton,
 } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import { useProfile } from '@/services/profile';
+import { CrisisBanner } from '@/features/resources/CrisisBanner';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { ResourceMap } from '@/features/resources/ResourceMap';
 import { OfficialSourcesWidget } from '@/features/resources/OfficialSourcesWidget';
@@ -47,6 +49,9 @@ export default function ResultsScreen() {
   };
 
   const categoryLabel = NEED_CATEGORY_META[need.category]?.label ?? 'Resources';
+  // The Emergency path routes to real crisis lines before anything else — the
+  // banner must survive every branch (list, map, empty), so it's decided once.
+  const isEmergency = need.category === 'emergency';
 
   // Map view is the whole screen — edge-to-edge under the header, with the toggle
   // floating over it — so it reads as a real map, not a widget.
@@ -54,14 +59,23 @@ export default function ResultsScreen() {
     return (
       <View style={styles.mapScreen}>
         <Stack.Screen options={{ title: categoryLabel }} />
-        <ResourceMap
-          results={state.results}
-          needCategory={need.category}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-        />
-        <View style={styles.toggleFloat}>
-          <ViewToggle value={view} onChange={changeView} />
+        {isEmergency ? (
+          <View style={styles.mapCrisis}>
+            <CrisisBanner />
+          </View>
+        ) : null}
+        {/* No NavigatorDisclaimer here on purpose — a floating caption over the
+            map would be noise; the list, empty, and detail views all carry it. */}
+        <View style={styles.mapWrap}>
+          <ResourceMap
+            results={state.results}
+            needCategory={need.category}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+          <View style={styles.toggleFloat}>
+            <ViewToggle value={view} onChange={changeView} />
+          </View>
         </View>
       </View>
     );
@@ -70,6 +84,9 @@ export default function ResultsScreen() {
   return (
     <ScreenContainer>
       <Stack.Screen options={{ title: categoryLabel }} />
+      {/* Crisis routing depends on nothing async — it must survive loading and
+          error states too, not just results. */}
+      {isEmergency ? <CrisisBanner style={styles.crisis} /> : null}
       {state.status === 'loading' ? (
         <ResultsSkeleton />
       ) : state.status === 'error' ? (
@@ -96,6 +113,7 @@ export default function ResultsScreen() {
             />
           </View>
           <OfficialSourcesWidget category={need.category} />
+          <NavigatorDisclaimer style={styles.disclaimer} />
         </ScrollView>
       ) : (
         <View style={styles.ready}>
@@ -112,7 +130,12 @@ export default function ResultsScreen() {
             renderItem={({ item }) => (
               <ResourceCard result={item} needCategory={need.category} />
             )}
-            ListFooterComponent={<OfficialSourcesWidget category={need.category} />}
+            ListFooterComponent={
+              <>
+                <OfficialSourcesWidget category={need.category} />
+                <NavigatorDisclaimer style={styles.disclaimer} />
+              </>
+            }
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
           />
@@ -170,7 +193,13 @@ const styles = StyleSheet.create({
   emptyText: { textAlign: 'center', maxWidth: 320 },
   emptyBtn: { marginTop: spacing.md, paddingHorizontal: spacing.xxl },
   mapScreen: { flex: 1, backgroundColor: colors.background },
+  crisis: { marginBottom: spacing.lg },
+  mapCrisis: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
+  // Keeps the floating toggle anchored to the map, not the screen, so the
+  // crisis banner above can't sit under it.
+  mapWrap: { flex: 1 },
   toggleFloat: { position: 'absolute', top: spacing.sm, right: spacing.md },
+  disclaimer: { marginTop: spacing.lg },
   skeletons: { gap: spacing.md },
   skeletonCard: {
     backgroundColor: colors.surface,

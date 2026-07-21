@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { loadSaved, saveSaved, type SavedEntry } from './savedStorage';
+import { pushSaved, reconcileSaved } from '../sync/backupSync';
 
 // The app's on-device list of saved resources. A small Context mirroring
 // ProfileContext/ActivityContext — local-only, nothing sensitive. The context is
@@ -30,19 +31,28 @@ export function SavedProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    loadSaved().then((stored) => {
-      if (!active) return;
-      setEntries(stored);
-      setIsHydrated(true);
-    });
+    // Reconcile with the backup before marking hydrated — a reinstall restores
+    // its list here, and pushes stay gated on isHydrated so an empty pre-restore
+    // state can never be pushed over good backup data. No-op when sync is off.
+    loadSaved()
+      .then((stored) => reconcileSaved(stored))
+      .then((merged) => {
+        if (!active) return;
+        setEntries(merged);
+        setIsHydrated(true);
+      });
     return () => {
       active = false;
     };
   }, []);
 
-  // Persist whenever the list changes (after the initial hydrate).
+  // Persist locally + mirror to the backup whenever the list changes (after the
+  // initial hydrate). pushSaved is debounced and a no-op when sync is off.
   useEffect(() => {
-    if (isHydrated) saveSaved(entries);
+    if (isHydrated) {
+      saveSaved(entries);
+      pushSaved(entries);
+    }
   }, [entries, isHydrated]);
 
   const toggleSave = useCallback((id: string) => {

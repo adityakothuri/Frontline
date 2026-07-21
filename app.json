@@ -41,7 +41,8 @@
         {
           "locationWhenInUsePermission": "Frontline uses your location only to center the map on you. It is never stored or shared."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

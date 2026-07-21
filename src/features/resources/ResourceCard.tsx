@@ -9,7 +9,8 @@ import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
 import { useSaved } from '@/services/saved';
 import { callPhone, openDirections } from './resourceActions';
-import { openNowStatus, sourceStatus, STATUS_TONE_COLOR } from './resourceStatus';
+import { openNowStatus } from './resourceStatus';
+import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -30,8 +31,10 @@ export function ResourceCard({ result, needCategory }: ResourceCardProps) {
   const { resource, distanceMiles, isOpenNow } = result;
   const meta = RESOURCE_CATEGORY_META[resource.category];
   const open = openNowStatus(isOpenNow);
-  const source = sourceStatus(resource);
   const saved = isSaved(resource.id);
+  // "Open now / hours unknown" only makes sense for places you visit during
+  // hours. A job posting has no visiting hours, so the pill would just be noise.
+  const showStatus = resource.category !== 'jobs';
   const hasDirections =
     resource.address !== null || (resource.latitude !== null && resource.longitude !== null);
 
@@ -56,7 +59,7 @@ export function ResourceCard({ result, needCategory }: ResourceCardProps) {
             </AppText>
           </View>
           <View style={styles.rightCluster}>
-            <StatusPill label={open.label} tone={open.tone} />
+            {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
@@ -85,16 +88,7 @@ export function ResourceCard({ result, needCategory }: ResourceCardProps) {
           {resource.description}
         </AppText>
 
-        <View style={styles.sourceRow}>
-          <Ionicons
-            name={source.tone === 'success' ? 'shield-checkmark-outline' : 'alert-circle-outline'}
-            size={13}
-            color={STATUS_TONE_COLOR[source.tone]}
-          />
-          <AppText variant="caption" style={{ color: STATUS_TONE_COLOR[source.tone] }}>
-            {source.label}
-          </AppText>
-        </View>
+        <SourceRow resource={resource} style={styles.sourceRow} />
 
         <View style={styles.actions}>
           {resource.phone ? (
@@ -156,12 +150,7 @@ const styles = StyleSheet.create({
   bookmarkPressed: { opacity: 0.5 },
   name: { marginTop: spacing.xs },
   desc: { marginTop: spacing.xs },
-  sourceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
+  sourceRow: { marginTop: spacing.xs },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   action: {
     flexDirection: 'row',

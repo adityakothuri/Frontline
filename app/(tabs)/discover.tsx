@@ -22,7 +22,7 @@ import { useProfile } from '@/services/profile';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { NeedCategoryCard } from '@/features/needs/NeedCategoryCard';
 import { CategoryShells, shellCategory, type ShellId } from '@/features/discover/CategoryShells';
-import { NEED_CATEGORIES, type NeedCategory } from '@/types/need';
+import { NEED_CATEGORIES, DEFAULT_RADIUS_MILES, type NeedCategory } from '@/types/need';
 
 type BrowseState =
   | { status: 'loading' }
@@ -41,12 +41,16 @@ export default function DiscoverScreen() {
   const load = useCallback(async () => {
     setState({ status: 'loading' });
     try {
-      const results = await resourceService.listResources(shellCategory(selected));
+      const results = await resourceService.listResources(
+        shellCategory(selected),
+        profile?.zip,
+        profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES,
+      );
       setState({ status: 'ready', results });
     } catch {
       setState({ status: 'error' });
     }
-  }, [selected]);
+  }, [selected, profile?.zip, profile?.preferredRadiusMiles]);
 
   useEffect(() => {
     if (selected === 'other') return;

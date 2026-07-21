@@ -26,6 +26,7 @@ export const colors = {
 
   // Semantic — used for meaning, never as chrome
   danger: '#C0392B', // red — emergencies only
+  dangerText: '#A93226', // red as *text* — >=4.5:1 on the danger-tinted banners
   dangerSoft: 'rgba(192,57,43,0.12)',
   warning: '#B7791F', // amber — unverified / outdated / caution (dots + icons)
   warningText: '#8F5D16', // amber as *text* — >=4.5:1 on all paper surfaces

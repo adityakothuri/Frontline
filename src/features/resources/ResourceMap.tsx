@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, EmptyState, PressableScale } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
-import { SEED_CENTER, resourceToNeedCategory, type ResourceSearchResult } from '@/services/resources';
+import { resourceToNeedCategory, type ResourceSearchResult } from '@/services/resources';
 import { useProfile } from '@/services/profile';
 import { useUserLocation } from '@/services/location';
 import type { NeedCategory } from '@/types/need';
@@ -20,12 +20,14 @@ type ResourceMapProps = {
   onSelect: (id: string | null) => void;
 };
 
-// First-paint region: the seed city, then we fit to the actual pins on ready.
-const INITIAL_REGION: Region = {
-  latitude: SEED_CENTER.latitude,
-  longitude: SEED_CENTER.longitude,
-  latitudeDelta: 0.4,
-  longitudeDelta: 0.4,
+// Wide-US fallback for the instant before any pin exists (with zero located
+// results the map isn't rendered at all, so this is rarely seen). The real
+// first-paint region derives from the data — no seed-city dependency.
+const FALLBACK_REGION: Region = {
+  latitude: 39.8283,
+  longitude: -98.5795,
+  latitudeDelta: 40,
+  longitudeDelta: 40,
 };
 
 // The map view of the same result set as the list. Located resources become
@@ -41,6 +43,18 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
     [results],
   );
   const offMapCount = results.length - located.length;
+
+  // First paint centers on the first pinned result; fitToPins refines on ready.
+  const initialRegion = useMemo<Region>(() => {
+    const first = located[0]?.resource;
+    if (!first || first.latitude === null || first.longitude === null) return FALLBACK_REGION;
+    return {
+      latitude: first.latitude,
+      longitude: first.longitude,
+      latitudeDelta: 0.4,
+      longitudeDelta: 0.4,
+    };
+  }, [located]);
 
   // Custom marker children re-rasterize while tracking; let them paint once, then
   // stop tracking to avoid continuous redraw jank.
@@ -96,7 +110,7 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
-        initialRegion={INITIAL_REGION}
+        initialRegion={initialRegion}
         onMapReady={fitToPins}
         onPress={() => {
           onSelect(null);

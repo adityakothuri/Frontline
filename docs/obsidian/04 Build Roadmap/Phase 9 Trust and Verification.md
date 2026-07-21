@@ -1,7 +1,7 @@
 ---
 tags: [roadmap, phase-9, mvp, trust]
-status: planned
-updated: 2026-07-07
+status: done
+updated: 2026-07-11
 ---
 
 # Phase 9 — Trust, Safety & Verification Surfacing
@@ -25,12 +25,17 @@ Make trust **explicit and consistent** everywhere. Trust is the product for a ve
 
 ## Checklist
 
-- [ ] Audit every resource surface for source + last-checked + verification display.
-- [ ] Implement warning treatment for stale/unverified.
-- [ ] Add persistent disclaimer + consistent AI labels.
-- [ ] Emergency crisis-resource surfacing.
-- [ ] `ui-reviewer` + `/slop-check`; `qa-tester` against [[MVP Acceptance Criteria]] section F.
-- [ ] `/finish-task`: build log + [[app_walkthrough]].
+- [x] Audit every resource surface for source + last-checked + verification display
+      (map preview was the gap → shared `SourceRow` now on card, detail, preview).
+- [x] Implement warning treatment for stale/unverified (`trustWarning()` on detail).
+- [x] Add persistent disclaimer (`NavigatorDisclaimer` on Home/Results/detail) + AI labels
+      (already consistent via `AiContentBlock`, confirmed in audit).
+- [x] Emergency crisis-resource surfacing (`CrisisBanner`: 911 text-only, 988-press-1 call;
+      survives loading/error/empty/list/map branches).
+- [x] `ui-reviewer` (all findings fixed in-task) + `/slop-check` (pass); `qa-tester` **PASS**
+      against [[MVP Acceptance Criteria]] section F.
+- [x] `/finish-task`: build log [[2026-07-11 Phase 9 Trust and Verification Surfacing]] +
+      [[app_walkthrough]]. ⚠️ On-device tap-through still pending.
 
 ## Definition of done
 

@@ -27,8 +27,14 @@ behind interfaces a real backend/AI can later implement.
   tokens, category pins; ZIP or device location. See [[Map and Search Design]].
 - **Persistence (MVP)**: saved items + profile stored **on-device** (e.g. AsyncStorage), added with
   approval when Phase 8 lands.
-- **Backend (post-MVP)**: real database + verified data ingestion + AI proxy — Priority 10, not
-  before the frontend loop is clean. See [[Phase 10 Backend and Data Ingestion]].
+- **Backend (Phase 10 slice 1, built 2026-07-12)**: **Supabase** — Postgres (curated resources +
+  ZIP centroids, RLS read-only anon) behind `SupabaseResourceService`, and a Deno Edge Function
+  Claude proxy behind `ClaudeAiService`, both implementing the unchanged service interfaces. The
+  client uses plain `fetch` (no supabase-js). Env absent → full offline mock/templated mode;
+  resource runtime failures → error/retry UI (never silent mock data); AI failures → templated
+  fallback. See [[2026-07-12 Phase 10 Supabase Backend and Claude Proxy]] and
+  [[Environment Variables]]. Ingestion/accounts remain future slices —
+  [[Phase 10 Backend and Data Ingestion]].
 
 ## Layering
 

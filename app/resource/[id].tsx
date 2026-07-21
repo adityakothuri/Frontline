@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { EmptyState, Loading, ScreenContainer } from '@/components';
+import { EmptyState, ErrorState, Loading, ScreenContainer } from '@/components';
 import { resourceService } from '@/services/resources';
 import { ResourceDetail } from '@/features/resources/ResourceDetail';
 import type { Resource } from '@/types/resource';
@@ -8,6 +8,7 @@ import type { NeedCategory } from '@/types/need';
 
 type LoadState =
   | { status: 'loading' }
+  | { status: 'error' }
   | { status: 'notFound' }
   | { status: 'ready'; resource: Resource };
 
@@ -22,8 +23,13 @@ export default function ResourceDetailScreen() {
 
   const load = useCallback(async () => {
     setState({ status: 'loading' });
-    const resource = await resourceService.getById(id);
-    setState(resource ? { status: 'ready', resource } : { status: 'notFound' });
+    try {
+      const resource = await resourceService.getById(id);
+      setState(resource ? { status: 'ready', resource } : { status: 'notFound' });
+    } catch {
+      // A real backend can fail here — distinct from "not found", and retryable.
+      setState({ status: 'error' });
+    }
   }, [id]);
 
   useEffect(() => {
@@ -46,6 +52,8 @@ export default function ResourceDetailScreen() {
       <Stack.Screen options={{ title }} />
       {state.status === 'loading' ? (
         <Loading label="Loading resource…" />
+      ) : state.status === 'error' ? (
+        <ErrorState onRetry={load} />
       ) : (
         <EmptyState
           icon="help-circle-outline"

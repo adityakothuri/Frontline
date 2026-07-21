@@ -9,6 +9,7 @@ import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
 import { openNowStatus } from './resourceStatus';
+import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
 
 type ResourcePreviewProps = {
@@ -24,6 +25,8 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
   const { resource, distanceMiles, isOpenNow } = result;
   const meta = RESOURCE_CATEGORY_META[resource.category];
   const open = openNowStatus(isOpenNow);
+  // No visiting hours for a job posting → skip the open-now pill.
+  const showStatus = resource.category !== 'jobs';
 
   // Spring up + fade in when a pin is tapped, so the card doesn't just snap in.
   const anim = useRef(new Animated.Value(0)).current;
@@ -57,8 +60,10 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
         <AppText variant="caption" color="textMuted">
           {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
         </AppText>
-        <StatusPill label={open.label} tone={open.tone} />
+        {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
       </View>
+
+      <SourceRow resource={resource} />
 
       <PrimaryButton
         label="View details"
