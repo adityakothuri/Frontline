@@ -11,14 +11,13 @@ import {
 import { compareByDistanceThenVerification, sortSearchResults } from './sortResults';
 
 /**
- * The real ResourceService: Supabase PostgREST behind the same interface as
- * the mock (which remains the executable spec for filter/sort semantics).
- * One RPC serves search (radius + categories) and browse (nulls); origin
- * resolution (ZIP -> centroid) and distance happen server-side; open-now and
- * the explainable ordering stay client-side.
+ * The ResourceService: Supabase PostgREST behind the `ResourceService`
+ * interface. One RPC serves search (radius + categories) and browse (nulls);
+ * origin resolution (ZIP -> centroid) and distance happen server-side; open-now
+ * and the explainable ordering stay client-side.
  *
- * Failures propagate to the existing error/retry UI — never a silent fallback
- * to mock data (simulated organizations must not be shown as real places).
+ * Failures propagate to the existing error/retry UI — never fake data. All rows
+ * are real, ingested from official sources; there is no simulated fallback.
  */
 
 /** Row shape returned by the search_resources RPC. */

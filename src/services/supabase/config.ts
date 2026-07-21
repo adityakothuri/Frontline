@@ -1,7 +1,9 @@
 /**
- * The one switch between offline (mock/templated) and real backend mode.
- * Both service factories read this: config absent -> mock resources + templated
- * AI; config present -> Supabase + Claude.
+ * Whether the real backend is configured. Resources are ALWAYS real (Supabase);
+ * without config, resource/rating calls throw (error/retry UI), never fake data.
+ * This flag also selects the AI implementation: config present -> real Claude
+ * (via the proxy); absent -> the templated AI fallback (deterministic guidance,
+ * clearly a fallback — not resource data).
  *
  * Env access MUST be literal property reads — Expo inlines EXPO_PUBLIC_* at
  * bundle time and dynamic access (process.env[name]) silently yields undefined.
