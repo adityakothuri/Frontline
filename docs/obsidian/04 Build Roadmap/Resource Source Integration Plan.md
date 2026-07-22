@@ -181,11 +181,34 @@ their data is directory-grade → ingest as `verification_status:'needs_review'`
 6. Pursue **211 / Open Referral** access → unlock food/clothing/legal/transportation/community.
 7. VA + others → **production keys** before public launch (VA needs a stakeholder demo, ~1–3 months).
 
+## Refresh schedule (automated — built 2026-07-21)
+Re-ingesting keeps rows current and updates each resource's `last_checked` (trust badge). Cadence is
+tuned to how fast each source actually changes:
+
+| Source | Data churn | Frequency | Why |
+|---|---|---|---|
+| USAJOBS (jobs) | **High** — postings expire in ~2–4 wks | **Weekly** + purge >21d | Stale jobs are worse than none |
+| SAMHSA treatment | Moderate | Monthly | New/closed facilities |
+| HRSA health centers | Low–moderate | Monthly | Site changes |
+| HUD housing counseling | Low | Monthly (in the places run) | Agencies rarely move |
+| VA facilities | Low | Monthly | Very stable |
+| College Scorecard | Annual data release | Monthly is fine (cheap) | Refresh picks up the yearly update |
+
+**Most viable cadence: `jobs` weekly + `places` monthly.** Facilities are stable, so monthly keeps
+`last_checked` honest with near-zero effort; only jobs need weekly attention.
+
+**How it runs:**
+- `ingestion/refresh.sh [all|places|jobs]` — orchestrates every source (incl. the HUD regional sweep)
+  and purges USAJOBS postings not refreshed in 21 days. Reads keys from env or `.env.seed`.
+- `.github/workflows/refresh-data.yml` — GitHub Actions cron (weekly jobs, monthly places; manual
+  dispatch too). Needs the 6 repo secrets listed in the workflow. Runs even when your machine is off.
+- Local alternative: `crontab` → `0 6 * * 1 … refresh.sh jobs` and `0 4 1 * * … refresh.sh places`.
+
 ## Freshness & hygiene (applies to all)
-- Job postings and some directory rows **expire** → schedule periodic re-ingest + purge of stale rows
-  (future automation; today it's manual re-runs).
 - Keep official-first; never present directory/scraped data as `verified`.
 - One `DATA.gov` key is reusable across many `api.data.gov` federal APIs — get it once.
+- Only USAJOBS rows are auto-purged (they expire); place rows update in place (a transient API
+  hiccup must never delete real clinics).
 
 ## Env keys summary (all → `.env.seed`, server-side only)
 | Var | Source | How to get |

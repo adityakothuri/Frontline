@@ -1,0 +1,54 @@
+name: Refresh resource data
+
+# Keeps the live resource DB current and every `last_checked` date honest.
+#   • jobs   (USAJOBS) — churn fast, so weekly
+#   • places (HRSA/SAMHSA/HUD/VA/colleges) — change slowly, so monthly
+# Manual runs: Actions tab → "Run workflow" (choose all | places | jobs).
+#
+# Requires these repo secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+#   VA_API_KEY, USAJOBS_API_KEY, USAJOBS_USER_AGENT, DATA_GOV_API_KEY
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # weekly  — Mondays 06:00 UTC  → jobs
+    - cron: '0 4 1 * *'   # monthly — 1st at 04:00 UTC   → places
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'What to refresh'
+        default: 'all'
+        type: choice
+        options: [all, places, jobs]
+
+# Never let two refreshes write concurrently.
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      VA_API_KEY: ${{ secrets.VA_API_KEY }}
+      USAJOBS_API_KEY: ${{ secrets.USAJOBS_API_KEY }}
+      USAJOBS_USER_AGENT: ${{ secrets.USAJOBS_USER_AGENT }}
+      DATA_GOV_API_KEY: ${{ secrets.DATA_GOV_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Choose mode from the schedule (or manual input)
+        id: pick
+        run: |
+          case "${{ github.event.schedule }}" in
+            "0 6 * * 1") echo "mode=jobs"   >> "$GITHUB_OUTPUT" ;;
+            "0 4 1 * *") echo "mode=places" >> "$GITHUB_OUTPUT" ;;
+            *)           echo "mode=${{ github.event.inputs.mode || 'all' }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Run ingestion refresh
+        run: bash ingestion/refresh.sh "${{ steps.pick.outputs.mode }}"
