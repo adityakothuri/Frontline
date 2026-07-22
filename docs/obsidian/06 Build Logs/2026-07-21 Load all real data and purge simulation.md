@@ -41,11 +41,13 @@ regional sweep (CONUS grid + HI + AK, 400–900 mi radii) with idempotent dedup 
 
 ## Comprehensive checkup
 Full `grep` of `src/`+`app/` for simulat/mock/fake/dummy/stub/placeholder-data/etc.:
-remaining hits are all (a) comments documenting the *absence* of simulation, (b) the iOS
-*simulator* (device), or (c) the **templated AI fallback** (`templatedAiService`,
-`simulateLatency`) — a graceful per-call degradation for the Claude proxy, not resource
-data. **Open decision:** whether to also remove templated-AI fallback (would make AI
-hard-fail on any proxy error). Left in place pending a call.
+remaining hits are all (a) comments documenting the *absence* of simulation or (b) the iOS
+*simulator* (device).
+
+**Templated AI removed (per decision):** deleted `src/services/ai/templatedAiService.ts`;
+`ClaudeAiService` no longer falls back to it — failures propagate to the existing error/retry
+UI (ResourceDetail guidance retry, CallScriptCard retry). `aiService` is now `ClaudeAiService`
+always. AI output is always real Claude, never templated stand-in text.
 
 ## Bug fixed
 NUL byte (U+0000) in HUD data broke whole upsert batches (22P05) — central fix in

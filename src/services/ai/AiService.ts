@@ -6,10 +6,10 @@ import type { Resource } from '@/types/resource';
  * and is **simplified guidance — never legal, medical, financial, or
  * government-certified advice**. See `docs/obsidian/03 Technical/AI Feature Design.md`.
  *
- * The MVP ships a deterministic templated implementation
- * (`templatedAiService`). A real Claude-backed implementation later sits behind
- * this same interface, called through a proxy (the API key never ships in the
- * client — see `docs/obsidian/03 Technical/Environment Variables.md`).
+ * Implemented only by `ClaudeAiService` — real Claude via a proxy edge function
+ * (the API key never ships in the client — see
+ * `docs/obsidian/03 Technical/Environment Variables.md`). There is no simulated
+ * implementation; on failure the calling screen shows an error/retry state.
  */
 
 export interface PlanStep {
