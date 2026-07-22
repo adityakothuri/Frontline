@@ -54,10 +54,10 @@ NUL byte (U+0000) in HUD data broke whole upsert batches (22P05) — central fix
 `upsert.ts`. See [[2026-07-21 Null byte in provider data breaks upsert (22P05)]].
 
 ## Not done / blocked
-- **College Scorecard (education) — 0 rows.** Needs a free `DATA_GOV_API_KEY`
-  (api.data.gov/signup) not present in `.env.seed`; the public `DEMO_KEY` is rate-limited
-  (30/hr) and can't bulk-load ~6.2k schools. Adapter is built + verified — one command
-  once the key is added.
+- **College Scorecard (education) — LOADED (5,715 schools)** with the user's DATA.gov key.
+  The ~500 gap vs the ~6.2k operating total is schools with no valid geocode (skipped —
+  honest). Final DB: healthcare 38,661 · education 5,715 · housing 1,316 · benefits 445 ·
+  jobs 89 = **46,226 real resources, 0 simulated**. 5 of 11 categories covered.
 - Food / clothing / legal / transportation: still blocked on a 211/Open Referral
   partnership (no public API). Emergency: crisis lines are hardcoded in `CrisisBanner`
   (988/911), intact and independent of the DB.
