@@ -204,16 +204,20 @@ context. State is local — **no new route, typedRoutes untouched**. In map view
 padding) with the `ViewToggle` floating over it.
 
 - **`ResourceMap.tsx`** — `react-native-maps` `MapView` with **category Ionicon markers** (category
-  colors) for located resources; fits the viewport to the pins on `onMapReady` (`SEED_CENTER` first
-  paint); `tracksViewChanges={false}` after first paint for perf. Tap a pin → `ResourcePreview`.
-  Resources with **null coords** (phone/online-only, e.g. the Veterans Crisis Line) get no pin —
-  shown as a count note, or a full "Phone & online only" empty state if a category has only those.
-- **Location (`src/services/location/`)** — `showsUserLocation` (blue dot, gated on granted) + a
-  **recenter** button. `useUserLocation(zip)` resolves **device GPS with a ZIP-geocode fallback**
-  (`userLocation.ts` wraps `expo-location`); permission is requested **only on the recenter tap**,
-  never persisted. `mapRef.animateToRegion` pans to the user (or geocoded ZIP). **Data stays LA:**
-  pins/`fitToPins`/distances are unchanged — location is overlay + camera only. Needs a native build
-  (Info.plist permission via the `expo-location` config plugin). See [[Decision Log]].
+  colors) for located resources; first paint centers on the first pin (US-center `FALLBACK_REGION`
+  only if none), then `fitToPins` on `onMapReady`; `tracksViewChanges={false}` after first paint for
+  perf. Tap a pin → `ResourcePreview`. Resources with **null coords** (phone/online-only, e.g. the
+  national referrals + Veterans Crisis Line) get no pin — shown as a count note, or a full "Phone &
+  online only" empty state if a category has only those.
+- **Map controls** — **+/− zoom buttons** (top-right) scale the live region (`regionRef` kept fresh by
+  `onRegionChangeComplete`, clamped `MIN_DELTA`…`MAX_DELTA`), and a **recenter** button (bottom-right).
+  Recenter is **ZIP-first**: it centers on the profile ZIP's centroid (`geocodeZip`, the app's frame of
+  reference — where the pins are), falling back to **device GPS** only when no ZIP is set. This avoids
+  the old bug where GPS (a simulator/stale fix) recentered to the wrong city.
+- **Location (`src/services/location/`)** — `showsUserLocation` (blue dot, gated on granted).
+  `useUserLocation(zip)` wraps `expo-location`; `geocodeZip` resolves a ZIP → coords. Permission is
+  requested only on a GPS fallback, never persisted. Needs a native build (Info.plist permission via
+  the `expo-location` config plugin). See [[Decision Log]].
 - **`ResourceMap.web.tsx`** — placeholder (maps is iOS/Android only; Metro auto-resolves `.web.tsx`).
 - **`ResourcePreview.tsx`** — compact overlay card → `/resource/[id]?category=`.
 - **Map tab** (`app/(tabs)/map.tsx`) — located resources **near the profile ZIP** as pins, no
