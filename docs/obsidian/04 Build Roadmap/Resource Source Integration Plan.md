@@ -41,7 +41,7 @@ Keys live only in the git-ignored `.env.seed` (server-side), never in the app bu
 | housing | ✅ HUD counseling | HUD-VASH, SAMHSA housing (more breadth) |
 | education | ✅ College Scorecard | VA GI Bill enrichment (later) |
 | food | ❌ | 211 / Open Referral, USDA/food-bank directories |
-| legal | ❌ | Legal Services Corporation directory, 211 |
+| legal | ✅ LSC legal aid | 211 (long tail) |
 | clothing | ❌ | 211 / findhelp (directory long-tail) |
 | transportation | ❌ | 211, VA Veterans Transportation Service |
 | community_support | ⚠️ Vet Centers | National Resource Directory, 211 |
@@ -133,6 +133,32 @@ Keys live only in the git-ignored `.env.seed` (server-side), never in the app bu
 - **Endpoint:** CareerOneStop "American Job Center Finder" (by zip/radius).
 - **Implementation:** `ingestion/sources/americanJobCenters.ts` → `category:'jobs'`, `source_type:'official'`.
 - **Effort:** ~half day. **Priority:** medium.
+
+### 7. LSC — Legal Aid Offices (legal) ✅ DONE (2026-07-21)
+- **Fills:** `legal` — the ~130 **LSC-funded civil legal-aid nonprofits** + branch offices (854
+  offices). Official (Legal Services Corporation, federal). Eviction, benefits, family, consumer —
+  civil, not criminal.
+- **Key:** **NONE** — LSC's public ArcGIS Feature Service (found via the ArcGIS Online catalog:
+  `LSC_offices_grantees_main_branch (Public)`, owner `laytonj_LSCGOV`).
+- **Endpoint (verified live):** `GET {layer}/query?where=1=1&outFields=…&resultOffset=&resultRecordCount=1000&f=json`.
+  Our **first ArcGIS-backed adapter** — pages on `exceededTransferLimit`; each feature has
+  `attributes` (incl. `Latitude`/`Longitude`) + point geometry.
+- **Implementation:** `ingestion/sources/lscLegalAid.ts`, source key **`lsc-legal`**. National.
+  No phone/website columns → honest null (address + directions still work). Main vs branch office
+  distinguished in the name.
+- **Run:** `node --experimental-strip-types ingestion/run.ts --source lsc-legal --dry-run`.
+
+## Categories with NO good public API (→ curated fallback, per owner's call)
+Verified there is **no viable official/keyless place-locator API** for these — the real data lives in
+211 / Feeding America / findhelp (partnership-gated) or is program-based, not a directory:
+- **food** — only USDA **SNAP retailer** data (~250k grocery *stores*; wrong fit for "food help").
+  Free-food pantries are Feeding America / 211 (no open API).
+- **transportation** — VA VTS / DAV / VetRide are reached **through a VA medical center** (already in
+  the DB), not a separate locator API.
+- **clothing** — no federal API; 211/findhelp territory.
+- **community_support** — Vet Centers are already ingested (as healthcare); the rest is 211/NRD.
+These are the categories to fill with **hand-verified curated national resources** (real orgs like a
+food-bank locator link, VTS, 211) — not simulated data.
 
 ---
 

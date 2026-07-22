@@ -404,6 +404,8 @@ official source badge and a `last_checked` date — the existing trust layer, no
 | `ingestion/sources/hrsaHealthCenters.ts` | HRSA adapter (keyless **national CSV**, RFC-4180 parse, Active sites only) → `healthcare`. 18.9k sites. |
 | `ingestion/sources/samhsaTreatment.ts` | SAMHSA FindTreatment adapter (keyless national export) → `healthcare`. Filters out HRSA-typed dup rows; keeps SA/MH/OTP. |
 | `ingestion/sources/collegeScorecard.ts` | College Scorecard adapter (`DATA_GOV_API_KEY`, 0-indexed paging) → `education`. ~6.2k schools. |
+| `ingestion/sources/lscLegalAid.ts` | LSC legal-aid adapter (keyless **ArcGIS** feature server, paged on `exceededTransferLimit`) → `legal`. 854 offices. |
+| `ingestion/refresh.sh` · `.github/workflows/refresh-data.yml` | Scheduled re-ingest — jobs weekly, places monthly; purges expired USAJOBS rows. |
 | `ingestion/upsert.ts` | Service-role, idempotent PostgREST upsert of `resources` + `resource_sources`. |
 | `ingestion/run.ts` | CLI orchestrator: per-source env config → fetch → validate → (dry-run or upsert). |
 | `ingestion/README.md` | How to get the free VA/USAJOBS keys and run each mode. |
