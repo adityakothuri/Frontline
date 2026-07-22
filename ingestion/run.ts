@@ -25,6 +25,7 @@ import { createHudCounselingSource } from './sources/hudCounseling.ts';
 import { createHrsaHealthCentersSource } from './sources/hrsaHealthCenters.ts';
 import { createSamhsaTreatmentSource } from './sources/samhsaTreatment.ts';
 import { createCollegeScorecardSource } from './sources/collegeScorecard.ts';
+import { createLscLegalAidSource } from './sources/lscLegalAid.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
 
@@ -36,6 +37,8 @@ const HRSA_CSV_URL =
   'https://data.hrsa.gov/DataDownload/DD_Files/Health_Center_Service_Delivery_and_LookAlike_Sites.csv';
 const SAMHSA_BASE = 'https://findtreatment.gov/locator/exportsAsJson/v2';
 const SCORECARD_BASE = 'https://api.data.gov/ed/collegescorecard/v1/schools';
+const LSC_BASE =
+  'https://services3.arcgis.com/n7h3cEoHTyNCwjCf/arcgis/rest/services/LSC_offices_grantees_main_branch_(Public)/FeatureServer/0';
 
 /** A registered source: how to build it and how to read its secrets from env. */
 interface SourceDef {
@@ -94,6 +97,14 @@ const SOURCES: Record<string, SourceDef> = {
         'a free key from api.data.gov/signup (DEMO_KEY works for testing)',
       ),
       baseUrl: process.env.SCORECARD_BASE_URL ?? SCORECARD_BASE,
+    }),
+  },
+  'lsc-legal': {
+    factory: createLscLegalAidSource,
+    // LSC's public ArcGIS feature server is keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.LSC_BASE_URL ?? LSC_BASE,
     }),
   },
 };

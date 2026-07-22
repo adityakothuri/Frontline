@@ -61,6 +61,7 @@ refresh_places() {
   log "HRSA health centers (national)";      $RUN --source hrsa-health
   log "SAMHSA treatment (national)";          $RUN --source samhsa-treatment
   log "College Scorecard (national)";         $RUN --source college-scorecard
+  log "LSC legal aid (national)";             $RUN --source lsc-legal
   log "VA facilities (national)";             $RUN --source va-facilities --national
 
   # HUD locator caps at ~1,329/query, so sweep regional points (CONUS + HI + AK);
