@@ -26,6 +26,7 @@ import { createHrsaHealthCentersSource } from './sources/hrsaHealthCenters.ts';
 import { createSamhsaTreatmentSource } from './sources/samhsaTreatment.ts';
 import { createCollegeScorecardSource } from './sources/collegeScorecard.ts';
 import { createLscLegalAidSource } from './sources/lscLegalAid.ts';
+import { createCuratedNationalSource } from './sources/curatedNational.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
 
@@ -105,6 +106,14 @@ const SOURCES: Record<string, SourceDef> = {
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.LSC_BASE_URL ?? LSC_BASE,
+    }),
+  },
+  'curated-national': {
+    factory: createCuratedNationalSource,
+    // Reads a local JSON file of hand-verified national resources (no API).
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: resolve(root, 'ingestion/data/curated-national.json'),
     }),
   },
 };

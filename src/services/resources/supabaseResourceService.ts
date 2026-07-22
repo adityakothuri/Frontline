@@ -32,6 +32,13 @@ const toResult = (row: SearchRow, now: Date): ResourceSearchResult => ({
   isOpenNow: isOpenNow(row.resource.hours, now),
 });
 
+// Cap results per category so one dense category (healthcare has ~38k rows)
+// can't flood a search or the map. It's the NEAREST N per category, so a veteran
+// still sees plenty of local options; the map stays balanced and fast. A focused
+// search can show a few more than a browse-everything map.
+const SEARCH_PER_CATEGORY_LIMIT = 50;
+const BROWSE_PER_CATEGORY_LIMIT = 30;
+
 const rpcBody = (need: Need) => ({
   zip: need.location.zip ?? null,
   lat: need.location.latitude ?? null,
@@ -39,6 +46,7 @@ const rpcBody = (need: Need) => ({
   radius_miles: need.location.radiusMiles,
   categories: needToResourceCategories(need.category),
   in_person_only: need.modality === 'in_person',
+  per_category_limit: SEARCH_PER_CATEGORY_LIMIT,
 });
 
 class SupabaseResourceService implements ResourceService {
@@ -68,6 +76,7 @@ class SupabaseResourceService implements ResourceService {
         zip: zip ?? null,
         radius_miles: radiusMiles ?? null,
         categories: category ? needToResourceCategories(category) : null,
+        per_category_limit: BROWSE_PER_CATEGORY_LIMIT,
       },
     });
     const now = new Date();

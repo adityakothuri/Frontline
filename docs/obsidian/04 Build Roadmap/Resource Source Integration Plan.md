@@ -160,6 +160,14 @@ Verified there is **no viable official/keyless place-locator API** for these —
 These are the categories to fill with **hand-verified curated national resources** (real orgs like a
 food-bank locator link, VTS, 211) — not simulated data.
 
+**✅ DONE (2026-07-21):** `ingestion/sources/curatedNational.ts` + `ingestion/data/curated-national.json`
+(source key `curated-national`) loads **13 real, verified national resources** across food, clothing,
+transportation, community_support — USDA National Hunger Hotline, Feeding America, 211, SNAP,
+Salvation Army, Goodwill, VA VTS, DAV, VA Caregiver Support Line, Vet Centers. They carry **no
+coordinates** (nationwide referrals), so they appear in every search for their category as a national
+option but place no map pin. `source_type` is honest per entry (official / nonprofit). Update by
+editing the JSON and re-running. Still worth pursuing **211/Open Referral** later for *local* rows.
+
 ---
 
 ## TIER 2 — directory/aggregator (breadth for the long tail; partnership-gated)

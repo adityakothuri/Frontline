@@ -405,7 +405,13 @@ official source badge and a `last_checked` date — the existing trust layer, no
 | `ingestion/sources/samhsaTreatment.ts` | SAMHSA FindTreatment adapter (keyless national export) → `healthcare`. Filters out HRSA-typed dup rows; keeps SA/MH/OTP. |
 | `ingestion/sources/collegeScorecard.ts` | College Scorecard adapter (`DATA_GOV_API_KEY`, 0-indexed paging) → `education`. ~6.2k schools. |
 | `ingestion/sources/lscLegalAid.ts` | LSC legal-aid adapter (keyless **ArcGIS** feature server, paged on `exceededTransferLimit`) → `legal`. 854 offices. |
+| `ingestion/sources/curatedNational.ts` · `data/curated-national.json` | Real hand-verified **national referrals** (hotlines/locators) for the API-less categories (food, clothing, transportation, community_support). Null coords → list, not map pin. |
 | `ingestion/refresh.sh` · `.github/workflows/refresh-data.yml` | Scheduled re-ingest — jobs weekly, places monthly; purges expired USAJOBS rows. |
+
+**Category balancing (`0010`):** `search_resources` takes a `per_category_limit` — a
+`row_number() over (partition by category order by distance)` keeps only the nearest N per category, so
+one dense category (healthcare ~38k) can't flood the map/browse. The client passes 50 for a focused
+search and 30 for browse/map. No data is deleted; it's a query-time cap.
 | `ingestion/upsert.ts` | Service-role, idempotent PostgREST upsert of `resources` + `resource_sources`. |
 | `ingestion/run.ts` | CLI orchestrator: per-source env config → fetch → validate → (dry-run or upsert). |
 | `ingestion/README.md` | How to get the free VA/USAJOBS keys and run each mode. |
