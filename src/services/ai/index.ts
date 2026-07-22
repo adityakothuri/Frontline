@@ -1,7 +1,5 @@
-import { supabaseConfig } from '../supabase/config';
 import type { AiService } from './AiService';
 import { ClaudeAiService } from './claudeAiService';
-import { TemplatedAiService } from './templatedAiService';
 
 export type {
   AiService,
@@ -14,11 +12,9 @@ export type {
 export { AI_NOT_ADVICE_DISCLAIMER } from './AiService';
 
 /**
- * The app's AI service. Real Claude (via the Supabase edge-function proxy)
- * when EXPO_PUBLIC_SUPABASE_* env is set; otherwise the deterministic
- * templated implementation. ClaudeAiService itself falls back to templated
- * per-call on any failure, so AI features never hard-fail.
+ * The app's AI service — real Claude via the Supabase edge-function proxy,
+ * always. There is no simulated/templated fallback: on any failure the calling
+ * screen shows an error/retry state. Without Supabase env, calls throw (same
+ * error/retry path), never templated stand-in text.
  */
-export const aiService: AiService = supabaseConfig
-  ? new ClaudeAiService()
-  : new TemplatedAiService();
+export const aiService: AiService = new ClaudeAiService();

@@ -1,9 +1,7 @@
 /**
- * Whether the real backend is configured. Resources are ALWAYS real (Supabase);
- * without config, resource/rating calls throw (error/retry UI), never fake data.
- * This flag also selects the AI implementation: config present -> real Claude
- * (via the proxy); absent -> the templated AI fallback (deterministic guidance,
- * clearly a fallback — not resource data).
+ * Whether the real backend is configured. Everything is real: resources, ratings,
+ * and AI all require Supabase. Without config, those calls throw and the UI shows
+ * an error/retry state — there is no simulated data or templated AI anywhere.
  *
  * Env access MUST be literal property reads — Expo inlines EXPO_PUBLIC_* at
  * bundle time and dynamic access (process.env[name]) silently yields undefined.
