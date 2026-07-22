@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Pressable, FlatList, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +29,32 @@ type BrowseState =
   | { status: 'error' }
   | { status: 'ready'; results: ResourceSearchResult[] };
 
+// On the "all" browse the results come back distance-sorted, so a dense category
+// (healthcare) fills the top of the list. Round-robin across categories instead,
+// so the list alternates and a veteran immediately sees the full variety the app
+// offers. Each category keeps its own nearest-first order internally.
+function interleaveByCategory(results: ResourceSearchResult[]): ResourceSearchResult[] {
+  const buckets = new Map<string, ResourceSearchResult[]>();
+  for (const r of results) {
+    const arr = buckets.get(r.resource.category);
+    if (arr) arr.push(r);
+    else buckets.set(r.resource.category, [r]);
+  }
+  const groups = [...buckets.values()];
+  const out: ResourceSearchResult[] = [];
+  for (let i = 0; ; i++) {
+    let added = false;
+    for (const group of groups) {
+      if (i < group.length) {
+        out.push(group[i]);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return out;
+}
+
 // Browse opportunities: a curated shell row over all opportunities (or one
 // category), with an "Other" shell that opens the full category list.
 export default function DiscoverScreen() {
@@ -56,6 +82,15 @@ export default function DiscoverScreen() {
     if (selected === 'other') return;
     load();
   }, [selected, load]);
+
+  // The multi-category "all" browse alternates categories; a single category
+  // keeps its natural nearest-first order.
+  const displayResults = useMemo(() => {
+    if (state.status !== 'ready') return [];
+    return shellCategory(selected) === undefined
+      ? interleaveByCategory(state.results)
+      : state.results;
+  }, [state, selected]);
 
   const handleSelect = (id: ShellId) => {
     setSelected(id);
@@ -117,7 +152,7 @@ export default function DiscoverScreen() {
           <Loading label="Loading opportunities…" />
         ) : state.status === 'error' ? (
           <ErrorState onRetry={load} />
-        ) : state.results.length === 0 ? (
+        ) : displayResults.length === 0 ? (
           <EmptyState
             icon="search-outline"
             title="Nothing here yet"
@@ -125,7 +160,7 @@ export default function DiscoverScreen() {
           />
         ) : (
           <FlatList
-            data={state.results}
+            data={displayResults}
             keyExtractor={(item) => item.resource.id}
             renderItem={({ item }) => (
               <ResourceCard

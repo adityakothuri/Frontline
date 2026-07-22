@@ -7,7 +7,7 @@ import { colors, radii, spacing } from '@/theme';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import { resourceToNeedCategory, type ResourceSearchResult } from '@/services/resources';
 import { useProfile } from '@/services/profile';
-import { useUserLocation, geocodeZip } from '@/services/location';
+import { useUserLocation, geocodeZip, resolveZipCentroid } from '@/services/location';
 import type { Coordinates } from '@/lib/geo';
 import type { NeedCategory } from '@/types/need';
 import { ResourcePreview } from './ResourcePreview';
@@ -107,9 +107,14 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
     try {
       // The ZIP the veteran chose is the map's frame of reference — every pin is
       // near it — so center on the ZIP centroid, not device GPS (which on a
-      // simulator or a stale fix can be a different city). GPS is only a fallback
-      // when there's no ZIP set.
-      let target: Coordinates | null = profile?.zip ? await geocodeZip(profile.zip) : null;
+      // simulator or a stale fix can be a different city). Prefer the backend
+      // zip_centroids table (exactly what search uses), then the OS geocoder,
+      // then GPS only when there's no ZIP at all.
+      let target: Coordinates | null = null;
+      if (profile?.zip) {
+        target = await resolveZipCentroid(profile.zip);
+        if (!target) target = await geocodeZip(profile.zip);
+      }
       if (!target) target = await locate();
       if (target) {
         mapRef.current?.animateToRegion({ ...target, latitudeDelta: 0.08, longitudeDelta: 0.08 }, 350);
@@ -188,29 +193,6 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
         })}
       </MapView>
 
-      {/* Zoom controls — top-right, out of the way of the bottom preview/recenter */}
-      <View style={styles.zoomWrap}>
-        <PressableScale
-          accessibilityRole="button"
-          accessibilityLabel="Zoom in"
-          onPress={() => zoomBy(0.5)}
-          scaleTo={0.9}
-          style={styles.zoomBtn}
-        >
-          <Ionicons name="add" size={22} color={colors.textPrimary} />
-        </PressableScale>
-        <View style={styles.zoomDivider} />
-        <PressableScale
-          accessibilityRole="button"
-          accessibilityLabel="Zoom out"
-          onPress={() => zoomBy(2)}
-          scaleTo={0.9}
-          style={styles.zoomBtn}
-        >
-          <Ionicons name="remove" size={22} color={colors.textPrimary} />
-        </PressableScale>
-      </View>
-
       {offMapCount > 0 ? (
         <View style={styles.note}>
           <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
@@ -238,9 +220,31 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
               </AppText>
             </View>
           ) : null}
+          {/* Zoom sits directly above the recenter, same corner */}
+          <View style={styles.zoomWrap}>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="Zoom in"
+              onPress={() => zoomBy(0.5)}
+              scaleTo={0.9}
+              style={styles.zoomBtn}
+            >
+              <Ionicons name="add" size={22} color={colors.textPrimary} />
+            </PressableScale>
+            <View style={styles.zoomDivider} />
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="Zoom out"
+              onPress={() => zoomBy(2)}
+              scaleTo={0.9}
+              style={styles.zoomBtn}
+            >
+              <Ionicons name="remove" size={22} color={colors.textPrimary} />
+            </PressableScale>
+          </View>
           <PressableScale
             accessibilityRole="button"
-            accessibilityLabel="Recenter the map on your location"
+            accessibilityLabel="Recenter the map on your ZIP code"
             onPress={recenter}
             disabled={status === 'locating' || recentering}
             scaleTo={0.92}
@@ -272,9 +276,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   zoomWrap: {
-    position: 'absolute',
-    right: spacing.md,
-    top: spacing.md,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  zoomBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  zoomBtn: { width: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
   zoomDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   note: {
     position: 'absolute',
