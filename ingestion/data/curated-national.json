@@ -1,0 +1,135 @@
+{
+  "_note": "Hand-verified REAL national resources (not simulated) for categories with no public place-locator API — food, clothing, transportation, community_support. These are nationwide referrals (hotlines / locators), so they carry no coordinates: they appear in every search for their category as a national option, and do not place a map pin. Each was verified against the org's official site. Update by editing this file and re-running: node --experimental-strip-types ingestion/run.ts --source curated-national",
+  "resources": [
+    {
+      "external_id": "usda-national-hunger-hotline",
+      "category": "food",
+      "name": "USDA National Hunger Hotline",
+      "description": "Call the USDA National Hunger Hotline to find food pantries, meal sites, and food assistance near you (Mon–Fri, 8am–8pm ET). En español: 1-877-842-6273. Or text FOOD to 914-342-7744.",
+      "phone": "1-866-348-6479",
+      "website": "https://www.fns.usda.gov/national-hunger-clearinghouse",
+      "eligibility": "Open to anyone in the U.S. looking for food help. Free.",
+      "source_type": "official"
+    },
+    {
+      "external_id": "feeding-america-foodbank-locator",
+      "category": "food",
+      "name": "Feeding America — Find Your Local Food Bank",
+      "description": "Enter your ZIP to find your nearest food bank and free grocery distributions through Feeding America's national network of 200+ food banks.",
+      "phone": null,
+      "website": "https://www.feedingamerica.org/find-your-local-foodbank",
+      "eligibility": "Anyone in need of food. Requirements vary by local food bank.",
+      "source_type": "nonprofit"
+    },
+    {
+      "external_id": "211-food",
+      "category": "food",
+      "name": "211 — Local Food Assistance",
+      "description": "Dial 211 to connect with local food pantries, meal programs, and emergency food near you — free and confidential, available 24/7.",
+      "phone": "211",
+      "website": "https://www.211.org",
+      "eligibility": "Open to everyone. Free and confidential.",
+      "source_type": "nonprofit"
+    },
+    {
+      "external_id": "snap-food-benefits",
+      "category": "food",
+      "name": "SNAP (Food Stamps)",
+      "description": "SNAP helps pay for groceries each month. You apply through your state — check whether you qualify and find your state's application.",
+      "phone": null,
+      "website": "https://www.fns.usda.gov/snap/recipient/eligibility",
+      "eligibility": "Based on household income and size. Many veterans qualify — apply through your state.",
+      "source_type": "official"
+    },
+    {
+      "external_id": "211-clothing",
+      "category": "clothing",
+      "name": "211 — Clothing & Essentials",
+      "description": "Dial 211 to find local clothing closets and free essential-item assistance (coats, work clothes, household basics) near you.",
+      "phone": "211",
+      "website": "https://www.211.org",
+      "eligibility": "Open to everyone. Free and confidential.",
+      "source_type": "nonprofit"
+    },
+    {
+      "external_id": "salvation-army-clothing",
+      "category": "clothing",
+      "name": "The Salvation Army",
+      "description": "The Salvation Army provides free or low-cost clothing and household essentials at local centers nationwide, plus vouchers through many family stores.",
+      "phone": "1-800-725-2769",
+      "website": "https://www.salvationarmyusa.org/usn/ways-we-help",
+      "eligibility": "Assistance for individuals and families in need. Ask your local center.",
+      "source_type": "nonprofit"
+    },
+    {
+      "external_id": "goodwill-locator",
+      "category": "clothing",
+      "name": "Goodwill — Find a Local Center",
+      "description": "Find a nearby Goodwill for low-cost clothing and, at many locations, free interview-ready clothing tied to their job programs.",
+      "phone": null,
+      "website": "https://www.goodwill.org/locator/",
+      "eligibility": "Open to everyone; job-program clothing help varies by location.",
+      "source_type": "nonprofit"
+    },
+    {
+      "external_id": "va-veterans-transportation-service",
+      "category": "transportation",
+      "name": "VA Veterans Transportation Service (VTS)",
+      "description": "The VA's Veterans Transportation Service offers free rides to and from VA medical appointments. Call 1-800-MyVA411 or ask your VA facility's transportation office.",
+      "phone": "1-800-698-2411",
+      "website": "https://www.va.gov/healthbenefits/vtp/veterans_transportation_service.asp",
+      "eligibility": "Veterans enrolled in VA health care with a VA-authorized appointment. Availability varies by facility.",
+      "source_type": "official"
+    },
+    {
+      "external_id": "dav-medical-transportation",
+      "category": "transportation",
+      "name": "DAV — Free Rides to VA Appointments",
+      "description": "Disabled American Veterans runs volunteer drivers who give free rides to and from VA medical appointments at VA locations across the country.",
+      "phone": null,
+      "website": "https://www.dav.org/get-help-now/medical-transportation/",
+      "eligibility": "Veterans needing a ride to VA medical care. Contact your local DAV Hospital Service Coordinator.",
+      "source_type": "nonprofit"
+    },
+    {
+      "external_id": "211-transportation",
+      "category": "transportation",
+      "name": "211 — Transportation Help",
+      "description": "Dial 211 to find local transportation help — rides to appointments, transit passes, and non-emergency medical transport near you.",
+      "phone": "211",
+      "website": "https://www.211.org",
+      "eligibility": "Open to everyone. Free and confidential.",
+      "source_type": "nonprofit"
+    },
+    {
+      "external_id": "va-caregiver-support-line",
+      "category": "community_support",
+      "name": "VA Caregiver Support Line",
+      "description": "Free support for family caregivers of veterans — the Caregiver Support Line connects you with resources and your local support coordinator.",
+      "phone": "1-855-260-3274",
+      "website": "https://www.caregiver.va.gov",
+      "eligibility": "Family caregivers of veterans. Free.",
+      "source_type": "official"
+    },
+    {
+      "external_id": "vet-centers-call-center",
+      "category": "community_support",
+      "name": "Vet Centers — Call 1-877-WAR-VETS",
+      "description": "Vet Centers offer free, confidential counseling and community for combat veterans and their families. Call 1-877-927-8387 anytime, day or night.",
+      "phone": "1-877-927-8387",
+      "website": "https://www.va.gov/find-locations/?facilityType=vet_center",
+      "eligibility": "Combat veterans, service members, and their families. No VA enrollment needed.",
+      "source_type": "official"
+    },
+    {
+      "external_id": "211-community-support",
+      "category": "community_support",
+      "name": "211 — Community & Social Services",
+      "description": "Dial 211 for local community support — peer groups, caregiver help, and social services near you, free and confidential, 24/7.",
+      "phone": "211",
+      "website": "https://www.211.org",
+      "eligibility": "Open to everyone. Free and confidential.",
+      "source_type": "nonprofit"
+    }
+  ]
+}
