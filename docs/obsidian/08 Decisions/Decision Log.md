@@ -566,6 +566,28 @@ Running log of notable product, design, and technical decisions (lightweight ADR
   veteran's own vote stays on-device (ActivityContext) for button state + the review prompt; the
   shared count is server-authoritative. See [[2026-07-21 College Scorecard plus Real Ratings and Simulated-Data Purge]].
 
+### 2026-07-22 — Strict veteran-relevance (drop all general-public data)
+- **Status:** accepted
+- **Context:** After ingesting real national data, most of it was **general-public, not veteran-specific**
+  — College Scorecard loaded every college (incl. a beauty institute), HRSA every community clinic,
+  LSC every legal-aid office, SAMHSA every treatment facility. For a veterans' app this is noise that
+  breaks trust.
+- **Decision:** Every resource must be **veteran-specific** (exists to serve veterans) OR offer a
+  **concrete veteran benefit**. Enforce at ingest with a NOT NULL `veteran_relevance` column
+  (`veteran_specific` | `veteran_benefit`) so general data can never silently return; the DB is
+  veteran-only by construction (no runtime filter). **Kept:** VA facilities (specific), USAJOBS
+  (veterans' preference). **Replaced:** College Scorecard → **GI-Bill-approved schools only** (VA GI
+  Bill API + ZIP-centroid geocode). **Dropped:** HRSA, HUD counseling, LSC, SAMHSA (its veteran filter
+  proved unreliable on re-test). **Referrals:** veteran-specific national referrals (VA homeless line,
+  HUD-VASH/GPD/SSVF, VA-accredited legal, VTS/DAV, Caregiver line, Vet Centers, Crisis Line) fill the
+  categories with no clean per-place veteran dataset.
+- **Alternatives:** (a) keep general safety-net veterans *can* use — reintroduces the exact noise;
+  (b) per-place harvest of GPD/SSVF/CVSO — verified live to be **single-state ArcGIS layers only** (no
+  national dataset exists), so those are referrals, not pins.
+- **Consequences:** DB shrinks from ~47k to a veteran-only set (VA + USAJOBS + GI-Bill schools +
+  veteran referrals). Migrations `0011`/`0012`. See
+  [[2026-07-22 Veteran-only data rebuild]].
+
 ## Related
 
 [[Technical Architecture]] · [[AI Feature Design]] · [[Non-MVP Ideas]] · [[Frontline Command Center]]

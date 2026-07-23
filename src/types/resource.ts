@@ -40,6 +40,15 @@ export type SourceType =
 /** How confident we are the information is current and correct. */
 export type VerificationStatus = 'verified' | 'needs_review' | 'unverified';
 
+/**
+ * Why this resource belongs in a veterans' app — the strict inclusion rule.
+ * `veteran_specific`: exists to serve veterans (VA, Vet Centers, VSOs, GPD/SSVF,
+ * DAV, CVSOs). `veteran_benefit`: a place/program that offers a concrete veteran
+ * benefit (GI Bill-approved school, veterans' hiring preference). Nothing else is
+ * ingested — the app holds only veteran-relevant resources.
+ */
+export type VeteranRelevance = 'veteran_specific' | 'veteran_benefit';
+
 export interface Resource {
   id: string;
   name: string;
@@ -62,6 +71,8 @@ export interface Resource {
   documents_needed: string[];
   source_url: string | null;
   source_type: SourceType;
+  /** Why it's in a veterans' app — every resource is one or the other. */
+  veteran_relevance: VeteranRelevance;
   verification_status: VerificationStatus;
   /** ISO date the info was last confirmed. Stale dates trigger a warning. */
   last_checked: string;

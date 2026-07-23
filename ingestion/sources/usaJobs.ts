@@ -125,6 +125,7 @@ function normalize(d: UsaJobDescriptor, today: string): NormalizedResource | nul
     documents_needed: ['resume'],
     source_url: applyUrl,
     source_type: 'official',
+    veteran_relevance: 'veteran_benefit', // federal jobs carry veterans' hiring preference
     verification_status: 'verified',
     last_checked: today,
     last_updated: isoDate(d.PublicationStartDate, today),

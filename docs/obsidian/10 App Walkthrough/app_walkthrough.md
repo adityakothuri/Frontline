@@ -403,15 +403,18 @@ official source badge and a `last_checked` date — the existing trust layer, no
 |---|---|
 | `supabase/migrations/0008_provenance.sql` | Adds `external_id`/`source_provider`/`ingested_at` to `resources`, a partial dedup unique index, and the `resource_sources` lineage table (deny-all, service-role only). |
 | `ingestion/types.ts` | The source-agnostic contract: `IngestionSource`, `NormalizedResource`, `SourceFactory`. |
-| `ingestion/sources/vaFacilities.ts` | VA adapter — `apikey` fetch, `--national`/geo/state scopes, VA-hours → controlled format. |
-| `ingestion/sources/usaJobs.ts` | USAJOBS adapter — `Authorization-Key`+`User-Agent` fetch, location-scoped federal jobs. |
-| `ingestion/sources/hudCounseling.ts` | HUD housing-counseling adapter (keyless geo locator) → `housing`. Service-code jargon → plain English. |
-| `ingestion/sources/hrsaHealthCenters.ts` | HRSA adapter (keyless **national CSV**, RFC-4180 parse, Active sites only) → `healthcare`. 18.9k sites. |
-| `ingestion/sources/samhsaTreatment.ts` | SAMHSA FindTreatment adapter (keyless national export) → `healthcare`. Filters out HRSA-typed dup rows; keeps SA/MH/OTP. |
-| `ingestion/sources/collegeScorecard.ts` | College Scorecard adapter (`DATA_GOV_API_KEY`, 0-indexed paging) → `education`. ~6.2k schools. |
-| `ingestion/sources/lscLegalAid.ts` | LSC legal-aid adapter (keyless **ArcGIS** feature server, paged on `exceededTransferLimit`) → `legal`. 854 offices. |
-| `ingestion/sources/curatedNational.ts` · `data/curated-national.json` | Real hand-verified **national referrals** (hotlines/locators) for the API-less categories (food, clothing, transportation, community_support). Null coords → list, not map pin. |
-| `ingestion/refresh.sh` · `.github/workflows/refresh-data.yml` | Scheduled re-ingest — jobs weekly, places monthly; purges expired USAJOBS rows. |
+| `ingestion/sources/vaFacilities.ts` | VA adapter → `healthcare`/`benefits_help`. `veteran_specific`. |
+| `ingestion/sources/usaJobs.ts` | USAJOBS adapter → `jobs`. `veteran_benefit` (veterans' preference). |
+| `ingestion/sources/vaGiBillSchools.ts` | VA GI Bill Comparison Tool API (keyless, `category=school`, per_page capped at 10 → ~1,380 pages) → `education`. Only GI-Bill-approved schools; ZIP-centroid geocode (`ingestion/geocode.ts`). `veteran_benefit`. |
+| `ingestion/sources/curatedNational.ts` · `data/curated-national.json` | Hand-verified **veteran-specific** national referrals (VA homeless line, HUD-VASH/GPD/SSVF, VA-accredited legal, VTS/DAV, Caregiver, Vet Centers, Crisis Line) for categories with no per-place veteran dataset. Null coords → list, not map pin. |
+| `ingestion/geocode.ts` | Offline ZIP → lat/long via the loaded Census ZCTA centroids (used by GI Bill schools). |
+| `ingestion/refresh.sh` · `.github/workflows/refresh-data.yml` | Scheduled re-ingest — jobs weekly, places monthly (VA / GI Bill / referrals). |
+
+**Veteran-relevance (`0011`/`0012`):** every resource has a NOT NULL `veteran_relevance`
+(`veteran_specific` \| `veteran_benefit`). It's enforced at ingest, so the DB is **veteran-only by
+construction** (no runtime filter). `<VeteranBadge>` shows it on each card. Sources dropped as general:
+HRSA, HUD counseling, LSC, SAMHSA, College Scorecard (replaced by GI-Bill-approved schools). See
+[[Decision Log]].
 
 **Category balancing (`0010`):** `search_resources` takes a `per_category_limit` — a
 `row_number() over (partition by category order by distance)` keeps only the nearest N per category, so

@@ -11,6 +11,15 @@ updated: 2026-07-20
 > the unchanged `ResourceService`. This is the per-source implementation plan (how to build each
 > adapter and how to get each key). Architecture context: [[Backend to Production Master Plan]] §WS-7.
 
+> **⚠️ 2026-07-22 — Strict veteran-relevance rebuild.** Frontline is veterans-only now: every resource
+> must be **veteran-specific** or offer a **concrete veteran benefit** (enforced by the NOT NULL
+> `veteran_relevance` column, migrations 0011/0012). The general-public sources below (HRSA, HUD
+> counseling, LSC, SAMHSA, College Scorecard) were **dropped**. Live-verification also found that
+> GPD/SSVF/CVSO have **no national dataset** (only single-state ArcGIS layers), so veteran housing/legal/
+> benefits gaps are filled by **veteran-specific national referrals** (curated), not per-place pins.
+> Current sources: **VA facilities** (specific), **USAJOBS** (benefit), **GI-Bill-approved schools**
+> (benefit, via the VA GI Bill API + ZIP-centroid geocode), and **veteran referrals**. See [[Decision Log]].
+
 ## How every adapter is built (the pattern, once)
 
 All sources follow the same shape already used by `va-facilities` and `usajobs`:

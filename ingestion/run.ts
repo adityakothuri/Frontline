@@ -21,11 +21,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createVaFacilitiesSource } from './sources/vaFacilities.ts';
 import { createUsaJobsSource } from './sources/usaJobs.ts';
-import { createHudCounselingSource } from './sources/hudCounseling.ts';
-import { createHrsaHealthCentersSource } from './sources/hrsaHealthCenters.ts';
-import { createSamhsaTreatmentSource } from './sources/samhsaTreatment.ts';
-import { createCollegeScorecardSource } from './sources/collegeScorecard.ts';
-import { createLscLegalAidSource } from './sources/lscLegalAid.ts';
+import { createVaGiBillSchoolsSource } from './sources/vaGiBillSchools.ts';
 import { createCuratedNationalSource } from './sources/curatedNational.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
@@ -33,13 +29,7 @@ import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } 
 const root = resolve(import.meta.dirname, '..');
 const VA_SANDBOX_BASE = 'https://sandbox-api.va.gov/services/va_facilities/v1';
 const USAJOBS_BASE = 'https://data.usajobs.gov/api';
-const HUD_HCS_BASE = 'https://data.hud.gov/Housing_Counselor';
-const HRSA_CSV_URL =
-  'https://data.hrsa.gov/DataDownload/DD_Files/Health_Center_Service_Delivery_and_LookAlike_Sites.csv';
-const SAMHSA_BASE = 'https://findtreatment.gov/locator/exportsAsJson/v2';
-const SCORECARD_BASE = 'https://api.data.gov/ed/collegescorecard/v1/schools';
-const LSC_BASE =
-  'https://services3.arcgis.com/n7h3cEoHTyNCwjCf/arcgis/rest/services/LSC_offices_grantees_main_branch_(Public)/FeatureServer/0';
+const VA_GIBILL_BASE = 'https://api.va.gov/v0/gi/institutions/search';
 
 /** A registered source: how to build it and how to read its secrets from env. */
 interface SourceDef {
@@ -65,48 +55,10 @@ const SOURCES: Record<string, SourceDef> = {
       userAgent: requireEnv(process.env.USAJOBS_USER_AGENT, 'USAJOBS_USER_AGENT', 'the email the USAJOBS key is registered to'),
     }),
   },
-  'hud-housing': {
-    factory: createHudCounselingSource,
-    // HUD's housing-counselor locator is public and keyless — no secret to read.
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: process.env.HUD_HCS_BASE_URL ?? HUD_HCS_BASE,
-    }),
-  },
-  'hrsa-health': {
-    factory: createHrsaHealthCentersSource,
-    // HRSA's national CSV download is public and keyless.
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: process.env.HRSA_CSV_URL ?? HRSA_CSV_URL,
-    }),
-  },
-  'samhsa-treatment': {
-    factory: createSamhsaTreatmentSource,
-    // FindTreatment.gov's export endpoint is public and keyless.
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: process.env.SAMHSA_BASE_URL ?? SAMHSA_BASE,
-    }),
-  },
-  'college-scorecard': {
-    factory: createCollegeScorecardSource,
-    resolveConfig: () => ({
-      apiKey: requireEnv(
-        process.env.DATA_GOV_API_KEY,
-        'DATA_GOV_API_KEY',
-        'a free key from api.data.gov/signup (DEMO_KEY works for testing)',
-      ),
-      baseUrl: process.env.SCORECARD_BASE_URL ?? SCORECARD_BASE,
-    }),
-  },
-  'lsc-legal': {
-    factory: createLscLegalAidSource,
-    // LSC's public ArcGIS feature server is keyless.
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: process.env.LSC_BASE_URL ?? LSC_BASE,
-    }),
+  'gi-bill': {
+    factory: createVaGiBillSchoolsSource,
+    // VA GI Bill Comparison Tool institutions API — keyless.
+    resolveConfig: () => ({ apiKey: '', baseUrl: process.env.VA_GIBILL_BASE_URL ?? VA_GIBILL_BASE }),
   },
   'curated-national': {
     factory: createCuratedNationalSource,
@@ -121,10 +73,8 @@ const SOURCES: Record<string, SourceDef> = {
 /** Per-source paging defaults (overridable with --per-page / --max-pages). */
 const PAGE_DEFAULTS: Record<string, { perPage: number; maxPages: number }> = {
   usajobs: { perPage: 25, maxPages: 4 },
-  // SAMHSA national sweep: ~45k records at 500/page ≈ 92 pages.
-  'samhsa-treatment': { perPage: 500, maxPages: 120 },
-  // College Scorecard: ~6.2k operating schools at 100/page ≈ 63 pages.
-  'college-scorecard': { perPage: 100, maxPages: 80 },
+  // VA GI Bill: ~13.8k schools; the API hard-caps per_page at 10 → ~1,380 pages.
+  'gi-bill': { perPage: 10, maxPages: 1500 },
 };
 
 function requireEnv(value: string | undefined, name: string, hint: string): string {
