@@ -267,6 +267,7 @@ function normalize(facility: VaFacility, today: string): NormalizedResource | nu
     documents_needed: [],
     source_url: website,
     source_type: 'official',
+    veteran_relevance: 'veteran_specific', // VA facilities exist to serve veterans
     verification_status: 'verified',
     last_checked: today,
     last_updated: today,

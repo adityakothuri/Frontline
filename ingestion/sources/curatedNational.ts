@@ -14,7 +14,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { ResourceCategory, SourceType } from '../../src/types/resource.ts';
+import type { ResourceCategory, SourceType, VeteranRelevance } from '../../src/types/resource.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -34,6 +34,7 @@ interface CuratedEntry {
   website: string | null;
   eligibility: string | null;
   source_type: SourceType;
+  veteran_relevance: VeteranRelevance;
 }
 
 interface CuratedFile {
@@ -56,6 +57,7 @@ function normalize(entry: CuratedEntry, today: string): NormalizedResource {
     documents_needed: [],
     source_url: entry.website,
     source_type: entry.source_type,
+    veteran_relevance: entry.veteran_relevance,
     verification_status: 'verified',
     last_checked: today,
     last_updated: today,

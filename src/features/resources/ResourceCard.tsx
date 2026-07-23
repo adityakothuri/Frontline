@@ -12,6 +12,7 @@ import { callPhone, openDirections } from './resourceActions';
 import { openNowStatus } from './resourceStatus';
 import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
+import { VeteranBadge } from './VeteranBadge';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -52,11 +53,14 @@ export function ResourceCard({ result, needCategory }: ResourceCardProps) {
     >
       <Card style={styles.card}>
         <View style={styles.topRow}>
-          <View style={styles.categoryChip}>
-            <Ionicons name={meta.icon} size={14} color={meta.color} />
-            <AppText variant="caption" color="textSecondary">
-              {meta.label}
-            </AppText>
+          <View style={styles.leftCluster}>
+            <View style={styles.categoryChip}>
+              <Ionicons name={meta.icon} size={14} color={meta.color} />
+              <AppText variant="caption" color="textSecondary">
+                {meta.label}
+              </AppText>
+            </View>
+            <VeteranBadge relevance={resource.veteran_relevance} />
           </View>
           <View style={styles.rightCluster}>
             {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
@@ -145,6 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  leftCluster: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   categoryChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   rightCluster: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bookmarkPressed: { opacity: 0.5 },
