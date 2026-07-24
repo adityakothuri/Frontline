@@ -1,7 +1,7 @@
 # Security Policy
 
-Watchdog handles cameras, video, location, and neighborhood-safety data. Security and privacy
-are core product concerns, not afterthoughts.
+Frontline serves veterans and handles location and optional, self-provided profile data, plus
+AI-generated guidance. Security, privacy, and trust are core product concerns, not afterthoughts.
 
 ## Reporting a vulnerability
 
@@ -23,26 +23,36 @@ acknowledge and work on a fix before any public disclosure.
 - Use `.env.local` (or the deployment environment) for local/real values.
 - `.env.example` contains **placeholders only** and is safe to commit — keep it that way.
 - **Mobile apps ship their bundle**, so anything in the app is effectively public. Only
-  **public client keys** (e.g. `EXPO_PUBLIC_SUPABASE_ANON_KEY`) may live in app source.
-- **Service-role / admin / backend secrets must never appear in app source** — keep privileged
-  operations on a backend or edge function.
+  **public client keys** (e.g. `EXPO_PUBLIC_*`) may live in app source.
+- **The AI / Anthropic API key must never ship in the client.** Real LLM calls go through a
+  server-side proxy; the app only holds the proxy URL. See
+  [Environment Variables](docs/obsidian/03%20Technical/Environment%20Variables.md).
 
-## Privacy & camera/video
+## Privacy & data minimization
 
-- **User approval is required before any footage or detection becomes public.** Nothing from a
-  private camera is posted automatically.
-- Raw private footage stays private unless the user intentionally posts it.
-- Location handling must be privacy-conscious (coarse, permissioned).
-- Alerts are temporary by design (auto-delete/expiration).
+- **Collect the minimum.** Frontline **never** asks for SSN, VA login credentials, bank/financial
+  info, or a medical diagnosis.
+- The veteran **profile is optional** and used only to personalize results — never to gatekeep.
+- Location: prefer **ZIP entry**; if using device location, ask clearly and allow ZIP instead.
+  Don't store precise location beyond the session.
+- MVP profile/saved data lives **on-device** — no account, no server, no tracking.
+
+## AI safety
+
+- AI output is **simplified guidance — never legal, medical, financial, or government-certified
+  advice**. Eligibility language stays hedged ("you *may* qualify… confirm with the official
+  source"), and every AI surface is labeled.
+- Frontline is a **navigator, not the VA / a government agency**, and must say so.
 
 ## Sensitive changes need extra review
 
-Changes touching **camera/video handling, detection, location, authentication, permissions, or
-anything that affects what becomes public** require extra scrutiny in review — call them out
-explicitly in the PR (see the "Risks / Follow-ups" section of the PR template) and record
-notable decisions in the [Decision Log](docs/obsidian/08%20Decisions/Decision%20Log.md).
+Changes touching **location, the AI proxy/keys, any new data collection, authentication, or
+permissions** require extra scrutiny in review — call them out explicitly in the PR (see the
+"Risks / Follow-ups" section of the PR template) and record notable decisions in the
+[Decision Log](docs/obsidian/08%20Decisions/Decision%20Log.md).
 
 ## Related
 
 - [Environment Variables](docs/obsidian/03%20Technical/Environment%20Variables.md)
+- [Trust, Safety & Privacy](docs/obsidian/01%20Product/Trust%20Safety%20and%20Privacy.md)
 - [Product Principles](docs/obsidian/01%20Product/Product%20Principles.md)

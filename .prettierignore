@@ -1,4 +1,4 @@
-# Prettier formats Watchdog app source only. Everything below is generated,
+# Prettier formats Frontline app source only. Everything below is generated,
 # vendored, or intentionally hand-formatted (docs vault, CI, Claude/Codex tooling).
 node_modules/
 .expo/
