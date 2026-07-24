@@ -35,6 +35,8 @@ interface CuratedEntry {
   eligibility: string | null;
   source_type: SourceType;
   veteran_relevance: VeteranRelevance;
+  /** Date a human last confirmed this entry against its official site. */
+  verified_on: string;
 }
 
 interface CuratedFile {
@@ -59,8 +61,10 @@ function normalize(entry: CuratedEntry, today: string): NormalizedResource {
     source_type: entry.source_type,
     veteran_relevance: entry.veteran_relevance,
     verification_status: 'verified',
-    last_checked: today,
-    last_updated: today,
+    // The real human-review date, not the run date — an unreviewed entry goes
+    // stale on schedule instead of looking freshly checked forever.
+    last_checked: entry.verified_on,
+    last_updated: entry.verified_on,
     tags: ['national', entry.category],
     created_at: today,
     updated_at: today,

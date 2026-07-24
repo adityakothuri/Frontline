@@ -4,19 +4,25 @@ import { AppText } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import type { VeteranRelevance } from '@/types/resource';
 
-// Why a resource belongs in a veterans' app, shown as a compact pill. Every
-// resource is one or the other, so the badge is a quiet reassurance (the whole
-// app is veteran-relevant) rather than a filter the veteran has to think about.
+// Why a resource belongs in a veterans' app, shown as a compact pill. Veteran
+// rows get the accent pill; general rows ("Open to everyone") render muted so
+// veteran resources stay visually primary — the label is honesty, not flair.
 const LABEL: Record<VeteranRelevance, string> = {
   veteran_specific: 'For veterans',
   veteran_benefit: 'Veterans’ benefit',
+  general: 'Open to everyone',
 };
 
 export function VeteranBadge({ relevance }: { relevance: VeteranRelevance }) {
+  const general = relevance === 'general';
   return (
-    <View style={styles.badge}>
-      <Ionicons name="ribbon-outline" size={12} color={colors.accent} />
-      <AppText variant="caption" style={styles.label}>
+    <View style={[styles.badge, general && styles.badgeGeneral]}>
+      <Ionicons
+        name={general ? 'people-outline' : 'ribbon-outline'}
+        size={12}
+        color={general ? colors.textSecondary : colors.accent}
+      />
+      <AppText variant="caption" style={general ? styles.labelGeneral : styles.label}>
         {LABEL[relevance]}
       </AppText>
     </View>
@@ -33,5 +39,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.accentSoft,
   },
+  badgeGeneral: { backgroundColor: colors.surfaceMuted },
   label: { color: colors.accent },
+  // textSecondary, not textMuted: muted is 4.24:1 on surfaceMuted — under AA
+  // for 12px text. Secondary (6.0:1) still reads quieter than the accent pill.
+  labelGeneral: { color: colors.textSecondary },
 });

@@ -1,8 +1,8 @@
 ---
 tags: [command-center, start-here]
 status: active
-phase: "Phase 10 backend LIVE; Phase 12 data ingestion LIVE (WS-7: 2,261 real VA facilities NATIONWIDE + 100 USAJOBS federal jobs, official/verified, via the unchanged ResourceService — any ZIP returns real distance-ranked results, verified on-device for ZIP 75034). WS-6 Google auth deliberately skipped — local-device sync stays."
-updated: 2026-07-15
+phase: "Data cycle FINAL (2026-07-24): hybrid relevance (veteran-first + labeled general), ~17k live rows across every category, Census-geocoded pins, honest trust labels, scheduled refresh with a freshness gate. Remaining: user merges to main + sets 5 secrets; Feed America pilot sign-off; VA-key re-ingest."
+updated: 2026-07-24
 ---
 
 # Frontline Command Center
@@ -34,6 +34,27 @@ routing, badge convergence — 2026-07-11). Remaining: the accumulated **on-devi
 [[Phase 10 Backend and Data Ingestion]] (post-MVP, needs explicit approval).
 
 ## Current Active Task
+
+**🟢 Data cycle FINAL audit + hybrid rebuild (2026-07-24).** The user's three pillars checked and
+fixed: **(1) veteran-centric** — hybrid rule (veteran rows fill the search cap first + win ties;
+general rows badged "Open to everyone"; migrations `0013`/`0014`); **(2) abundant** — LSC legal
+854 + HUD housing 1,315 restored as labeled-general, SSVF 235 veteran-specific housing added,
+Vet Centers cross-listed → community_support (re-ingest needs `VA_API_KEY`), Feed America food
+feed built (pilot-gated); **(3) auto-updating** — cron workflow fixed (jobs weekly / places
+monthly) + `freshnessGate.ts` fails CI on stale sources + failure auto-opens an issue — **but the
+cron is dead until the branch merges to `main` and 5 repo secrets are set (user action)**. Also:
+GI Bill pins now **Census-geocoded to street addresses** (`0015` cache; unmatched = no pin — ZIP
+centroids removed), trust copy honest ("From official VA/gov data · updated <date>"; curated
+hotlines show their real `verified_on`). See
+[[2026-07-24 Data cycle final audit and hybrid rebuild]] + [[Decision Log]].
+
+**Next (user):** (a) merge `feature/phase-10-backend` → `main`, set secrets (`SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, `VA_API_KEY`, `USAJOBS_API_KEY`, `USAJOBS_USER_AGENT`), run a manual
+`workflow_dispatch` to verify; (b) re-run `--source va-facilities --national` with the VA key
+(activates Vet Center cross-listing); (c) approve/decline Feed America CC BY-SA + national food
+rollout after the TX spot-check. Then the data cycle is closed and focus moves elsewhere.
+
+<details><summary>Prior — Phase 12 / WS-7 ingestion go-live (2026-07-20)</summary>
 
 **🟢 Phase 12 / WS-7 — real data ingestion LIVE & app returns real results by ZIP (2026-07-20).**
 Standalone `ingestion/` tooling (not app-bundle) pulls two official sources through the **unchanged
@@ -74,6 +95,8 @@ sandbox limit before public launch; (d) pre-launch polish (WS-2/3/4/5). Owner hy
 rotating the `service_role` key post-demo (pasted in chat). Prior: **🟢 Phase 10 backend LIVE** —
 migrations 0001–0006, `zip_centroids` (33,791), `ai`+`sync` ACTIVE, cost controls
 ([[2026-07-15 Backend Go-Live Cost Controls and Production Plan]]).
+
+</details>
 
 <details><summary>Prior — Phase 10 backend slice 2: saved/profile backup sync</summary>
 

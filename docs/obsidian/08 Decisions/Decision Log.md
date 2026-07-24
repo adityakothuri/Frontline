@@ -588,6 +588,33 @@ Running log of notable product, design, and technical decisions (lightweight ADR
   veteran referrals). Migrations `0011`/`0012`. See
   [[2026-07-22 Veteran-only data rebuild]].
 
+### 2026-07-24 — Hybrid relevance: veteran-first, labeled general backfill (supersedes 2026-07-22)
+- **Status:** accepted (user decision during the final data-cycle audit)
+- **Context:** The strict rule left **7 of 11 categories with 1–4 national hotlines** and nothing
+  local — a veteran searching "food" or "legal" near them found no place to actually go. Abundance
+  and strict veteran-only were in direct conflict.
+- **Decision:** **Veteran resources always come first; thin categories are backfilled with
+  high-quality general sources clearly labeled.** A third `veteran_relevance` tier — `general` —
+  is allowed (migration `0013`, column stays NOT NULL). Veteran-first is enforced as **capacity and
+  tie-breaks, not display shuffling**: the `search_resources` per-category cap fills veteran rows
+  before general (`0014`), relevance breaks distance ties client-side, and the visible sort stays
+  nearest-first (a vet needing food today wants the nearest pantry). General rows show a muted
+  "Open to everyone" badge; national veteran hotlines render in a dedicated "National help lines"
+  strip above local results instead of sorting last on a null distance.
+- **Sources:** restored LSC legal aid (854, `legal`) and HUD counseling (~1.3k, `housing`) as
+  `general`; added **SSVF grantees** (235, `veteran_specific`, from the VA FY26 XLSX → curated
+  JSON) and **Vet Center cross-listing** into `community_support`; piloted the **Feed America
+  HSDS feed** for `food` (aggregator → `directory`/`needs_review`, CC BY-SA attribution,
+  national rollout gated on license sign-off). HRSA/SAMHSA stay out (healthcare already has
+  1,816 VA facilities; 37k general rows would drown the veteran identity).
+- **Also decided:** GI Bill school pins move from **ZIP centroids to Census-geocoded street
+  addresses** (`0015` cache; unmatched = no pin, never approximate); `last_checked` semantics are
+  now honest ("From official VA/gov data · updated <date>"; curated lists carry their real
+  human-review date); refresh runs on GitHub Actions cron with a freshness gate that fails loudly.
+- **Consequences:** Migrations `0013`–`0015`; the "veteran-only by construction" claim becomes
+  "veteran-first by construction". Marketing line: every resource is either veteran-specific,
+  a veteran benefit, or clearly labeled open-to-everyone.
+
 ## Related
 
 [[Technical Architecture]] · [[AI Feature Design]] · [[Non-MVP Ideas]] · [[Frontline Command Center]]

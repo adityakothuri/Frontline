@@ -281,6 +281,28 @@ function normalize(facility: VaFacility, today: string): NormalizedResource | nu
   };
 }
 
+/**
+ * Vet Centers are counseling-first, so they live in `healthcare` — but they are
+ * also the closest thing the VA has to a local veteran community hub (peer
+ * support, family readjustment, someone to talk to). Cross-list each one into
+ * `community_support` as a second row so that category holds real, nearby
+ * places instead of only national hotlines. Distinct id/external_id keeps the
+ * provenance rows separate.
+ */
+function crossListVetCenter(base: NormalizedResource): NormalizedResource {
+  return {
+    ...base,
+    id: `${base.id}:community`,
+    external_id: `${base.external_id}:community`,
+    category: 'community_support',
+    description:
+      'Vet Center — a local hub for veteran peer support: free, confidential readjustment counseling for combat veterans, service members, and their families.',
+    eligibility:
+      'For combat veterans, service members, and their families. No VA enrollment or appointment needed — walk in or call.',
+    tags: [...base.tags, 'community-support'],
+  };
+}
+
 // Response `facilityType` values → the `?type=` param values used for nationwide
 // pulls. We ingest the three usable types (cemeteries are skipped downstream).
 const NATIONAL_TYPES = ['health', 'benefits', 'vet_center'] as const;
@@ -371,7 +393,11 @@ export const createVaFacilitiesSource: SourceFactory = (config: SourceConfig): I
             if (seen.has(facility.id)) continue;
             seen.add(facility.id);
             const normalized = normalize(facility, today);
-            if (normalized) results.push(normalized);
+            if (!normalized) continue;
+            results.push(normalized);
+            if (facility.attributes.facilityType === 'vet_center') {
+              results.push(crossListVetCenter(normalized));
+            }
           }
           if (facilities.length < query.perPage) break; // last page of this segment
         }

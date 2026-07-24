@@ -5,7 +5,7 @@
 #
 # Usage:
 #   ingestion/refresh.sh all      # everything (default)
-#   ingestion/refresh.sh places   # slow-changing places: HRSA, SAMHSA, HUD, VA, colleges
+#   ingestion/refresh.sh places   # slow-changing places: VA, GI Bill, LSC, HUD, curated
 #   ingestion/refresh.sh jobs     # USAJOBS only (postings churn fast) + purge expired
 #
 # Recommended cadence (see docs/obsidian/04 Build Roadmap/Resource Source
@@ -58,10 +58,28 @@ refresh_jobs() {
 }
 
 refresh_places() {
-  # Veteran-relevant sources only (see docs — strict veteran inclusion rule).
+  # Veteran sources first, then the labeled-general backfill (hybrid rule —
+  # see docs/obsidian/08 Decisions/Decision Log.md, 2026-07-23).
   log "VA facilities (national)";              $RUN --source va-facilities --national
   log "GI Bill schools (national)";            $RUN --source gi-bill
   log "Veteran national referrals";            $RUN --source curated-national
+  log "SSVF providers (from committed JSON)";  $RUN --source ssvf-providers
+  log "LSC legal aid (national)";              $RUN --source lsc-legal
+
+  # HUD locator caps at ~1,329/query, so sweep regional points (CONUS + HI + AK);
+  # the idempotent upsert dedups by agency id.
+  local points=(
+    "47.6 -122.3 600" "46.6 -112.0 600" "47.9 -97.0 600" "44.9 -93.2 600"
+    "44.5 -73.2 600" "40.7 -74.0 500" "39.7 -104.9 600" "38.6 -90.2 600"
+    "38.9 -77.0 500" "34.0 -118.2 500" "33.4 -112.1 500" "32.8 -96.8 600"
+    "29.8 -95.4 500" "33.7 -84.4 500" "29.95 -90.1 500" "28.5 -81.4 500"
+    "25.8 -80.2 400" "41.88 -87.63 500" "21.4 -157.9 500" "61.2 -149.9 900" "64.8 -147.7 600"
+  )
+  for p in "${points[@]}"; do
+    set -- $p
+    log "HUD housing — $1,$2 (r=$3)"
+    $RUN --source hud-housing --lat "$1" --long "$2" --radius "$3"
+  done
 }
 
 case "$MODE" in

@@ -14,6 +14,7 @@ import {
 } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import {
+  isNationalReferral,
   resourceService,
   resourceToNeedCategory,
   type ResourceSearchResult,
@@ -84,12 +85,18 @@ export default function DiscoverScreen() {
   }, [selected, load]);
 
   // The multi-category "all" browse alternates categories; a single category
-  // keeps its natural nearest-first order.
-  const displayResults = useMemo(() => {
-    if (state.status !== 'ready') return [];
-    return shellCategory(selected) === undefined
-      ? interleaveByCategory(state.results)
-      : state.results;
+  // keeps its natural nearest-first order, with national veteran help lines
+  // (no location, no distance) pulled into their own strip on top instead of
+  // sorting last on a null distance.
+  const { referrals, displayResults } = useMemo(() => {
+    if (state.status !== 'ready') return { referrals: [], displayResults: [] };
+    if (shellCategory(selected) === undefined) {
+      return { referrals: [], displayResults: interleaveByCategory(state.results) };
+    }
+    return {
+      referrals: state.results.filter((r) => isNationalReferral(r.resource)),
+      displayResults: state.results.filter((r) => !isNationalReferral(r.resource)),
+    };
   }, [state, selected]);
 
   const handleSelect = (id: ShellId) => {
@@ -152,7 +159,7 @@ export default function DiscoverScreen() {
           <Loading label="Loading opportunities…" />
         ) : state.status === 'error' ? (
           <ErrorState onRetry={load} />
-        ) : displayResults.length === 0 ? (
+        ) : displayResults.length === 0 && referrals.length === 0 ? (
           <EmptyState
             icon="search-outline"
             title="Nothing here yet"
@@ -168,6 +175,34 @@ export default function DiscoverScreen() {
                 needCategory={shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)}
               />
             )}
+            ListHeaderComponent={
+              referrals.length > 0 ? (
+                <View style={styles.referralSection}>
+                  <AppText variant="label" color="textSecondary" accessibilityRole="header">
+                    National help lines
+                  </AppText>
+                  {referrals.map((item) => (
+                    <ResourceCard
+                      key={item.resource.id}
+                      result={item}
+                      needCategory={
+                        shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)
+                      }
+                    />
+                  ))}
+                  {displayResults.length > 0 ? (
+                    <AppText
+                      variant="label"
+                      color="textSecondary"
+                      accessibilityRole="header"
+                      style={styles.nearYouLabel}
+                    >
+                      Near you
+                    </AppText>
+                  ) : null}
+                </View>
+              ) : null
+            }
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
           />
@@ -209,6 +244,8 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: spacing.xl,
   },
+  referralSection: { gap: spacing.md },
+  nearYouLabel: { marginTop: spacing.sm },
   misc: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
   backRow: {
     flexDirection: 'row',

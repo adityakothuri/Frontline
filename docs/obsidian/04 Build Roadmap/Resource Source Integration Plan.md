@@ -11,14 +11,19 @@ updated: 2026-07-20
 > the unchanged `ResourceService`. This is the per-source implementation plan (how to build each
 > adapter and how to get each key). Architecture context: [[Backend to Production Master Plan]] §WS-7.
 
-> **⚠️ 2026-07-22 — Strict veteran-relevance rebuild.** Frontline is veterans-only now: every resource
-> must be **veteran-specific** or offer a **concrete veteran benefit** (enforced by the NOT NULL
-> `veteran_relevance` column, migrations 0011/0012). The general-public sources below (HRSA, HUD
-> counseling, LSC, SAMHSA, College Scorecard) were **dropped**. Live-verification also found that
-> GPD/SSVF/CVSO have **no national dataset** (only single-state ArcGIS layers), so veteran housing/legal/
-> benefits gaps are filled by **veteran-specific national referrals** (curated), not per-place pins.
-> Current sources: **VA facilities** (specific), **USAJOBS** (benefit), **GI-Bill-approved schools**
-> (benefit, via the VA GI Bill API + ZIP-centroid geocode), and **veteran referrals**. See [[Decision Log]].
+> **⚠️ 2026-07-24 — Hybrid relevance rebuild (supersedes the 2026-07-22 strict rule).** Veteran
+> resources always rank first (the search RPC's per-category cap fills veteran rows before general;
+> relevance breaks distance ties), and thin categories are backfilled with **clearly-labeled general
+> sources** (`veteran_relevance:'general'`, "Open to everyone" badge). Current sources:
+> **VA facilities** (specific; Vet Centers also cross-listed → community_support), **USAJOBS**
+> (benefit), **GI-Bill schools** (benefit, pins now **Census-geocoded to street addresses** — no more
+> ZIP centroids; unmatched = no pin), **SSVF grantees** (specific, from the VA FY XLSX), **curated
+> veteran referrals**, **LSC legal aid** (general, restored), **HUD counseling** (general, restored),
+> and the **Feed America food feed** (general, pilot-gated). HRSA/SAMHSA remain out — healthcare
+> already has 1,816 VA facilities. Refresh runs on GitHub Actions cron (jobs weekly, places monthly)
+> with a freshness gate. Authoritative source table: `ingestion/README.md`. See [[Decision Log]].
+>
+> The per-source sections below predate both rebuilds — read them as build history, not current state.
 
 ## How every adapter is built (the pattern, once)
 

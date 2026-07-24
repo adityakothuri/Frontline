@@ -463,6 +463,55 @@ are a location-scoped snapshot needing periodic re-ingest. **Extend later:** mor
 `ingestion/sources/` (HUD housing, USAJOBS more metros, 211/findhelp → `needs_review`), freshness
 automation + purge of closed postings, cross-provider geo-dedup.
 
+## Hybrid data cycle — veteran-first + labeled general, honest pins & freshness (2026-07-24)
+
+### Why it exists
+The final data-cycle audit found 7 of 11 categories nearly empty after the strict veteran-only
+purge, refresh automation that had never run, school pins on ZIP centroids, and trust labels
+implying human review. The user chose a **hybrid**: veteran resources always first, thin
+categories backfilled with clearly-labeled general sources. See [[Decision Log]] (2026-07-24) and
+[[2026-07-24 Data cycle final audit and hybrid rebuild]].
+
+### Where the code lives
+- **Relevance tier**: `supabase/migrations/0013` (adds `'general'`, still NOT NULL),
+  `0014`+`0016` (search RPC: located rows fill the per-category cap veteran-first;
+  null-distance referrals get their own cap of 3/category, curated hotlines first),
+  `src/types/resource.ts` (`VeteranRelevance`), `src/features/resources/VeteranBadge.tsx`
+  (muted "Open to everyone" badge), `src/services/resources/sortResults.ts` (relevance breaks
+  distance ties; `isNationalReferral()`).
+- **National help-lines strip**: `app/results.tsx` + `app/(tabs)/discover.tsx` partition
+  null-coord veteran referrals into a labeled strip above local results (they no longer sort last
+  on null distance). Discover's "all" browse keeps the category interleave.
+- **Exact geocoding**: `ingestion/censusGeocode.ts` (Census batch geocoder + `geocode_cache`
+  table, migration `0015`), `ingestion/sources/vaGiBillSchools.ts` (emits `geocode` address parts,
+  null coords until matched). Unmatched = listed, never pinned. ZIP-centroid module deleted.
+- **Sources**: `lscLegalAid.ts` (854, legal, general), `hudCounseling.ts` (1,315, housing,
+  general), `ssvfProviders.ts` + `data/ssvf-providers.json` (235 VA SSVF grantees, housing,
+  veteran_specific, quarterly manual), Vet Center cross-listing in `vaFacilities.ts`
+  (→ community_support), `feedAmericaFood.ts` (food, pilot-gated aggregator, needs_review).
+- **Freshness**: `.github/workflows/refresh-data.yml` (jobs weekly / places monthly, must live on
+  `main` with 5 secrets set), `ingestion/refresh.sh`, `ingestion/freshnessGate.ts` (CI fails when
+  any provider ages past cadence), failure auto-opens a GitHub issue.
+- **Honest labels**: `resourceStatus.ts` ("From official VA/gov data · updated <date>"),
+  `ResourceDetail.tsx` ("Data updated <date>"), `curatedNational.ts` (`last_checked` = the entry's
+  `verified_on` human-review date).
+
+### How data flows
+Provider APIs / curated JSON → adapter `normalize()` (must set `veteran_relevance`) → optional
+Census geocoding (cache-first) → validate → service-role upsert. The app reads the same
+`search_resources` RPC; veteran-first lives in the RPC's window ordering + client tie-breaks, so
+the visible sort stays nearest-first.
+
+### What's mock vs production
+Nothing is mocked. Feed America is **pilot-gated** (TX dry-run + spot-check; national needs the
+CC BY-SA sign-off). Vet Center cross-listing re-ingest waits on `VA_API_KEY`. Cron waits on the
+merge to `main` + secrets.
+
+### How to extend
+New source → `ingestion/README.md` "Adding a source": adapter + `veteran_relevance` + register +
+add to `freshnessGate.ts` with a cadence. Providers with addresses but no coords set `geocode`
+parts — never approximate.
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:

@@ -15,7 +15,7 @@ export const colors = {
   // Text — warm near-black on paper
   textPrimary: '#1A1A17',
   textSecondary: '#57564F',
-  textMuted: '#6F6D63', // WCAG AA (>=4.5:1) on all app surfaces for small text
+  textMuted: '#6F6D63', // AA (>=4.5:1) on background/surface; only 4.24:1 on surfaceMuted — use textSecondary there for small text
   textOnAccent: '#FBF8F0', // warm paper-white on olive (5.0:1)
 
   // Accent — a real olive green (high chroma, never gray), primary actions only.
