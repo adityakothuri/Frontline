@@ -48,10 +48,15 @@ results → detail): all screens render, badges/labels/geocoded distances correc
 116k food rows; migration `0017` adds a bounding-box pre-filter + index (500 → 200 in 0.57 s).
 Data integrity clean: 0 unpaired coords, 0 null-island pins, 0 orphans, 0 mislabeled trust.
 
-**⏳ Blocked on user (2 items):** (a) add `VA_API_KEY` / `USAJOBS_API_KEY` / `USAJOBS_USER_AGENT`
-to `.env.seed` → I set the 3 GitHub secrets + dispatch the workflow + re-ingest VA facilities
-(activates ~300 Vet Center → community_support rows); until then the Monday jobs cron will fail
-the freshness gate. `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` secrets already set. See
+**Automation PROVEN (2026-07-24 eve):** all 5 secrets set; **dispatched the `jobs` workflow — it
+succeeded** (USAJOBS 306→345, purge + freshness gate green). Workflow VA base-URL bug fixed (PR #13,
+was defaulting to sandbox). The cron is real and working.
+
+**⏳ One blocker left — VA key rejected:** the provided `VA_API_KEY` returns **401** on both sandbox
+and production Facilities API (the USAJOBS key from the same paste works). It's expired/revoked/wrong-
+scope. Until a valid VA Facilities key is set (GitHub secret + `.env.seed`), the ~300 Vet Center →
+community_support cross-listings can't load and the monthly `places` cron will fail on VA. The
+existing 2,261 VA rows (2026-07-21) stay live, so the app isn't degraded. See
 [[2026-07-24 Data cycle final audit and hybrid rebuild]] + [[Decision Log]].
 
 **Publishability (release-manager audit):** engineering is strong (clean RLS, env hygiene, green

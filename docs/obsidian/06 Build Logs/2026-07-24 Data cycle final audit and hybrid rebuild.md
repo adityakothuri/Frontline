@@ -152,6 +152,26 @@ all-browse went **500 → 200 in 0.57 s**, balanced across all 11 categories.
 - RN-Web nested-`<button>` hydration warning (Pressable card containing the
   bookmark Pressable) — harmless on native.
 
+## Automation proven live (2026-07-24, evening)
+
+All 5 GitHub secrets set. **Dispatched the `jobs` workflow — it succeeded**:
+USAJOBS re-ingested (306 → 345 rows, expired postings purged), the freshness
+gate passed, no failure issue. The scheduled cron infrastructure is real and
+working. Also fixed a workflow bug (PR #13): `refresh-data.yml` inherited
+run.ts's **sandbox** default for `VA_FACILITIES_BASE_URL`, so the monthly
+places run would have ingested the fixed sandbox dataset — now pinned to the
+production URL.
+
+### ⚠️ VA key rejected (blocks the Vet Center cross-listing)
+The `VA_API_KEY` provided returns **401 on both sandbox and production**
+Facilities API (verified by direct curl; the USAJOBS key from the same source
+works — 200). The key is clean (40 chars, no hidden bytes), so it is
+expired / revoked / not scoped to the Facilities API. **Consequence:** the
+~300 Vet Center → community_support cross-listings can't load until a valid
+Facilities key is set (as both the `VA_API_KEY` GitHub secret and `.env.seed`).
+The existing 2,261 VA rows (loaded 2026-07-21) are still live and correct, so
+the app is not degraded — community_support just stays referral-only for now.
+
 ## Remaining (user actions — the cron is dead until #1)
 
 1. Merge `feature/phase-10-backend` → `main` + set repo secrets
