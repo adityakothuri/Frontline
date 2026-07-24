@@ -25,6 +25,7 @@ import { createVaGiBillSchoolsSource } from './sources/vaGiBillSchools.ts';
 import { createCuratedNationalSource } from './sources/curatedNational.ts';
 import { createHudCounselingSource } from './sources/hudCounseling.ts';
 import { createSsvfProvidersSource } from './sources/ssvfProviders.ts';
+import { createFeedAmericaFoodSource } from './sources/feedAmericaFood.ts';
 import { geocodeResources } from './censusGeocode.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
@@ -88,6 +89,17 @@ const SOURCES: Record<string, SourceDef> = {
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: resolve(root, 'ingestion/data/ssvf-providers.json'),
+    }),
+  },
+  'feed-america': {
+    factory: createFeedAmericaFoodSource,
+    // Food pantries (open to everyone, labeled). Veterans face food insecurity
+    // and no veteran-specific food dataset exists; kept scoped (8 states, and
+    // capped to the nearest ~20 in the app) so it never dominates. Keyless;
+    // hard-fails without --state. Decision 2026-07-24.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.FEEDAM_BASE_URL ?? 'https://feedam.org/hsds/v3',
     }),
   },
 };

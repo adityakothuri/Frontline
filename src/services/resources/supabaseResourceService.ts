@@ -1,6 +1,6 @@
 import { isOpenNow } from '@/lib/hours';
 import type { Need, NeedCategory } from '@/types/need';
-import type { Resource } from '@/types/resource';
+import type { Resource, ResourceCategory } from '@/types/resource';
 import { supabaseRequest } from '../supabase/client';
 import { needToResourceCategories } from './needMapping';
 import {
@@ -39,6 +39,26 @@ const toResult = (row: SearchRow, now: Date): ResourceSearchResult => ({
 const SEARCH_PER_CATEGORY_LIMIT = 50;
 const BROWSE_PER_CATEGORY_LIMIT = 30;
 
+// A few categories are dense general (open-to-everyone) data — food pantries —
+// where veterans have no veteran-specific dataset. Cap them to the nearest N so
+// a veteran-focused feed never fills with them; veteran categories are
+// uncapped here and keep the full per-category limit above. Applied AFTER the
+// distance sort, so it keeps the nearest ones.
+const DENSE_GENERAL_CAPS: Partial<Record<ResourceCategory, number>> = { food: 20 };
+
+function capDenseGeneral(results: ResourceSearchResult[]): ResourceSearchResult[] {
+  const counts = new Map<string, number>();
+  return results.filter((r) => {
+    const cap = DENSE_GENERAL_CAPS[r.resource.category];
+    // Only cap the general rows (the dense pantries). Veteran rows — including
+    // the national veteran food referral — are never dropped.
+    if (cap === undefined || r.resource.veteran_relevance !== 'general') return true;
+    const n = (counts.get(r.resource.category) ?? 0) + 1;
+    counts.set(r.resource.category, n);
+    return n <= cap;
+  });
+}
+
 const rpcBody = (need: Need) => ({
   zip: need.location.zip ?? null,
   lat: need.location.latitude ?? null,
@@ -56,9 +76,11 @@ class SupabaseResourceService implements ResourceService {
       body: rpcBody(query.need),
     });
     const now = new Date();
-    return sortSearchResults(
-      rows.map((row) => toResult(row, now)),
-      query.need.urgency,
+    return capDenseGeneral(
+      sortSearchResults(
+        rows.map((row) => toResult(row, now)),
+        query.need.urgency,
+      ),
     );
   }
 
@@ -80,7 +102,9 @@ class SupabaseResourceService implements ResourceService {
       },
     });
     const now = new Date();
-    return rows.map((row) => toResult(row, now)).sort(compareByDistanceThenVerification);
+    return capDenseGeneral(
+      rows.map((row) => toResult(row, now)).sort(compareByDistanceThenVerification),
+    );
   }
 
   async getById(id: string): Promise<Resource | null> {
