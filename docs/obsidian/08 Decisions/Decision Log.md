@@ -617,6 +617,25 @@ Running log of notable product, design, and technical decisions (lightweight ADR
   "veteran-first by construction". Marketing line: every resource is either veteran-specific,
   a veteran benefit, or clearly labeled open-to-everyone.
 
+### 2026-07-24 — Education = veteran-focused schools only (not every GI-Bill college)
+- **Status:** accepted (user decision)
+- **Context:** The GI Bill Comparison Tool lists ~12.8k approved schools — i.e. nearly every
+  college in the US that accepts the benefit. In a veterans' app that reads as bloat: "any college"
+  is not a veteran resource.
+- **Decision:** Keep only schools that **materially do more for veterans than accept the benefit** —
+  Yellow Ribbon funding (extra tuition beyond the GI Bill cap), an organized **Student Veteran
+  Group**, or **VET TEC**. Filter lives in `isVeteranFocused()` in `vaGiBillSchools.ts`, so the
+  monthly refresh stays consistent. Weaker signals (Principles of Excellence = compliance, 8 Keys =
+  a pledge) are excluded. Result: **12,854 → 2,794** (1,096 public / 1,340 private nonprofit / 358
+  for-profit). Purged 10,060 rows + provenance.
+- **Alternatives considered:** Student Veteran Group only (~1,372, stricter); add 8 Keys (~3,800,
+  broader). The chosen middle keeps every school with a real veteran community OR extra veteran
+  funding.
+- **Also fixed here:** a long-standing `describe()` case bug — VA `type` is upper-case, compared
+  against lower-case, so *every* school read "private for-profit"; now correctly typed.
+- **Consequences:** education drops to a genuinely veteran-supportive set comparable in size to the
+  other real categories. See [[2026-07-24 Data cycle final audit and hybrid rebuild]].
+
 ## Related
 
 [[Technical Architecture]] · [[AI Feature Design]] · [[Non-MVP Ideas]] · [[Frontline Command Center]]

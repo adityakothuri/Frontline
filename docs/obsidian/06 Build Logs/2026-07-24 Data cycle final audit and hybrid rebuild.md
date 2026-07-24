@@ -162,22 +162,64 @@ run.ts's **sandbox** default for `VA_FACILITIES_BASE_URL`, so the monthly
 places run would have ingested the fixed sandbox dataset — now pinned to the
 production URL.
 
-### ⚠️ VA key rejected (blocks the Vet Center cross-listing)
-The `VA_API_KEY` provided returns **401 on both sandbox and production**
-Facilities API (verified by direct curl; the USAJOBS key from the same source
-works — 200). The key is clean (40 chars, no hidden bytes), so it is
-expired / revoked / not scoped to the Facilities API. **Consequence:** the
-~300 Vet Center → community_support cross-listings can't load until a valid
-Facilities key is set (as both the `VA_API_KEY` GitHub secret and `.env.seed`).
-The existing 2,261 VA rows (loaded 2026-07-21) are still live and correct, so
-the app is not degraded — community_support just stays referral-only for now.
+### VA sandbox key + Vet Center cross-listing DONE
+First VA key (`Rdo90UWm…`) was rejected 401 everywhere. Second key
+(`MKMA7EQz…`) works on **sandbox** (200 / prod 401) — a sandbox key, which
+matches how the app's VA data has always been sourced (real, fixed nationwide
+dataset). Ran `va-facilities --national` against sandbox: **2,677 rows**
+(refreshed 1,816 healthcare + 445 benefits, **+417 Vet Center →
+community_support cross-listings**). Verified: an Austin community_support
+search returns Austin Vet Center at 1.9 mi (real pin). community_support:
+2 → **419**.
 
-## Remaining (user actions — the cron is dead until #1)
+Workflow: `VA_FACILITIES_BASE_URL` is now a repo variable defaulting to
+sandbox (PR #14) — a production key later is a one-variable change.
 
-1. Merge `feature/phase-10-backend` → `main` + set repo secrets
-   (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VA_API_KEY`,
-   `USAJOBS_API_KEY`, `USAJOBS_USER_AGENT`) + one manual `workflow_dispatch`.
-2. Re-run `--source va-facilities --national` with the VA key → activates the
-   ~300 Vet Center community_support cross-listings.
-3. Approve/decline Feed America (CC BY-SA attribution + ~310k-row size) →
-   national food ingest, or leave food referral-only.
+**Gotcha caught by the cron:** the first `places` dispatch failed 401 because
+the `VA_API_KEY` GitHub secret still held the OLD key (local `.env.seed` had
+the new one, so local runs worked). The failure step correctly opened issue
+\#15 — the safety net working as designed. Secret updated to the new key and
+`places` re-dispatched.
+
+## Education de-bloat (2026-07-24, user decision)
+
+The raw GI Bill list (~12.8k schools) is "every college that accepts the
+benefit" — bloat for a veterans' app. Filtered to **veteran-focused** schools
+(Yellow Ribbon OR Student Veteran Group OR VET TEC) via `isVeteranFocused()`
+in the adapter, so the monthly refresh stays consistent. **12,854 → 2,794**
+(1,096 public / 1,340 private nonprofit / 358 for-profit); purged 10,060 rows +
+provenance; VACUUMed. Descriptions now name the veteran feature ("…with
+dedicated veteran support. Offers the Yellow Ribbon program…"). Also fixed a
+pre-existing `describe()` case bug (VA `type` is upper-case → every school read
+"private for-profit"). Verified: Austin education search returns St Edward's
+University at 2.7 mi. Full breakdown now — food 116,501 · education 2,794 ·
+healthcare 1,816 · housing 1,554 · legal 856 · benefits 448 · community_support
+419 · jobs 345 · referral-only: transportation/emergency/clothing.
+
+## Both cron paths PROVEN live
+
+`jobs` dispatch succeeded (USAJOBS 306→345, purge + gate green). `places`
+dispatch **succeeded** after the VA secret fix (VA 2,677 incl. Vet Centers,
+LSC, HUD sweep, food 8-state, GI Bill, SSVF, curated — all refreshed, freshness
+gate green). The automation is fully real. Issue #15 (the stale-secret false
+alarm) closed.
+
+## Status: data cycle CLOSED ✅
+
+All shipped to `main` (PRs #9/#11/#12/#13/#14); all 5 secrets set; both cron
+paths dispatched and green; VA Vet Centers live; education de-bloated; app run
+and verified. Data integrity clean.
+
+**Open items (optional, not blockers):**
+1. **Production VA data** — the current VA key is a sandbox key (real but fixed
+   ~2.7k facilities). For live nationwide coverage, get a production Facilities
+   key from developer.va.gov and set repo variable
+   `VA_FACILITIES_BASE_URL=https://api.va.gov/services/va_facilities/v1` +
+   update the `VA_API_KEY` secret. No code change.
+2. **National food** — currently 8 states. Going national (~310k rows) needs a
+   Supabase paid tier (DB would exceed the 500 MB free cap).
+3. **Store readiness** (separate from the data cycle) — EAS setup, Android Maps
+   key, privacy policy, final bundle id, crash reporting. See the
+   release-manager audit in the Command Center.
+4. **Security hygiene** — rotate the VA/USAJOBS/service-role keys once launch
+   settles (they were pasted in chat).
