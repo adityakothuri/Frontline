@@ -9,7 +9,7 @@ import type { Ionicons } from '@expo/vector-icons';
  * `docs/obsidian/03 Technical/Resource Data Model.md`.
  *
  * All resources are REAL, ingested from official and directory sources (VA,
- * USAJOBS, GI Bill Comparison Tool, LSC, HUD, curated veteran referrals) via
+ * USAJOBS, GI Bill Comparison Tool, HUD, SSVF, curated veteran referrals) via
  * `ingestion/`. There is no simulated resource data anywhere in the app.
  */
 

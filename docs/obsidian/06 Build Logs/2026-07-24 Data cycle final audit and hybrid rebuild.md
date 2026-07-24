@@ -204,6 +204,16 @@ LSC, HUD sweep, food 8-state, GI Bill, SSVF, curated — all refreshed, freshnes
 gate green). The automation is fully real. Issue #15 (the stale-secret false
 alarm) closed.
 
+## Niche protection — trimmed general backfill (2026-07-24, user)
+
+Audit showed the DB was **95% general by volume** (food 116,500 = 93%). That
+reads as a general safety-net app, not a veteran app. Applied the "does it
+really apply to veterans" test: **dropped food (Feed America) + legal (LSC)**,
+**kept HUD housing** (HUD-VASH tie-in). Deleted both adapters + de-registered.
+**DB 124,737 → 7,383 rows, now 82% veteran / 18% general** (general = HUD only).
+Food/legal revert to their veteran national referrals. Every non-housing
+category is 100% veteran now. Freshness gate green on the 6 remaining sources.
+
 ## Status: data cycle CLOSED ✅
 
 All shipped to `main` (PRs #9/#11/#12/#13/#14); all 5 secrets set; both cron

@@ -636,6 +636,25 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 - **Consequences:** education drops to a genuinely veteran-supportive set comparable in size to the
   other real categories. See [[2026-07-24 Data cycle final audit and hybrid rebuild]].
 
+### 2026-07-24 — Trim general backfill to protect the veteran niche
+- **Status:** accepted (user decision)
+- **Context:** After the hybrid rebuild, the DB was **95% general data** by volume — food
+  (116,500 Feed America pantries) alone was 93% of all rows. That shifts Frontline from a
+  veteran app to a general safety-net finder. Test for a general source: veterans must
+  disproportionately need it AND there must be a concrete veteran-program tie-in.
+- **Decision:** **Drop food (Feed America) and legal (LSC)** general sources; **keep HUD housing**.
+  Food = generic pantries, no veteran tie-in, overwhelming volume → gone (reverts to the VA
+  food/basic-needs referral). Legal = general civil aid; veterans' real legal needs (discharge
+  upgrades, VA claims) are already covered by the veteran-specific referrals (Stateside Legal,
+  VA-accredited) → gone. HUD stays: HUD-VASH is a veteran voucher program and homelessness is a
+  signature veteran issue, and veteran SSVF still ranks above it. Result: DB **124,737 → 7,383**
+  rows, now **82% veteran / 18% general** (general = HUD housing only). Adapters
+  `feedAmericaFood.ts` + `lscLegalAid.ts` deleted; de-registered from `run.ts`, `refresh.sh`,
+  `freshnessGate.ts`.
+- **Principle going forward:** the bar for a general source is "does it really apply to veterans,"
+  not "is the data available." Keeps the app in its niche. See
+  [[2026-07-24 Data cycle final audit and hybrid rebuild]].
+
 ## Related
 
 [[Technical Architecture]] · [[AI Feature Design]] · [[Non-MVP Ideas]] · [[Frontline Command Center]]
