@@ -121,6 +121,37 @@ community_support / food / emergency / clothing. Freshness gate green on all 7
 providers; `npm run verify` green. Feed America TX pilot passed (23,627 real
 food-distribution sites after taxonomy filtering; clinics/SNAP/WIC excluded).
 
+## Ship + live app verification (same day)
+
+- **Shipped to `main`:** PR #9 merged; secrets `SUPABASE_URL` +
+  `SUPABASE_SERVICE_ROLE_KEY` set. CI green.
+- **Food scope (user decision):** 8 veteran-dense states (TX,FL,CA,VA,NC,GA,AZ,PA)
+  — **116,501 food rows** loaded, DB 198 MB (well under the 500 MB free-tier
+  cap). Taxonomy-filtered to real food distribution; `--state` now takes a
+  comma list and hard-fails without it. Added to `refresh.sh places` + the
+  freshness gate.
+- **Ran the actual app** (Expo web, headless Chrome, onboarding → Discover →
+  results → detail). Onboarding, home, the National-help-lines strip, the
+  "Open to everyone" / "For veterans" badges, honest "Official VA/gov data ·
+  updated" labels, and geocoded distances (Caritas of Austin 0.0 mi, BCL of
+  Texas 0.2 mi) all render correctly. AI proxy verified healthy via direct call
+  (HTTP 200, hedged summary in-schema).
+
+### Publish-blocker found and fixed by running the app
+The **"all categories" Discover browse 500'd** (`57014` statement timeout): with
+116k food rows, `search_resources` computed haversine for every located row
+before filtering by radius. Fix — **migration `0017_search_bbox_prefilter.sql`**:
+an indexable lat/lng bounding-box pre-filter (+ `resources_lat_lng_idx`) runs
+before the trig, so the query only touches rows near the user. Verified: the
+all-browse went **500 → 200 in 0.57 s**, balanced across all 11 categories.
+
+### Web-only (not shipping-native) notes
+- AI edge function has no CORS headers → the browser preview can't call it
+  (native has no CORS; curl confirms the function works). Add CORS only if a web
+  build is ever shipped.
+- RN-Web nested-`<button>` hydration warning (Pressable card containing the
+  bookmark Pressable) — harmless on native.
+
 ## Remaining (user actions — the cron is dead until #1)
 
 1. Merge `feature/phase-10-backend` → `main` + set repo secrets

@@ -27,7 +27,7 @@ unlabeled. This supersedes the 2026-07-22 strict veteran-only rule (see
 | `hud-housing` | HUD housing counseling locator | `housing` | general | keyless | monthly (21-point national sweep) |
 | `ssvf-providers` | VA SSVF grantee list (converted XLSX → `data/ssvf-providers.json`) | `housing` | veteran_specific | none (local file) | **quarterly, manual** |
 | `curated-national` | Hand-verified veteran hotlines (`data/curated-national.json`) | thin categories | veteran_specific | none (local file) | **quarterly, manual review** |
-| `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | pilot-gated (see below) |
+| `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | monthly — **8 veteran-dense states** (TX,FL,CA,VA,NC,GA,AZ,PA); national gated |
 
 ### Geocoding (exact pins or none)
 
@@ -52,13 +52,17 @@ ZIP-centroid placement was removed on 2026-07-24.
   `verification_status: 'needs_review'` — the app shows the amber
   "call ahead" treatment. Aggregator rows must never ship as `verified`.
 
-### Feed America attribution + pilot gate
+### Feed America attribution + state gate
 
 The food feed is CC BY-SA 4.0 and requires attribution
 ("Data from Feed America, feedam.org, EIN 92-1761881") — carried via
-`source_url` and this README. **Rollout is pilot-gated:** run `--state XX
---dry-run`, hand-spot-check ~20 rows, and get an explicit go-ahead (license +
-DB size — the full feed is ~310k rows) before any national ingest.
+`source_url` and this README. **Live scope (approved 2026-07-24): 8
+veteran-dense states** (`TX,FL,CA,VA,NC,GA,AZ,PA` — comma list to `--state`).
+The adapter hard-fails without `--state`; going **national** (~310k rows,
+roughly +350–450MB of database) needs an explicit Supabase-tier decision
+first. Taxonomy-filtered to actual food distribution (pantries, food banks,
+soup kitchens, meals) — FQHC clinics, SNAP-enrollment and WIC offices are
+excluded.
 
 ## What it does
 
