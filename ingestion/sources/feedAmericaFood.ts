@@ -137,12 +137,23 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
     provider: PROVIDER,
     async fetch(query: IngestionQuery): Promise<NormalizedResource[]> {
       const today = new Date().toISOString().slice(0, 10);
-      const stateFilter = query.state?.toUpperCase() ?? null;
-      if (!stateFilter) {
-        // Hard pilot gate, not a comment: national is ~310k rows and needs an
+      // Comma-separated states, e.g. --state "TX,FL,CA" — one download pass
+      // covers them all. Decision 2026-07-24: veteran-dense states only for
+      // now (DB-size bound); national needs a Supabase tier decision.
+      const stateFilter = query.state
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
+        : null;
+      if (!stateFilter || stateFilter.size === 0) {
+        // Hard gate, not a comment: national is ~310k rows and needs an
         // explicit license + DB-size decision. Remove this only with sign-off.
         throw new Error(
-          'feed-america is pilot-gated: pass --state XX. National ingest requires explicit approval (CC BY-SA + DB size).',
+          'feed-america is state-gated: pass --state XX[,YY,…]. National ingest requires explicit approval (CC BY-SA + DB size).',
         );
       }
 
@@ -180,7 +191,7 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
         const locId = str(loc, 'id');
         const addr = addressByLocation.get(locId);
         const state = (addr ? trimOrNull(str(addr, 'state_province')) : null)?.toUpperCase() ?? null;
-        if (stateFilter && state !== stateFilter) continue;
+        if (!state || !stateFilter.has(state)) continue;
 
         const name = trimOrNull(str(loc, 'name'));
         if (!name) continue;
