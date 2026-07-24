@@ -43,6 +43,10 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       VA_API_KEY: ${{ secrets.VA_API_KEY }}
+      # Production Facilities API — run.ts defaults to the SANDBOX, which returns
+      # a tiny fixed dataset and rejects production keys. Must be set here or the
+      # monthly places refresh silently ingests sandbox data.
+      VA_FACILITIES_BASE_URL: https://api.va.gov/services/va_facilities/v1
       USAJOBS_API_KEY: ${{ secrets.USAJOBS_API_KEY }}
       USAJOBS_USER_AGENT: ${{ secrets.USAJOBS_USER_AGENT }}
     steps:
