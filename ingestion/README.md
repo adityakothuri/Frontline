@@ -23,11 +23,17 @@ unlabeled. This supersedes the 2026-07-22 strict veteran-only rule (see
 | `va-facilities` | VA Lighthouse Facilities API | `healthcare`, `benefits_help`, Vet Centers also cross-listed → `community_support` | veteran_specific | `VA_API_KEY` | monthly |
 | `gi-bill` | VA GI Bill Comparison Tool API | `education` | veteran_benefit | keyless | monthly |
 | `usajobs` | USAJOBS API | `jobs` | veteran_benefit | `USAJOBS_API_KEY` + `USAJOBS_USER_AGENT` | **weekly** + 21-day purge |
-| `lsc-legal` | LSC legal aid offices (ArcGIS) | `legal` | general | keyless | monthly |
 | `hud-housing` | HUD housing counseling locator | `housing` | general | keyless | monthly (21-point national sweep) |
 | `ssvf-providers` | VA SSVF grantee list (converted XLSX → `data/ssvf-providers.json`) | `housing` | veteran_specific | none (local file) | **quarterly, manual** |
 | `curated-national` | Hand-verified veteran hotlines (`data/curated-national.json`) | thin categories | veteran_specific | none (local file) | **quarterly, manual review** |
-| `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | monthly — **8 veteran-dense states** (TX,FL,CA,VA,NC,GA,AZ,PA); national gated |
+
+**Only one general (non-veteran) source remains — `hud-housing`.** It earns its
+place: HUD-VASH is a veteran voucher program and homelessness is a signature
+veteran issue, and veteran SSVF providers still rank above it. Food (Feed
+America) and legal (LSC) general sources were **dropped 2026-07-24** — food was
+116k generic pantries (93% of the DB) with no veteran tie-in, and veterans'
+legal needs are covered by the veteran-specific referrals. Those categories are
+now veteran national referrals only (see `data/curated-national.json`).
 
 ### Geocoding (exact pins or none)
 
@@ -40,7 +46,7 @@ ZIP-centroid placement was removed on 2026-07-24.
 
 ### Trust labels (what the app shows)
 
-- Official APIs (VA, LSC, HUD, USAJOBS): `source_type: 'official'`,
+- Official APIs (VA, HUD, USAJOBS): `source_type: 'official'`,
   `verification_status: 'verified'`, `last_checked` = fetch date. The app
   renders this as "From official VA/gov data · updated <date>" — the label
   claims a fresh pull, not a human visit.
@@ -48,21 +54,14 @@ ZIP-centroid placement was removed on 2026-07-24.
   `last_checked` = the file's real human-review date (`verified_on` /
   `retrieved_on`), NOT the run date — an unreviewed entry goes stale on
   schedule (the app warns after 90 days; the freshness gate fails at 120).
-- Aggregators (`feed-america`): `source_type: 'directory'`,
-  `verification_status: 'needs_review'` — the app shows the amber
-  "call ahead" treatment. Aggregator rows must never ship as `verified`.
 
-### Feed America attribution + state gate
+### Removed general sources (2026-07-24)
 
-The food feed is CC BY-SA 4.0 and requires attribution
-("Data from Feed America, feedam.org, EIN 92-1761881") — carried via
-`source_url` and this README. **Live scope (approved 2026-07-24): 8
-veteran-dense states** (`TX,FL,CA,VA,NC,GA,AZ,PA` — comma list to `--state`).
-The adapter hard-fails without `--state`; going **national** (~310k rows,
-roughly +350–450MB of database) needs an explicit Supabase-tier decision
-first. Taxonomy-filtered to actual food distribution (pantries, food banks,
-soup kitchens, meals) — FQHC clinics, SNAP-enrollment and WIC offices are
-excluded.
+Feed America (food) and LSC (legal) adapters were deleted to keep the app
+veteran-niche. If a future decision reintroduces general food/legal data, they
+are recoverable from git history — but the bar is "does it really apply to
+veterans," not "is it available." Food and legal are now veteran national
+referrals only.
 
 ## What it does
 
@@ -131,15 +130,13 @@ node --experimental-strip-types ingestion/run.ts \
   --source va-facilities --state CA --dry-run
 
 # Everything on its normal cadence (what CI runs):
-bash ingestion/refresh.sh places   # VA + GI Bill + curated + LSC + HUD sweep
+bash ingestion/refresh.sh places   # VA + GI Bill + curated + SSVF + HUD sweep
 bash ingestion/refresh.sh jobs     # USAJOBS metro sweep + 21-day purge
 
 # Individual sources:
 node --experimental-strip-types ingestion/run.ts --source gi-bill
-node --experimental-strip-types ingestion/run.ts --source lsc-legal
 node --experimental-strip-types ingestion/run.ts --source hud-housing --lat 40.7 --long -74.0 --radius 500
 node --experimental-strip-types ingestion/run.ts --source ssvf-providers
-node --experimental-strip-types ingestion/run.ts --source feed-america --state TX --dry-run  # pilot only
 ```
 
 ### Flags
@@ -151,7 +148,7 @@ node --experimental-strip-types ingestion/run.ts --source feed-america --state T
 | `--type` | VA: comma-separated types for `--national` (`health,benefits,vet_center`) | all three |
 | `--lat` / `--long` | search center (both together) | — |
 | `--radius` | miles from the center / location | provider default |
-| `--state` | two-letter state (VA filter; feed-america pilot filter) | — |
+| `--state` | VA: two-letter state filter | — |
 | `--location` | USAJOBS: place name, e.g. `"Dallas, Texas"` | — |
 | `--keyword` | USAJOBS: free-text filter | — |
 | `--per-page` | page size | per-source default |

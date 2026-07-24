@@ -12,7 +12,7 @@ export { isNationalReferral } from './sortResults';
 /**
  * The app's resource service — the REAL Supabase backend, always. There is no
  * simulated fallback: every resource comes from the live ingestion pipeline
- * (VA, USAJOBS, GI Bill, LSC, HUD, curated veteran referrals). Without Supabase
+ * (VA, USAJOBS, GI Bill, HUD, SSVF, curated veteran referrals). Without Supabase
  * env, resource calls throw and surface as the error/retry UI — never fake data.
  */
 export const resourceService: ResourceService = new SupabaseResourceService();
