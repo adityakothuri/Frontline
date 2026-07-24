@@ -17,7 +17,8 @@ const CADENCE_DAYS: Record<string, number> = {
   usajobs: 10, // weekly refresh
   'va-facilities': 40, // monthly
   'va-gi-bill': 40, // monthly
-  'hud-housing-counseling': 40, // monthly (the one kept general source)
+  'hud-housing-counseling': 40, // monthly
+  'feed-america': 40, // monthly (8 veteran-dense states, scoped food pantries)
   'curated-national': 120, // quarterly manual review (last_checked = verified_on)
   'ssvf-providers': 120, // quarterly manual refresh from the VA FY list
 };

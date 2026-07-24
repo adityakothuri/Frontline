@@ -214,6 +214,26 @@ really apply to veterans" test: **dropped food (Feed America) + legal (LSC)**,
 Food/legal revert to their veteran national referrals. Every non-housing
 category is 100% veteran now. Freshness gate green on the 6 remaining sources.
 
+## Scarcity fix — scoped food back + legal enrichment plan (2026-07-24)
+
+After the trim, thin categories gave too little benefit. Diagnosis: data is
+**bimodal** — 6 strong veteran categories (~7,400 resources), 5 referral-only,
+and the thin 5 differ in kind (emergency is correctly thin; legal is fixable;
+food/clothing have no veteran dataset).
+
+- **Food — scoped re-add.** Feed America restored (8 states, 116,501 rows) but
+  **capped to the nearest ~20 general pantries per search** in the client
+  (`DENSE_GENERAL_CAPS` in `supabaseResourceService.ts`, applied after the
+  distance sort; only caps `veteran_relevance='general'` so the veteran food
+  referral is never dropped). Badged "Open to everyone". Verified: Austin food
+  search → 50 general + 1 referral from the RPC, client trims to 20 + referral;
+  nearest is Caritas of Austin 0.0 mi.
+- **Legal — real veteran data planned.** VA-accredited representatives directory
+  is veteran-specific and has locations, but it's export-only (no API/bulk URL,
+  not on data.gov). Path = SSVF pattern (manual export → committed file →
+  adapter). Awaiting the export file from the user.
+- **Keep all categories**, lean on the AI next-steps layer for thin ones.
+
 ## Status: data cycle CLOSED ✅
 
 All shipped to `main` (PRs #9/#11/#12/#13/#14); all 5 secrets set; both cron

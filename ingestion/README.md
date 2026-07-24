@@ -26,14 +26,21 @@ unlabeled. This supersedes the 2026-07-22 strict veteran-only rule (see
 | `hud-housing` | HUD housing counseling locator | `housing` | general | keyless | monthly (21-point national sweep) |
 | `ssvf-providers` | VA SSVF grantee list (converted XLSX → `data/ssvf-providers.json`) | `housing` | veteran_specific | none (local file) | **quarterly, manual** |
 | `curated-national` | Hand-verified veteran hotlines (`data/curated-national.json`) | thin categories | veteran_specific | none (local file) | **quarterly, manual review** |
+| `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | monthly — 8 veteran-dense states; **capped to nearest ~20 in-app** |
 
-**Only one general (non-veteran) source remains — `hud-housing`.** It earns its
-place: HUD-VASH is a veteran voucher program and homelessness is a signature
-veteran issue, and veteran SSVF providers still rank above it. Food (Feed
-America) and legal (LSC) general sources were **dropped 2026-07-24** — food was
-116k generic pantries (93% of the DB) with no veteran tie-in, and veterans'
-legal needs are covered by the veteran-specific referrals. Those categories are
-now veteran national referrals only (see `data/curated-national.json`).
+**Two general (non-veteran) sources, each kept for a reason:**
+- `hud-housing` — HUD-VASH is a veteran voucher program and homelessness is a
+  signature veteran issue; veteran SSVF providers rank above it.
+- `feed-america` — veterans face food insecurity and **no veteran-specific food
+  dataset exists**. Kept scoped: 8 states only, badged "Open to everyone", and
+  **capped to the nearest ~20 general pantries per search** in the client
+  (`DENSE_GENERAL_CAPS` in `supabaseResourceService.ts`), with the veteran food
+  referral always shown. So it's useful without dominating the veteran feed.
+
+**Legal (LSC) was dropped 2026-07-24** — general civil aid; veterans' legal
+needs are covered by the veteran-specific referrals (Stateside Legal,
+VA-accredited). A veteran-specific legal source (VA-accredited representatives)
+is the planned replacement (manual export → committed file, like SSVF).
 
 ### Geocoding (exact pins or none)
 
@@ -55,13 +62,13 @@ ZIP-centroid placement was removed on 2026-07-24.
   `retrieved_on`), NOT the run date — an unreviewed entry goes stale on
   schedule (the app warns after 90 days; the freshness gate fails at 120).
 
-### Removed general sources (2026-07-24)
+### The general-source bar
 
-Feed America (food) and LSC (legal) adapters were deleted to keep the app
-veteran-niche. If a future decision reintroduces general food/legal data, they
-are recoverable from git history — but the bar is "does it really apply to
-veterans," not "is it available." Food and legal are now veteran national
-referrals only.
+A general (non-veteran) source earns a place only if veterans disproportionately
+need it AND there's a concrete veteran tie-in — "does it really apply," not "is
+it available." Housing (HUD-VASH) and food (veteran food insecurity, no veteran
+dataset) clear it; general legal aid did not. General sources are always labeled
+"Open to everyone", ranked below veteran rows, and dense ones are capped in-app.
 
 ## What it does
 
@@ -130,14 +137,18 @@ node --experimental-strip-types ingestion/run.ts \
   --source va-facilities --state CA --dry-run
 
 # Everything on its normal cadence (what CI runs):
-bash ingestion/refresh.sh places   # VA + GI Bill + curated + SSVF + HUD sweep
+bash ingestion/refresh.sh places   # VA + GI Bill + curated + SSVF + food + HUD sweep
 bash ingestion/refresh.sh jobs     # USAJOBS metro sweep + 21-day purge
 
 # Individual sources:
 node --experimental-strip-types ingestion/run.ts --source gi-bill
 node --experimental-strip-types ingestion/run.ts --source hud-housing --lat 40.7 --long -74.0 --radius 500
 node --experimental-strip-types ingestion/run.ts --source ssvf-providers
+node --experimental-strip-types ingestion/run.ts --source feed-america --state "TX,FL,CA"  # comma list; hard-fails without --state
 ```
+
+Feed America is CC BY-SA 4.0 — attribution "Data from Feed America, feedam.org,
+EIN 92-1761881" is carried in each row's `source_url`.
 
 ### Flags
 
