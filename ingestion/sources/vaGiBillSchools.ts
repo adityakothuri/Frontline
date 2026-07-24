@@ -1,15 +1,18 @@
 /**
  * VA GI Bill schools adapter (GI Bill Comparison Tool API).
  *
- * Veteran-relevant by construction: only schools **approved for the GI Bill /
- * VA education benefits** — so a veteran can actually use their benefits there
- * (this is what replaced the generic "every college" dataset). `veteran_benefit`.
+ * Veteran-focused, not just GI-Bill-approved: we keep only schools that do more
+ * for veterans than accept the benefit — Yellow Ribbon funding, a Student
+ * Veteran Group, or VET TEC (see `isVeteranFocused`). This narrows the raw list
+ * from ~12.8k general colleges to ~2.8k genuinely veteran-supportive campuses
+ * (decision 2026-07-24 — the unfiltered set was bloat). `veteran_benefit`.
  *
  * Source: the keyless VA GI Bill Comparison Tool institutions API,
  * `https://api.va.gov/v0/gi/institutions/search?per_page=&page=` (JSON:API,
  * `data[].attributes`). It lists ~33k approved institutions; we keep the ones
- * that are actual schools (`type` public / private / for profit), US-based, and
- * not online-only — excluding OJT (~19k), flight, foreign, and correspondence.
+ * that are actual schools (`type` public / private / for profit), US-based,
+ * not online-only, AND veteran-focused — excluding OJT (~19k), flight, foreign,
+ * correspondence, and general colleges with no veteran commitment.
  * The list has full street addresses but **no coordinates** (and no phone; the
  * `insturl` website field is often absent from the current payload). Rows are
  * emitted with null coords + `geocode` address parts; the runner resolves them
@@ -59,8 +62,22 @@ interface GiAttributes {
   physical_country?: string | null;
   online_only?: boolean | null;
   distance_learning?: boolean | null;
-  yr?: boolean | null; // Yellow Ribbon program
+  yr?: boolean | null; // Yellow Ribbon program (extra tuition beyond the GI Bill cap)
+  student_veteran?: boolean | null; // has an organized Student Veteran Group
+  vet_tec_provider?: boolean | null; // VET TEC veteran tech-training provider
   insturl?: string | null;
+}
+
+/**
+ * Veteran-specific gate: keep only schools that materially do more for veterans
+ * than accept the benefit — Yellow Ribbon funding, an organized Student Veteran
+ * Group, or a VET TEC program. Decision 2026-07-24: the raw GI Bill list (~12.8k
+ * general colleges) was bloat; this narrows education to the ~2.8k campuses with
+ * a real veteran commitment. (Weaker signals — Principles of Excellence, 8 Keys
+ * — are deliberately excluded.)
+ */
+function isVeteranFocused(a: GiAttributes): boolean {
+  return Boolean(a.yr || a.student_veteran || a.vet_tec_provider);
 }
 
 interface GiResponse {
@@ -94,10 +111,17 @@ function normalizeUrl(raw: string | null | undefined): string | null {
 }
 
 function describe(a: GiAttributes): string {
-  const kind =
-    a.type === 'public' ? 'public' : a.type === 'private' ? 'private nonprofit' : 'private for-profit';
-  const yr = a.yr ? ' Offers the Yellow Ribbon program (extra tuition coverage).' : '';
-  return `GI Bill-approved ${kind} school. You can use your Post-9/11 GI Bill and VA education benefits here.${yr} Confirm your program and remaining entitlement.`;
+  // VA `type` is upper-case ("PUBLIC"/"PRIVATE"/"FOR PROFIT") — lower-case
+  // before comparing, or every school reads as "private for-profit".
+  const t = (a.type ?? '').toLowerCase();
+  const kind = t === 'public' ? 'public' : t === 'private' ? 'private nonprofit' : 'private for-profit';
+  // Every kept school clears isVeteranFocused(), so name the veteran feature.
+  const features: string[] = [];
+  if (a.yr) features.push('the Yellow Ribbon program (extra tuition coverage beyond the GI Bill cap)');
+  if (a.student_veteran) features.push('a student veteran group on campus');
+  if (a.vet_tec_provider) features.push('VET TEC tech training');
+  const feature = features.length > 0 ? ` Offers ${features.join(' and ')}.` : '';
+  return `GI Bill-approved ${kind} school with dedicated veteran support. Use your Post-9/11 GI Bill and VA education benefits here.${feature} Confirm your program and remaining entitlement.`;
 }
 
 /** GI Bill institution → our `Resource`, or null if it isn't a usable school. */
@@ -107,6 +131,8 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
   if (a.online_only) return null; // no physical location to map
   const country = (a.physical_country ?? a.country ?? '').toUpperCase();
   if (country && country !== 'USA') return null;
+
+  if (!isVeteranFocused(a)) return null; // general college that just accepts the benefit
 
   const externalId = trimOrNull(a.facility_code);
   const rawName = trimOrNull(a.name);
@@ -145,7 +171,14 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
     verification_status: 'verified',
     last_checked: today,
     last_updated: today,
-    tags: ['gi-bill', 'school', type.replace(/\s+/g, '-'), ...(a.yr ? ['yellow-ribbon'] : [])],
+    tags: [
+      'gi-bill',
+      'school',
+      type.replace(/\s+/g, '-'),
+      ...(a.yr ? ['yellow-ribbon'] : []),
+      ...(a.student_veteran ? ['student-veteran-group'] : []),
+      ...(a.vet_tec_provider ? ['vet-tec'] : []),
+    ],
     created_at: today,
     updated_at: today,
     external_id: externalId,
