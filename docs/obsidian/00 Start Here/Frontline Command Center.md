@@ -35,18 +35,29 @@ routing, badge convergence — 2026-07-11). Remaining: the accumulated **on-devi
 
 ## Current Active Task
 
-**🟢 Data cycle FINAL audit + hybrid rebuild (2026-07-24).** The user's three pillars checked and
-fixed: **(1) veteran-centric** — hybrid rule (veteran rows fill the search cap first + win ties;
-general rows badged "Open to everyone"; migrations `0013`/`0014`); **(2) abundant** — LSC legal
-854 + HUD housing 1,315 restored as labeled-general, SSVF 235 veteran-specific housing added,
-Vet Centers cross-listed → community_support (re-ingest needs `VA_API_KEY`), Feed America food
-feed built (pilot-gated); **(3) auto-updating** — cron workflow fixed (jobs weekly / places
-monthly) + `freshnessGate.ts` fails CI on stale sources + failure auto-opens an issue — **but the
-cron is dead until the branch merges to `main` and 5 repo secrets are set (user action)**. Also:
-GI Bill pins now **Census-geocoded to street addresses** (`0015` cache; unmatched = no pin — ZIP
-centroids removed), trust copy honest ("From official VA/gov data · updated <date>"; curated
-hotlines show their real `verified_on`). See
+**🟢 Data cycle FINAL — shipped to `main` + app verified (2026-07-24).** All work merged
+(PRs #9/#11/#12); `npm run verify` + CI green; live DB **134,336 rows**, 198 MB. Pillars:
+**(1) veteran-centric** — hybrid rule (veteran rows fill the search cap first + win ties;
+general rows badged "Open to everyone"; migrations `0013`/`0014`/`0016`); **(2) abundant** —
+food **116,501** (8 veteran-dense states), education 12,849 (Census-geocoded pins), legal 856
+(LSC), housing 1,554 (HUD 1,315 + SSVF 235), healthcare 1,816, benefits 448, jobs 306;
+**(3) auto-updating** — cron workflow on `main` (jobs weekly / places monthly) + `freshnessGate.ts`
+fails CI on stale sources + auto-opens an issue. **Ran the actual app** (onboarding → Discover →
+results → detail): all screens render, badges/labels/geocoded distances correct, AI proxy healthy.
+**Found + fixed a publish-blocker by running it** — the "all" browse 500'd (statement timeout) at
+116k food rows; migration `0017` adds a bounding-box pre-filter + index (500 → 200 in 0.57 s).
+Data integrity clean: 0 unpaired coords, 0 null-island pins, 0 orphans, 0 mislabeled trust.
+
+**⏳ Blocked on user (2 items):** (a) add `VA_API_KEY` / `USAJOBS_API_KEY` / `USAJOBS_USER_AGENT`
+to `.env.seed` → I set the 3 GitHub secrets + dispatch the workflow + re-ingest VA facilities
+(activates ~300 Vet Center → community_support rows); until then the Monday jobs cron will fail
+the freshness gate. `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` secrets already set. See
 [[2026-07-24 Data cycle final audit and hybrid rebuild]] + [[Decision Log]].
+
+**Publishability (release-manager audit):** engineering is strong (clean RLS, env hygiene, green
+CI, honest data). Store-blockers are the usual pre-launch non-code work: no EAS project/`eas.json`,
+no Android Google Maps API key (Android map blank in release), no privacy policy, placeholder
+bundle id `com.frontline.app`, no crash reporting/error boundary. None are data-cycle issues.
 
 **Next (user):** (a) merge `feature/phase-10-backend` → `main`, set secrets (`SUPABASE_URL`,
 `SUPABASE_SERVICE_ROLE_KEY`, `VA_API_KEY`, `USAJOBS_API_KEY`, `USAJOBS_USER_AGENT`), run a manual
