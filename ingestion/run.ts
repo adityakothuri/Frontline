@@ -23,10 +23,8 @@ import { createVaFacilitiesSource } from './sources/vaFacilities.ts';
 import { createUsaJobsSource } from './sources/usaJobs.ts';
 import { createVaGiBillSchoolsSource } from './sources/vaGiBillSchools.ts';
 import { createCuratedNationalSource } from './sources/curatedNational.ts';
-import { createLscLegalAidSource } from './sources/lscLegalAid.ts';
 import { createHudCounselingSource } from './sources/hudCounseling.ts';
 import { createSsvfProvidersSource } from './sources/ssvfProviders.ts';
-import { createFeedAmericaFoodSource } from './sources/feedAmericaFood.ts';
 import { geocodeResources } from './censusGeocode.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
@@ -36,8 +34,6 @@ const VA_SANDBOX_BASE = 'https://sandbox-api.va.gov/services/va_facilities/v1';
 const USAJOBS_BASE = 'https://data.usajobs.gov/api';
 const VA_GIBILL_BASE = 'https://api.va.gov/v0/gi/institutions/search';
 const HUD_HCS_BASE = 'https://data.hud.gov/Housing_Counselor';
-const LSC_BASE =
-  'https://services3.arcgis.com/n7h3cEoHTyNCwjCf/arcgis/rest/services/LSC_offices_grantees_main_branch_(Public)/FeatureServer/0';
 
 /** A registered source: how to build it and how to read its secrets from env. */
 interface SourceDef {
@@ -68,17 +64,11 @@ const SOURCES: Record<string, SourceDef> = {
     // VA GI Bill Comparison Tool institutions API — keyless.
     resolveConfig: () => ({ apiKey: '', baseUrl: process.env.VA_GIBILL_BASE_URL ?? VA_GIBILL_BASE }),
   },
-  'lsc-legal': {
-    factory: createLscLegalAidSource,
-    // LSC's public ArcGIS feature server is keyless. General (hybrid rule).
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: process.env.LSC_BASE_URL ?? LSC_BASE,
-    }),
-  },
   'hud-housing': {
     factory: createHudCounselingSource,
-    // HUD's housing-counselor locator is public and keyless. General (hybrid rule).
+    // HUD's housing-counselor locator is public and keyless. The ONE kept
+    // general source: veterans navigating HUD-VASH use HUD-approved counselors,
+    // and veteran SSVF providers still rank above it. General (hybrid rule).
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.HUD_HCS_BASE_URL ?? HUD_HCS_BASE,
@@ -98,14 +88,6 @@ const SOURCES: Record<string, SourceDef> = {
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: resolve(root, 'ingestion/data/ssvf-providers.json'),
-    }),
-  },
-  'feed-america': {
-    factory: createFeedAmericaFoodSource,
-    // Open HSDS feed, keyless. PILOT-GATED: run --state XX + spot-check first.
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: process.env.FEEDAM_BASE_URL ?? 'https://feedam.org/hsds/v3',
     }),
   },
 };
