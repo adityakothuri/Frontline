@@ -1,57 +1,73 @@
 ---
-tags: [product, source-of-truth]
-status: stable
-updated: 2026-07-05
+tags: [product, overview, source-of-truth]
+status: active
+updated: 2026-07-07
 ---
 
 # Product Overview
 
-> **Watchdog — Neighborhood safety, verified by people.**
+> **Frontline — Find your next step.** Frontline helps veterans find benefits, local resources, and
+> a clear plan for what to do next.
 
 ## The problem
 
-Neighborhood safety apps today have two failure modes: they either post raw camera footage
-publicly (a privacy nightmare) or they flood people with unverified, fear-inducing alerts.
-Both erode trust. People want to know what's happening near them **without** surveilling
-their neighbors or drowning in false alarms.
+Veterans are eligible for a wide range of benefits and local help — food assistance, housing and
+rent support, healthcare, disability and education benefits, job and legal help, transportation, and
+more — but the system is **fragmented, jargon-heavy, and hard to navigate**. Information is spread
+across VA pages, state and county offices, 2-1-1 directories, and local nonprofits. Benefit pages are
+written in bureaucratic language. It's often unclear **who to call, what to bring, or what to say.**
 
 ## The idea
 
-Watchdog connects (or simulates) home cameras, Ring-style doorbells, and security feeds. AI
-**watches for** suspicious or potentially unsafe events — but it never posts anything publicly
-on its own. When something concerning is detected, the app notifies the owner and creates an
-**in-app review item**.
-
-The user opens the app, reviews the flagged clip/event, and decides whether the detection is
-valid. If they approve it, they can post a **public neighborhood alert** — with a description,
-location, a video/thumbnail, and an **auto-delete expiration**. Nearby users open a map, tap
-the alert, and see the relevant details.
+A veteran opens Frontline to a calm home screen asking **"What do you need help with?"**, picks a
+**need category**, answers a few short guided questions, and shares a **location or ZIP code**. The
+app returns **nearby, relevant resources** as a **list and a map**. Opening a resource shows a
+**plain-English summary**, who it helps, likely eligibility, documents to bring, and **AI-generated
+next steps**. One tap generates a **call script** for that resource. The veteran can **save**,
+**call**, or get **directions**.
 
 ## Target user
 
-A privacy-conscious resident who already has (or would simulate) a camera and wants a calm,
-trustworthy way to stay aware of and warn neighbors about real local incidents — without
-becoming a surveillance hub or a fear machine.
+A veteran (or a family member / caregiver acting on their behalf) who needs help now or wants to
+understand what they're entitled to — often stressed, short on time, and tired of bureaucratic
+runaround. See [[User Personas]] and [[User Stories]].
 
 ## Core workflow
 
-1. AI detects a possible incident from a (simulated) camera feed.
-2. The owner is notified and reviews it privately.
-3. The owner approves or rejects. **Only approval makes it public.**
-4. An approved alert appears on a neighborhood map with an expiration.
-5. Nearby users view it; it auto-deletes when it expires.
+1. Open the app → **"What do you need help with?"**
+2. Pick a **need category** and answer a short **guided flow** (what, how urgent, in-person/online,
+   documents on hand, and what kind of help they want).
+3. Provide **location or ZIP**.
+4. See **top nearby resources** as a **list and map**.
+5. Open a resource → **plain-English AI summary**, eligibility, documents, and **next steps**.
+6. Tap **"Generate call script"** → a short, specific script (plus a shorter "nervous user" variant).
+7. **Save**, **call**, or get **directions**.
 
-## Why human approval matters
+## Why it's different
 
-This is the core differentiator. **AI assists; people decide.** Nothing from a private camera
-becomes public automatically. This single rule drives the privacy model, the UX, and the
-product's trustworthiness. See [[Product Principles]].
+- **AI embedded in workflows, not a chatbot.** AI produces next-step plans, call scripts, and
+  plain-English summaries at the moment they're useful — never a blank "ask me anything" box. See
+  [[AI Feature Design]].
+- **Trust is visible.** Every resource shows its **source type**, **last-checked date**, and
+  **verification status**, with a link to the original source. See [[Trust Safety and Privacy]].
+- **Honest and respectful.** Frontline is **not the VA** and says so. AI output is **simplified
+  guidance**, never legal/medical/financial/government-certified advice ("you *may* qualify…
+  confirm with the official source").
+- **Privacy by default.** Collects the minimum; **never** SSN, VA login, bank details, or diagnosis.
 
 ## What it should feel like
 
-Serious, polished, trustworthy public-safety software — not a hackathon app, a police
-scanner, or a social feed. See [[UI Design System]] and [[Anti-AI-Slop Design Rules]].
+Calm, premium, trustworthy — closer to a well-designed public-service tool than a startup app or a
+government form. Plain language, big tap targets, obvious next action. See [[UI Design System]] and
+[[Anti-AI-Slop Design Rules]].
+
+## What it is not (yet)
+
+Not a claims-filing tool, not a VA-login portal, not a document-upload vault, not legal/medical
+advice, and not a live-backend product in the MVP. See [[MVP Definition|MVP Scope]] and
+[[Non-MVP Ideas]].
 
 ## Related
 
-[[MVP Definition]] · [[Feature Priority Order]] · [[Product Principles]] · [[App Flow]] · [[Watchdog Command Center]]
+[[MVP Definition|MVP Scope]] · [[Feature Priority Order]] · [[Product Principles]] ·
+[[Trust Safety and Privacy]] · [[App Flow|Core User Flows]] · [[Frontline Command Center]]

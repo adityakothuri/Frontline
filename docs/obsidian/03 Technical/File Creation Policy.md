@@ -51,10 +51,10 @@ files must be called out first**, every time.
 ## Why this exists
 
 Uncontrolled file creation is the #1 cause of an app that feels like AI slop — random screens,
-duplicate components, dead files, unexplained systems. Discipline here keeps Watchdog
+duplicate components, dead files, unexplained systems. Discipline here keeps Frontline
 understandable and production-minded. See [[Anti-AI-Slop Code Rules]] and [[Product Principles]]
 (principle 10).
 
 ## Related
 
-[[Anti-AI-Slop Code Rules]] · [[Production Workflow]] · [[Folder Structure]] · [[Watchdog Command Center]]
+[[Anti-AI-Slop Code Rules]] · [[Production Workflow]] · [[Folder Structure]] · [[Frontline Command Center]]

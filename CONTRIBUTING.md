@@ -1,6 +1,6 @@
-# Contributing to Watchdog
+# Contributing to Frontline
 
-Watchdog is built with discipline: scoped tasks, clean typed code, and honest logging. These
+Frontline is built with discipline: scoped tasks, clean typed code, and honest logging. These
 rules keep the codebase serious and maintainable. The canonical, deeper versions live in the
 Obsidian vault ([docs/obsidian/](docs/obsidian/)); this file is the git-facing summary.
 
@@ -16,7 +16,7 @@ Obsidian vault ([docs/obsidian/](docs/obsidian/)); this file is the git-facing s
 ## Before You Start
 
 1. Read [CLAUDE.md](CLAUDE.md) and the
-   [Command Center](docs/obsidian/00%20Start%20Here/Watchdog%20Command%20Center.md).
+   [Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md).
 2. Confirm the task is in scope for the current phase / MVP
    ([Feature Priority Order](docs/obsidian/01%20Product/Feature%20Priority%20Order.md)).
 3. Use `/start-task` to produce a plan **before** coding.

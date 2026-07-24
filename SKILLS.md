@@ -1,6 +1,7 @@
-# Watchdog — AI Skills & Tooling
+# Frontline — AI Skills & Tooling
 
-This project is a **frontend-heavy React Native app** (in progress). This file is the
+This project is a **frontend-heavy React Native app** (Frontline — a veteran benefits and
+local-resource navigator, in progress). This file is the
 organized inventory of the AI-assistant skills and tooling installed in the repo.
 
 > Skills are curated for a React Native build. Web-DOM design skills (Tailwind/shadcn/GSAP),

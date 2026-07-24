@@ -27,7 +27,7 @@ Before coding:
 
 ## Checklist the skill enforces
 
-- [ ] Read `CLAUDE.md` + [[Watchdog Command Center]]
+- [ ] Read `CLAUDE.md` + [[Frontline Command Center]]
 - [ ] Exact task identified
 - [ ] MVP / non-MVP classified
 - [ ] Files likely to change listed

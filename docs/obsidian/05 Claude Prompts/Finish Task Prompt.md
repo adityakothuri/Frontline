@@ -30,7 +30,7 @@ Wrap up the current task:
 - [ ] Build log updated ([[Build Log Template]])
 - [ ] [[app_walkthrough]] updated if meaningful
 - [ ] [[Decision Log]] / bug / feature spec updated if needed
-- [ ] [[Watchdog Command Center]] current/next task updated
+- [ ] [[Frontline Command Center]] current/next task updated
 - [ ] Risks listed; next step recommended
 
 ## Related

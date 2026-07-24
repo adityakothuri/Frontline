@@ -1,0 +1,81 @@
+name: Refresh resource data
+
+# Keeps the live resource DB current and every `last_checked` date honest.
+#   • jobs   (USAJOBS) — churn fast, so weekly
+#   • places (VA facilities, GI Bill schools, LSC legal aid, HUD counseling,
+#             curated veteran referrals) — change slowly, so monthly
+# Curated referrals + SSVF providers are reviewed by hand quarterly; the
+# freshness gate below fails loudly when any source ages past its cadence.
+# Manual runs: Actions tab → "Run workflow" (choose all | places | jobs).
+#
+# NOTE: scheduled workflows only run from the DEFAULT branch — this file must
+# be on `main` (and the secrets set) before any cron fires.
+#
+# Requires these repo secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+#   VA_API_KEY, USAJOBS_API_KEY, USAJOBS_USER_AGENT
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # weekly  — Mondays 06:00 UTC  → jobs
+    - cron: '0 4 1 * *'   # monthly — 1st at 04:00 UTC   → places
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'What to refresh'
+        default: 'all'
+        type: choice
+        options: [all, places, jobs]
+
+# Never let two refreshes write concurrently.
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      issues: write
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      VA_API_KEY: ${{ secrets.VA_API_KEY }}
+      USAJOBS_API_KEY: ${{ secrets.USAJOBS_API_KEY }}
+      USAJOBS_USER_AGENT: ${{ secrets.USAJOBS_USER_AGENT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Choose mode from the schedule (or manual input)
+        id: pick
+        run: |
+          case "${{ github.event.schedule }}" in
+            "0 6 * * 1") echo "mode=jobs"   >> "$GITHUB_OUTPUT" ;;
+            "0 4 1 * *") echo "mode=places" >> "$GITHUB_OUTPUT" ;;
+            *)           echo "mode=${{ github.event.inputs.mode || 'all' }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Run ingestion refresh
+        run: bash ingestion/refresh.sh "${{ steps.pick.outputs.mode }}"
+      - name: Freshness gate — fail if any source is older than its cadence
+        run: node --experimental-strip-types ingestion/freshnessGate.ts
+      - name: Open an issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="Data refresh failed ($(date -u +%F), mode: ${{ steps.pick.outputs.mode }})"
+          body="The scheduled resource-data refresh failed. Veterans may be seeing stale data.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Check the failing step, fix, then re-run: Actions → Refresh resource data → Run workflow."
+          existing=$(gh issue list --state open --search "Data refresh failed" --json number --jq '.[0].number' || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body" --label bug
+          fi

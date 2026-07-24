@@ -8,6 +8,10 @@
 .env
 .env.local
 .env.*.local
+# Seed-script credentials (Supabase service-role key) — server-side only.
+.env.seed
+# Local edge-function secrets for `supabase functions serve`.
+supabase/functions/.env
 
 # Dependencies
 node_modules/

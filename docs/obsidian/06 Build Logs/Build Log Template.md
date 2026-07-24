@@ -60,4 +60,4 @@ What was requested (one or two lines).
 
 ## Related
 
-[[Production Workflow]] · [[Finish Task Prompt]] · [[app_walkthrough]] · [[Watchdog Command Center]]
+[[Production Workflow]] · [[Finish Task Prompt]] · [[app_walkthrough]] · [[Frontline Command Center]]

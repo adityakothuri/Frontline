@@ -1,13 +1,13 @@
 ---
 name: slop-check
-description: Use to review Watchdog changes for AI-looking code and project-discipline violations. Checks for AI-slop (giant files, vague names, duplicate logic, fake complexity), unauthorized new files, unrelated changes, naming quality, TypeScript safety, and whether the Obsidian logs need updating. This is the project anti-slop reviewer; it does NOT replace the built-in /code-review multi-agent reviewer.
+description: Use to review Frontline changes for AI-looking code and project-discipline violations. Checks for AI-slop (giant files, vague names, duplicate logic, fake complexity), unauthorized new files, unrelated changes, naming quality, TypeScript safety, and whether the Obsidian logs need updating. This is the project anti-slop reviewer; it does NOT replace the built-in /code-review multi-agent reviewer.
 user-invocable: true
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
 # Slop Check
 
-Fast anti-AI-slop review of the current changes, tuned to Watchdog's standards
+Fast anti-AI-slop review of the current changes, tuned to Frontline's standards
 (`docs/obsidian/03 Technical/Anti-AI-Slop Code Rules.md`).
 
 > This is the **project** reviewer, named `slop-check` so it does **not** shadow Claude Code's
@@ -26,7 +26,7 @@ Fast anti-AI-slop review of the current changes, tuned to Watchdog's standards
 5. **Naming quality & consistency** — components `PascalCase`, consistent file naming, clear
    intent.
 6. **TypeScript safety** — no stray `any`; real domain types; typed props and data.
-7. **Mock honesty** — simulation labeled `mock`/`demo`; believable data (no `Camera 1`, no
+7. **Mock honesty** — simulation labeled `mock`/`demo`; believable data (no `Resource 1`, no
    `Lorem ipsum`); nothing fake dressed up as a real integration.
 8. **Logs** — do the build log / `app_walkthrough` / decision log need updating for this change?
 

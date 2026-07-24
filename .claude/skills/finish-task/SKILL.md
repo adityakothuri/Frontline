@@ -1,6 +1,6 @@
 ---
 name: finish-task
-description: Use to CLOSE OUT a Watchdog task. Inspects changed files, runs quality checks, runs QA (and UI) review, then updates the Obsidian logs — build log, app_walkthrough (for meaningful changes), decision log, bug log — and the Command Center current/next task, lists risks, and recommends the next step.
+description: Use to CLOSE OUT a Frontline task. Inspects changed files, runs quality checks, runs QA (and UI) review, then updates the Obsidian logs — build log, app_walkthrough (for meaningful changes), decision log, bug log — and the Command Center current/next task, lists risks, and recommends the next step.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash
 ---
@@ -32,7 +32,7 @@ Complete a task and keep the project brain in sync. **A task is not done until t
    - Bug found/fixed? → `docs/obsidian/07 Bugs/` (Bug Report Template).
    - New feature planned/implemented? → `docs/obsidian/12 Feature Specs/`.
 8. **Update the Command Center.** Set current phase / active task / next recommended task in
-   `docs/obsidian/00 Start Here/Watchdog Command Center.md`.
+   `docs/obsidian/00 Start Here/Frontline Command Center.md`.
 9. **List remaining risks** and **recommend the next step.**
 
 ## Guarantees

@@ -1,46 +1,51 @@
 ---
 tags: [product, parking-lot]
 status: parked
-updated: 2026-07-05
+updated: 2026-07-07
 ---
 
 # Non-MVP Ideas
 
-Parked ideas. **None of these are built during the MVP** unless explicitly approved. Keeping
-them here prevents scope creep while preserving good thinking. See [[Feature Priority Order]].
+Parked ideas. **None of these are built during the MVP** unless explicitly approved. Keeping them
+here prevents scope creep while preserving good thinking. See [[Feature Priority Order]].
 
-## Backend (Priority 9 — after frontend loop is clean)
+## Real backend + data ingestion (Priority 10 — after frontend loop is clean)
 
-- Supabase or Firebase persistence for users, cameras, detections, alerts, media metadata.
-- Row-level security (if Supabase), expiration logic server-side, safe public/mobile keys only.
+- Persistence (Supabase/Firebase/Postgres) for resources, saved items, and profiles.
+- **Verified data ingestion** from official/directory sources: VA pages/APIs, state veteran affairs,
+  county veteran service offices, 2-1-1, the National Resource Directory, local nonprofits, food
+  banks, clothing closets, legal aid. Prioritize **verified/official** sources; scraping is a
+  later, secondary source — never the sole source of truth. See [[Phase 10 Backend and Data Ingestion]].
+- An **AI proxy/backend** so real LLM calls can ship (API keys never live in the client). Required
+  before Phase 6/7 use real models. See [[AI Feature Design]].
 
-## Real AI / video (Priority 10)
+## Advanced veteran-facing features (Priority 11 — future)
 
-- Real detection pipeline: video upload/stream sample, detection API, confidence, event
-  clipping, thumbnail generation, AI-suggested descriptions, false-positive handling.
-- Model/provider evaluation. **Do not pretend the MVP has real AI.**
+- **Claims filing** / application submission in-app.
+- **Login with VA credentials** (Login.gov / ID.me) and authenticated benefit data.
+- **Document upload** (DD-214, VA card, proof of income) — sensitive; needs real security + storage.
+- Appointment booking, reminders, and follow-up tracking.
+- Case-worker / VSO hand-off and shared checklists.
 
-## Real camera integrations (Priority 11)
+## Smarter AI (later)
 
-- Ring-style integrations, RTSP, smart-home integrations, camera permissions, live stream
-  handling, storage/security concerns. Complex — not casually built.
+- Retrieval over an official-benefits corpus for grounded summaries with citations.
+- Personalized eligibility pre-screening (still "you *may* qualify", never a determination).
+- Multilingual summaries and scripts.
 
-## Advanced community (Priority 12 — future)
+## Community & scale (future)
 
-- Comments, reactions, reputation, moderation, admin tools, verified neighborhoods,
-  police/non-emergency integrations, subscriptions, organizations, analytics.
-
-## Smaller parked ideas
-
-- Custom expiration durations beyond the preset options.
-- Anonymous vs identified posting nuances (revisit with privacy decision in [[Decision Log]]).
-- Multi-neighborhood / radius tuning.
+- Community-submitted resources with moderation and a verification workflow.
+- Ratings / "was this helpful" signals feeding verification status.
+- Organization accounts, analytics, and multi-region coverage.
 
 ## Rule
 
 If any of these becomes desirable, it goes through [[Feature Spec Template]] → approval →
-[[Feature Priority Order]] update → a roadmap phase. It does **not** sneak into an MVP task.
+[[Feature Priority Order]] update → a roadmap phase. It does **not** sneak into an MVP task. Anything
+touching **sensitive data, claims, or real advice** additionally requires an explicit trust/privacy
+review ([[Trust Safety and Privacy]]).
 
 ## Related
 
-[[MVP Definition]] · [[Feature Priority Order]] · [[Decision Log]]
+[[MVP Definition|MVP Scope]] · [[Feature Priority Order]] · [[Decision Log]]

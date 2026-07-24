@@ -10,10 +10,10 @@ Paste at the **start of a session** to orient Claude. (Most of this is already i
 this is a quick reinforcement.)
 
 ```text
-You are working on Watchdog, a neighborhood safety app (React Native + Expo, TypeScript).
+You are working on Frontline, a veteran benefits and local-resource navigator app (React Native + Expo, TypeScript).
 
 Before doing anything:
-1. Read CLAUDE.md and docs/obsidian/00 Start Here/Watchdog Command Center.md.
+1. Read CLAUDE.md and docs/obsidian/00 Start Here/Frontline Command Center.md.
 2. Confirm the current phase, active task, and next task.
 
 Follow these rules without exception:
@@ -35,4 +35,4 @@ Tell me the current task and your plan before writing any code.
 
 ## Related
 
-[[Start Task Prompt]] · [[Finish Task Prompt]] · [[Production Workflow]] · [[Watchdog Command Center]]
+[[Start Task Prompt]] · [[Finish Task Prompt]] · [[Production Workflow]] · [[Frontline Command Center]]

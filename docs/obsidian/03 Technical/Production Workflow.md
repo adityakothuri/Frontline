@@ -17,7 +17,7 @@ task branch  →  /start-task  →  implement (approved scope only)  →  qualit
 ### 1. Start — `/start-task`
 - **Create or confirm a task branch** (one task per branch — see
   [Branching Strategy](../../github/Branching%20Strategy.md)). Never do feature work on `main`.
-- Read `CLAUDE.md` and [[Watchdog Command Center]].
+- Read `CLAUDE.md` and [[Frontline Command Center]].
 - Identify the **exact** task; classify MVP / non-MVP (use `product-manager` if scope is fuzzy).
 - List files likely to change and any **new files needed** — get approval for new app files
   ([[File Creation Policy]]).
@@ -41,7 +41,7 @@ task branch  →  /start-task  →  implement (approved scope only)  →  qualit
 - Update the **build log** (`06 Build Logs/`, see [[Build Log Template]]).
 - Update **[[app_walkthrough]]** if the change was moderate/meaningful.
 - Update [[Decision Log]] / bugs / [[Feature Spec Template|feature spec]] if relevant.
-- Update [[Watchdog Command Center]] current/next task.
+- Update [[Frontline Command Center]] current/next task.
 - List remaining risks; recommend the next step.
 
 ### 6. Pull request
@@ -54,7 +54,7 @@ task branch  →  /start-task  →  implement (approved scope only)  →  qualit
 ## One task at a time
 
 No batching multiple features. Finish and log one before starting the next. See
-[[Watchdog Command Center]] "Rules That Must Not Be Broken."
+[[Frontline Command Center]] "Rules That Must Not Be Broken."
 
 ## Related
 

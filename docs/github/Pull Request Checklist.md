@@ -47,7 +47,7 @@ against the [UI Design System](../obsidian/02%20Design/UI%20Design%20System.md) 
 Include them for UI changes.
 
 ## Risks / Follow-ups
-Call out anything reviewers should scrutinize — **especially camera/video, location, auth,
+Call out anything reviewers should scrutinize — **especially AI output, location, privacy, auth,
 permissions, or anything affecting what becomes public** (see [SECURITY.md](../../SECURITY.md)).
 
 ## Related

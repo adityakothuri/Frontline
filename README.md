@@ -1,54 +1,63 @@
-# Watchdog
+# Frontline
 
-> **Neighborhood safety, verified by people.**
+> **Find your next step.** Frontline helps veterans find benefits, local resources, and a clear
+> plan for what to do next.
 
 ## Overview
 
-Watchdog is a **React Native + Expo** neighborhood-safety app. Users connect (or, in the MVP,
-**simulate**) home cameras and doorbells. AI watches for suspicious events but **never posts
-anything publicly on its own** — it notifies the owner and creates an in-app review item. The
-owner reviews the flagged clip, and only if they **approve** it does it become a public
-neighborhood alert on a map, with an auto-delete expiration.
+Frontline is a **React Native + Expo** app that helps **veterans** navigate the fragmented world of
+benefits and local help. A veteran opens the app, chooses **what they need help with** (food,
+housing, healthcare, VA benefits, jobs, legal, transportation, and more), shares a **location or
+ZIP**, and gets **nearby relevant resources**, **plain-English benefit explanations**, and
+**AI-generated next steps** — what to bring, who to call, and what to say.
 
-The MVP is a polished, believable **demo** of that loop with **simulated** camera and AI flows.
-Real camera integrations and real AI/video detection are deliberately **future work** — the
-code and docs label simulation honestly (`mock` / `demo` / `simulated`).
+The AI is **embedded into real workflows** (guided need flows, next-step plans, call scripts,
+benefit summaries), **not a chatbot**. Frontline is a **resource navigator, not the VA or a
+government agency**, and its AI output is **simplified guidance, never legal, medical, financial, or
+government-certified advice**.
 
-**Principles:** user control first · human verification (AI detects, people decide) · privacy
-by default · calm (not alarmist) safety · local relevance · temporary-by-design alerts.
+The MVP is a polished, trustworthy **demo** of that loop with **simulated** data and **templated**
+AI behind a typed `AiService` seam. Real backend persistence, verified data ingestion, and real LLM
+calls are **later phases** — the code and docs label simulation honestly (`mock` / `demo` /
+`simulated` / `templated`).
+
+**Principles:** veteran-first clarity · AI in workflows (not a chatbot) · trust by verification ·
+not advice · privacy by default (no SSN/VA-login/bank/diagnosis) · accessibility always.
 
 ## Core MVP Flow
 
-1. Enter the app (sign in or demo mode).
-2. See a polished home dashboard.
-3. View simulated cameras.
-4. A simulated AI detection appears.
-5. Review the detection.
-6. Approve or reject it.
-7. If approved, edit the description and expiration.
-8. The approved alert appears on the neighborhood map.
-9. Others open alert details.
-10. The alert expires per its auto-delete setting.
+1. Open the app → **"What do you need help with?"**
+2. Pick a **need category**.
+3. Answer a short **guided flow** (what · urgency · in-person/online · documents on hand · help type).
+4. Provide **location or ZIP**.
+5. See **nearby resources** as a **list and map**.
+6. Tap a resource for its **detail**.
+7. Read a **plain-English summary**, eligibility, documents, and **next steps**.
+8. Tap **"Generate call script"** for a short, specific script (+ a nervous-user variant).
+9. **Save**, **call**, or get **directions**.
 
 ## Feature Priorities
 
-Foundation → app shell → camera simulation → AI detection simulation → **human review (core)**
-→ public alert posting → map viewing → alert lifecycle/auto-delete → profile/settings →
-*(post-MVP)* real backend → real AI/video → real cameras → advanced community.
+Foundation → app shell/design system → **resource data model + `AiService` seam** → **guided need
+flow** → **resource list/cards/detail** → **map discovery** → **AI plans + call scripts** → **AI
+summarization** → **saved + profile** → **trust/verification** → *(post-MVP)* backend + verified
+data ingestion.
 Full list + reasoning: [docs/obsidian/01 Product/Feature Priority Order.md](docs/obsidian/01%20Product/Feature%20Priority%20Order.md).
 
 ## Tech Stack
 
 - **React Native + Expo**, **TypeScript-first**
-- **React Navigation** (structure chosen in Phase 1)
-- Local state + typed **mock services** now; **Supabase/Firebase** later (post-MVP)
+- **expo-router** (file-based routing)
+- **react-native-maps** for local resource discovery on iOS/Android (web shows a placeholder)
+- Local state + typed **mock services** behind interfaces (`ResourceService`, `AiService`); real
+  backend + **AI proxy** later (post-MVP — keys never ship in the client)
 - **Context7 MCP** for up-to-date library docs
-- Simulation-first: no real backend/model/camera SDKs in the MVP
+- Simulation-first: no real backend/model calls in the MVP
 
 ## Project Structure
 
 ```text
-Watchdog/
+Frontline/
 ├── CLAUDE.md            # Claude Code behavior + product/workflow brief
 ├── SKILLS.md            # installed AI skills/tooling inventory
 ├── README.md
@@ -56,36 +65,37 @@ Watchdog/
 │   ├── obsidian/        # the project "brain" (product, design, technical, roadmap, logs)
 │   └── github/          # git/GitHub workflow guides
 ├── .github/             # CI, issue/PR templates, dependabot
-└── src/ (or app/)       # app code — created in Phase 1, feature-based (not yet present)
+├── app/                 # expo-router routes (shell reused; feature screens being built)
+└── src/                 # components, theme tokens, services (resources, ai)
 ```
 
-App code will follow a **feature-based** layout — see
+App code follows a **feature-based** layout — see
 [Folder Structure](docs/obsidian/03%20Technical/Folder%20Structure.md).
 
 ## Getting Started
 
-> The app is not scaffolded yet (Phase 0). These steps apply once Phase 1 creates the Expo app.
-
-**Prerequisites:** Node.js (this machine uses Node in `~/.local`, npm global prefix `~/.local`).
+**Prerequisites:** Node.js ≥ 20.19.4 (this machine uses Node in `~/.local`), and a way to preview —
+an iOS Simulator (development build), Android emulator, or a web browser.
 
 ```bash
-# after the app is scaffolded (Phase 1):
 npm install
-npm start        # start Expo
+npm start        # start the Expo dev server, then press i / a / w
 ```
 
-## Available Scripts
+📖 **Full run instructions:** [docs/RUNNING.md](docs/RUNNING.md) — prerequisites, each platform,
+what you'll see, and troubleshooting.
 
-No `package.json` yet. When the app is scaffolded, these scripts are expected (and are what CI
-and the quality hook look for):
+## Available Scripts
 
 | Script | Purpose |
 |--------|---------|
 | `start` | Launch the Expo dev server |
+| `ios` / `android` / `web` | Start directly on a platform |
 | `typecheck` | `tsc --noEmit` |
 | `lint` | ESLint |
-| `test` | Tests (added when meaningful) |
-| `verify` | Convenience: typecheck + lint (+ test) — run before every PR |
+| `format` | Prettier (app source only) |
+| `test` | Placeholder (real tests added when meaningful) |
+| `verify` | typecheck + lint — run before every PR (also what CI runs) |
 
 ## Development Workflow
 
@@ -101,9 +111,9 @@ when they exist. Before opening a PR, run `verify`. See
 
 ## Environment Variables
 
-Copy `.env.example` → `.env.local` and fill values locally. **Only public `EXPO_PUBLIC_*` keys
-belong in the app**; service-role/backend secrets never go in app source. `.env*` is
-git-ignored; `.env.example` (placeholders only) is committed. See
+The MVP needs **no secrets** (data is simulated, AI is templated). When real integrations arrive,
+**only public `EXPO_PUBLIC_*` keys** belong in the app; the **AI/Anthropic key never ships in the
+client** — real LLM calls go through a server-side proxy. `.env*` is git-ignored. See
 [Environment Variables](docs/obsidian/03%20Technical/Environment%20Variables.md).
 
 ## Git Workflow
@@ -118,19 +128,24 @@ git-ignored; `.env.example` (placeholders only) is committed. See
 
 - **[CLAUDE.md](CLAUDE.md)** — controls Claude Code behavior; product + workflow brief.
 - **[docs/obsidian/](docs/obsidian/)** — the project brain. Start at
-  [Watchdog Command Center](docs/obsidian/00%20Start%20Here/Watchdog%20Command%20Center.md).
+  [Frontline Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md).
 - **[docs/github/](docs/github/)** — git/GitHub workflow.
 - **[SKILLS.md](SKILLS.md)** — installed AI skills/tooling.
 
 ## Current Status
 
-🟡 **Phase 0 — Foundation.** Project brain + repo workflow are set up; **no app source code
-yet, on purpose.** Next: Phase 1 — polished app shell (requires approval before creating app
-source + dependencies).
+🟡 **Reframed to Frontline.** The previous neighborhood-safety product was scrapped;
+this repo is now Frontline (a veteran benefits/resource navigator). The reusable **design system +
+app shell** carry over; documentation, `CLAUDE.md`, and app config are reframed. **Feature screens
+are built next**, starting with the resource data model + service seams
+([Phase 2](docs/obsidian/04%20Build%20Roadmap/Phase%202%20Resource%20Data%20Model%20and%20Service.md)).
+Until then the running app still shows the legacy shell/screens. See
+[docs/RUNNING.md](docs/RUNNING.md).
 
 ## Notes
 
-- **License:** proprietary — all rights reserved (see [LICENSE](LICENSE)). Not licensed for
-  reuse; may be opened later.
-- Simulation is labeled honestly; the MVP does **not** contain real camera or AI integrations.
+- **License:** proprietary — all rights reserved (see [LICENSE](LICENSE)). Not licensed for reuse.
+- Simulation is labeled honestly; the MVP does **not** contain real backend or live LLM calls.
+- **Not the VA:** Frontline is a navigator; AI output is guidance, not legal/medical/financial/
+  government-certified advice.
 - No real secrets are ever committed.
