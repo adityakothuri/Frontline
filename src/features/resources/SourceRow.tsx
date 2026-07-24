@@ -33,7 +33,9 @@ export function SourceRow({ resource, size = 'caption', style }: SourceRowProps)
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  // flex-start + a nudge: when a long label wraps, the icon stays on the first
+  // line instead of floating between the two.
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   // Long labels ("Community-submitted · may be outdated") wrap, never overflow.
-  label: { flexShrink: 1 },
+  label: { flexShrink: 1, marginTop: 1 },
 });

@@ -11,7 +11,7 @@ import { aiService, type BenefitSummary, type NextStepPlan } from '@/services/ai
 import { RESOURCE_CATEGORY_META, type Resource } from '@/types/resource';
 import { defaultNeedForCategory, type NeedCategory } from '@/types/need';
 import { callPhone, openDirections } from './resourceActions';
-import { openNowStatus, formatCheckedDate, trustWarning } from './resourceStatus';
+import { openNowStatus, trustWarning } from './resourceStatus';
 import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
 import { ActionRow } from './ActionRow';
@@ -220,11 +220,10 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
         </Section>
 
         {/* Trust */}
+        {/* SourceRow already carries "· updated <date>" — no separate date line,
+            it read as the same fact twice. */}
         <Section title="Trust & verification">
           <SourceRow resource={resource} size="body" />
-          <AppText variant="caption" color="textMuted">
-            Last checked {formatCheckedDate(resource.last_checked)}
-          </AppText>
           {warning ? (
             <AppText variant="body" style={styles.trustWarning}>
               {warning}

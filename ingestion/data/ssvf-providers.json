@@ -1,0 +1,1889 @@
+{
+  "source": "VA SSVF Provider Intake List, Fiscal Year 2026",
+  "source_url": "https://department.va.gov/homeless/supportive-services-for-veteran-families/",
+  "file_url": "https://department.va.gov/homeless/wp-content/uploads/sites/72/2026/03/SSVF_Provider_Intake_List_FY26.xlsx",
+  "retrieved_on": "2026-07-24",
+  "note": "Converted from the VA-published XLSX. Refresh quarterly: re-download the current FY list, regenerate, and re-run the ssvf-providers source. See ingestion/README.md.",
+  "providers": [
+    {
+      "organization": "Catholic Social Services",
+      "fain": "12-AK-001",
+      "states": "AK",
+      "areas_served": "Anchorage Municipality (AK);Matanuska-Susitna Borough (AK)",
+      "phone": "(907) 222-7300",
+      "email": "ssvf@cssalaska.org"
+    },
+    {
+      "organization": "Housing First, Inc.",
+      "fain": "12-AL-002",
+      "states": "AL",
+      "areas_served": "Baldwin County (AL);Mobile County (AL)",
+      "phone": "(251) 450-3345",
+      "email": "communityoutreach@hfal.org"
+    },
+    {
+      "organization": "Goodwill of Silicon Valley (dba Goodwill Industries of Santa Clara County)",
+      "fain": "12-CA-013",
+      "states": "CA",
+      "areas_served": "Santa Clara County (CA)",
+      "phone": "(408) 998-5727",
+      "email": "vfsprogram@goodwillsv.org"
+    },
+    {
+      "organization": "Shelter, Inc.",
+      "fain": "12-CA-016",
+      "states": "CA",
+      "areas_served": "Contra Costa County (CA)",
+      "phone": "(925) 957-7592",
+      "email": "SSVF@shelterinc.org"
+    },
+    {
+      "organization": "Volunteers of America of Greater Sacramento and Northern Nevada, Inc.",
+      "fain": "12-CA-018",
+      "states": "CA",
+      "areas_served": "El Dorado County (CA);Nevada County (CA);Placer County (CA);Sacramento County (CA);Sutter County (CA);Yolo County (CA);Yuba County (CA)",
+      "phone": "(916) 228-3153",
+      "email": "ssvf@voa-ncnn.org"
+    },
+    {
+      "organization": "Community Renewal Team, Inc.",
+      "fain": "12-CT-021",
+      "states": "CT",
+      "areas_served": "Hartford County (CT);Middlesex County (CT);New Haven County (CT);New London County (CT)",
+      "phone": "(860) 778-4775",
+      "email": "crumpt@crtct.org"
+    },
+    {
+      "organization": "Advocate Program, Inc.",
+      "fain": "12-FL-024",
+      "states": "FL",
+      "areas_served": "Broward County (FL);Miami-Dade County (FL);Monroe County (FL)",
+      "phone": "(786) 227-5842",
+      "email": "vssu@advocateprogram.org"
+    },
+    {
+      "organization": "Jewish Family & Childrens Service Of The Suncoast Inc",
+      "fain": "12-FL-028",
+      "states": "FL",
+      "areas_served": "Charlotte County (FL);Collier County (FL);DeSoto County (FL);Lee County (FL);Manatee County (FL);Sarasota County (FL)",
+      "phone": "9413662224",
+      "email": "bmathews@jfcs-cares.org"
+    },
+    {
+      "organization": "Central Savannah River Area Economic Opportunity Authority, Inc. (CSRA EOA)",
+      "fain": "12-GA-029",
+      "states": "GA",
+      "areas_served": "Bulloch County (GA);Burke County (GA);Candler County (GA);Clarke County (GA);Columbia County (GA);Effingham County (GA);Elbert County (GA);Emanuel County (GA);Glascock County (GA);Greene County (GA);Hancock County (GA);Jefferson County (GA);Jenkins County (GA);Johnson County (GA);Lincoln County (GA);McDuffie County (GA);Oglethorpe County (GA);Richmond County (GA);Screven County (GA);Taliaferro County (GA);Warren County (GA);Washington County (GA);Wilkes County (GA)",
+      "phone": "(706) 364-6548",
+      "email": "ssvf@csraeoa.org"
+    },
+    {
+      "organization": "El-Ada, Inc.",
+      "fain": "12-ID-032",
+      "states": "ID",
+      "areas_served": "Ada County (ID);Canyon County (ID);Elmore County (ID);Owyhee County (ID)",
+      "phone": "(208) 830-3892",
+      "email": "shellyl@eladacap.org"
+    },
+    {
+      "organization": "Thresholds",
+      "fain": "12-IL-033",
+      "states": "IL",
+      "areas_served": "Cook County (IL)",
+      "phone": "(773) 572-5321",
+      "email": "tim.rivard@thresholds.org"
+    },
+    {
+      "organization": "Volunteers of America Southeast Louisiana, Inc.",
+      "fain": "12-LA-038",
+      "states": "AR;LA",
+      "areas_served": "Columbia County (AR);Lafayette County (AR);Little River County (AR);Miller County (AR);Sevier County (AR);Acadia Parish (LA);Allen Parish (LA);Ascension Parish (LA);Assumption Parish (LA);Avoyelles Parish (LA);Beauregard Parish (LA);Bienville Parish (LA);Bossier Parish (LA);Caddo Parish (LA);Calcasieu Parish (LA);Caldwell Parish (LA);Cameron Parish (LA);Catahoula Parish (LA);Claiborne Parish (LA);Concordia Parish (LA);De Soto Parish (LA);East Baton Rouge Parish (LA);East Carroll Parish (LA);East Feliciana Parish (LA);Evangeline Parish (LA);Franklin Parish (LA);Grant Parish (LA);Iberia Parish (LA);Iberville Parish (LA);Jackson Parish (LA);Jefferson Davis Parish (LA);Jefferson Parish (LA);Lafayette Parish (LA);Lafourche Parish (LA);LaSalle Parish (LA);Lincoln Parish (LA);Livingston Parish (LA);Madison Parish (LA);Morehouse Parish (LA);Natchitoches Parish (LA);Orleans Parish (LA);Ouachita Parish (LA);Plaquemines Parish (LA);Pointe Coupee Parish (LA);Rapides Parish (LA);Red River Parish (LA);Richland Parish (LA);Sabine Parish (LA);St. Bernard Parish (LA);St. Charles Parish (LA);St. Helena Parish (LA);St. James Parish (LA);St. John the Baptist Parish (LA);St. Landry Parish (LA);St. Martin Parish (LA);St. Mary Parish (LA);St. Tammany Parish (LA);Tangipahoa Parish (LA);Tensas Parish (LA);Terrebonne Parish (LA);Union Parish (LA);Vermilion Parish (LA);Vernon Parish (LA);Washington Parish (LA);Webster Parish (LA);West Baton Rouge Parish (LA);West Carroll Parish (LA);West Feliciana Parish (LA);Winn Parish (LA)",
+      "phone": "(504) 483-3558",
+      "email": "dphillips@voasela.org"
+    },
+    {
+      "organization": "Volunteers of America of Massachusetts, Inc.",
+      "fain": "12-MA-040",
+      "states": "MA",
+      "areas_served": "Barnstable County (MA);Dukes County (MA);Essex County (MA);Middlesex County (MA);Nantucket County (MA);Norfolk County (MA);Plymouth County (MA);Suffolk County (MA)",
+      "phone": "(617) 360-1798",
+      "email": "veteranservices@voamass.org"
+    },
+    {
+      "organization": "Preble Street",
+      "fain": "12-ME-043",
+      "states": "ME",
+      "areas_served": "Androscoggin County (ME);Aroostook County (ME);Cumberland County (ME);Franklin County (ME);Hancock County (ME);Kennebec County (ME);Knox County (ME);Lincoln County (ME);Oxford County (ME);Penobscot County (ME);Piscataquis County (ME);Sagadahoc County (ME);Somerset County (ME);Waldo County (ME);Washington County (ME);York County (ME)",
+      "phone": "(207) 956-6556",
+      "email": "VHS@preblestreet.org"
+    },
+    {
+      "organization": "Southwest Counseling Solutions",
+      "fain": "12-MI-045",
+      "states": "MI",
+      "areas_served": "Wayne County (MI)",
+      "phone": "(313) 481-7919",
+      "email": "kenneth.cobb@miside.org"
+    },
+    {
+      "organization": "United Way of Forsyth County, Inc.",
+      "fain": "12-NC-049",
+      "states": "NC",
+      "areas_served": "Davidson County (NC);Davie County (NC);Forsyth County (NC);Guilford County (NC);Stokes County (NC);Surry County (NC);Yadkin County (NC)",
+      "phone": "(336) 978-0267",
+      "email": "rcarvajal@goodwillnwnc.org"
+    },
+    {
+      "organization": "Community Action Partnership of North Dakota",
+      "fain": "12-ND-051",
+      "states": "ND",
+      "areas_served": "Adams County (ND);Barnes County (ND);Benson County (ND);Billings County (ND);Bottineau County (ND);Bowman County (ND);Burke County (ND);Burleigh County (ND);Cass County (ND);Cavalier County (ND);Dickey County (ND);Divide County (ND);Dunn County (ND);Eddy County (ND);Emmons County (ND);Foster County (ND);Golden Valley County (ND);Grand Forks County (ND);Grant County (ND);Griggs County (ND);Hettinger County (ND);Kidder County (ND);LaMoure County (ND);Logan County (ND);McHenry County (ND);McIntosh County (ND);McKenzie County (ND);McLean County (ND);Mercer County (ND);Morton County (ND);Mountrail County (ND);Nelson County (ND);Oliver County (ND);Pembina County (ND);Pierce County (ND);Ramsey County (ND);Ransom County (ND);Renville County (ND);Richland County (ND);Rolette County (ND);Sargent County (ND);Sheridan County (ND);Sioux County (ND);Slope County (ND);Stark County (ND);Steele County (ND);Stutsman County (ND);Towner County (ND);Traill County (ND);Walsh County (ND);Ward County (ND);Wells County (ND);Williams County (ND)",
+      "phone": "(701) 232-2452",
+      "email": "programs@capnd.org"
+    },
+    {
+      "organization": "Catholic Charities Dioceses of Camden, Inc.",
+      "fain": "12-NJ-053",
+      "states": "NJ",
+      "areas_served": "Atlantic County (NJ);Camden County (NJ);Cape May County (NJ);Cumberland County (NJ);Gloucester County (NJ);Salem County (NJ)",
+      "phone": "(856) 701-4746",
+      "email": "Susan.Stephens@CamdenDiocese.org"
+    },
+    {
+      "organization": "Goodwill Industries of New Mexico",
+      "fain": "12-NM-055",
+      "states": "NM",
+      "areas_served": "Bernalillo County (NM);Catron County (NM);Chaves County (NM);Cibola County (NM);Colfax County (NM);Curry County (NM);De Baca County (NM);Eddy County (NM);Guadalupe County (NM);Harding County (NM);Lea County (NM);Los Alamos County (NM);McKinley County (NM);Mora County (NM);Quay County (NM);Rio Arriba County (NM);Roosevelt County (NM);San Juan County (NM);San Miguel County (NM);Sandoval County (NM);Santa Fe County (NM);Socorro County (NM);Taos County (NM);Torrance County (NM);Union County (NM);Valencia County (NM)",
+      "phone": "(505) 881-6401",
+      "email": "ksloan@goodwillnm.org"
+    },
+    {
+      "organization": "HELP Social Service Corporation",
+      "fain": "12-NY-060",
+      "states": "NY",
+      "areas_served": "Bronx County (NY);Kings County (NY);New York County (NY);Queens County (NY);Richmond County (NY)",
+      "phone": "(646) 619-3277",
+      "email": "ssvfny@helpusa.org"
+    },
+    {
+      "organization": "Westchester Community Opportunity Program, Inc. (WestCOP)",
+      "fain": "12-NY-063",
+      "states": "NY",
+      "areas_served": "Dutchess County (NY);Orange County (NY);Putnam County (NY);Rockland County (NY);Sullivan County (NY);Ulster County (NY);Westchester County (NY)",
+      "phone": "(845) 391-0825",
+      "email": "tterry@westcop.org"
+    },
+    {
+      "organization": "Mental Health Services for Homeless Persons, Inc.  d.b.a  FrontLine Service",
+      "fain": "12-OH-064",
+      "states": "OH",
+      "areas_served": "Ashtabula County (OH);Cuyahoga County (OH);Erie County (OH);Hancock County (OH);Huron County (OH);Lake County (OH);Lorain County (OH);Lucas County (OH);Ottawa County (OH);Sandusky County (OH);Seneca County (OH);Wood County (OH);Wyandot County (OH)",
+      "phone": "(216) 674-6700",
+      "email": "alayia.hunter@frontlineservice.org"
+    },
+    {
+      "organization": "Families in Crisis, Inc.",
+      "fain": "12-TX-071",
+      "states": "TX",
+      "areas_served": "Bell County (TX)",
+      "phone": "254-634-1184",
+      "email": "mechelle.lindsey@familiesincrisis.net"
+    },
+    {
+      "organization": "Virginia Supportive Housing",
+      "fain": "12-VA-077",
+      "states": "VA",
+      "areas_served": "Albemarle County (VA);Charles City County (VA);Charlottesville city (VA);Chesterfield County (VA);Colonial Heights city (VA);Dinwiddie County (VA);Emporia city (VA);Fluvanna County (VA);Goochland County (VA);Greene County (VA);Hanover County (VA);Henrico County (VA);Hopewell city (VA);Louisa County (VA);Nelson County (VA);New Kent County (VA);Petersburg city (VA);Powhatan County (VA);Richmond city (VA);Surry County (VA);Sussex County (VA)",
+      "phone": "(804) 788-6825",
+      "email": "intake@supportworkshousing.org"
+    },
+    {
+      "organization": "Humility Homes and Services, Inc.",
+      "fain": "12-ZZ-031",
+      "states": "IA;IL",
+      "areas_served": "Clinton County (IA);Muscatine County (IA);Scott County (IA);Henry County (IL);Lee County (IL);Mercer County (IL);Rock Island County (IL);Whiteside County (IL)",
+      "phone": "(563) 594-9742",
+      "email": "contact@humilityhomes.org"
+    },
+    {
+      "organization": "Veterans Inc.",
+      "fain": "12-ZZ-041",
+      "states": "CT;MA;ME;NH;RI;VT",
+      "areas_served": "Fairfield County (CT);Hartford County (CT);Litchfield County (CT);Middlesex County (CT);New Haven County (CT);New London County (CT);Tolland County (CT);Windham County (CT);Berkshire County (MA);Bristol County (MA);Essex County (MA);Franklin County (MA);Hampden County (MA);Hampshire County (MA);Middlesex County (MA);Norfolk County (MA);Plymouth County (MA);Worcester County (MA);Androscoggin County (ME);Aroostook County (ME);Cumberland County (ME);Franklin County (ME);Hancock County (ME);Kennebec County (ME);Knox County (ME);Lincoln County (ME);Oxford County (ME);Penobscot County (ME);Piscataquis County (ME);Sagadahoc County (ME);Somerset County (ME);Waldo County (ME);Washington County (ME);York County (ME);Belknap County (NH);Carroll County (NH);Cheshire County (NH);Coos County (NH);Grafton County (NH);Hillsborough County (NH);Merrimack County (NH);Rockingham County (NH);Strafford County (NH);Sullivan County (NH);Bristol County (RI);Kent County (RI);Newport County (RI);Providence County (RI);Washington County (RI);Addison County (VT);Bennington County (VT);Caledonia County (VT);Chittenden County (VT);Essex County (VT);Franklin County (VT);Grand Isle County (VT);Lamoille County (VT);Orange County (VT);Orleans County (VT);Rutland County (VT);Washington County (VT);Windham County (VT);Windsor County (VT)",
+      "phone": "(800) 482-2565",
+      "email": "info@veteransinc.org"
+    },
+    {
+      "organization": "COMMUNITY ACTION PARTNERSHIP OF KERN",
+      "fain": "13-CA-090",
+      "states": "CA",
+      "areas_served": "Kern County (CA)",
+      "phone": "(661) 554-9498",
+      "email": "emolina@capk.org"
+    },
+    {
+      "organization": "The Workplace, Inc.",
+      "fain": "13-CT-093",
+      "states": "CT",
+      "areas_served": "Fairfield County (CT);New Haven County (CT)",
+      "phone": "(203) 767-4291",
+      "email": "itorres@workplace.org"
+    },
+    {
+      "organization": "Faith, Hope, Love, Charity, Inc.",
+      "fain": "13-FL-096",
+      "states": "FL",
+      "areas_served": "Palm Beach County (FL)",
+      "phone": "(561) 560-8110",
+      "email": "referrals@standown.org"
+    },
+    {
+      "organization": "Primary Health Care, Inc.",
+      "fain": "13-IA-103",
+      "states": "IA",
+      "areas_served": "Dallas County (IA);Jasper County (IA);Marshall County (IA);Polk County (IA);Story County (IA);Warren County (IA)",
+      "phone": "(515) 248-1851",
+      "email": "eheid@phcinc.net"
+    },
+    {
+      "organization": "Heartland Human Care Services, Inc.",
+      "fain": "13-IL-105",
+      "states": "IL",
+      "areas_served": "Cook County (IL)",
+      "phone": "(773) 991-1456",
+      "email": "kmorris@heartlandhumancareservices.org"
+    },
+    {
+      "organization": "Community Action of Northeast Indiana, Inc. (dba Brightpoint)",
+      "fain": "13-IN-106",
+      "states": "IN",
+      "areas_served": "Adams County (IN);Allen County (IN);Blackford County (IN);Cass County (IN);DeKalb County (IN);Delaware County (IN);Elkhart County (IN);Fulton County (IN);Grant County (IN);Howard County (IN);Huntington County (IN);Jay County (IN);Kosciusko County (IN);LaGrange County (IN);Marshall County (IN);Miami County (IN);Noble County (IN);Pulaski County (IN);Randolph County (IN);St. Joseph County (IN);Steuben County (IN);Tipton County (IN);Wabash County (IN);Wells County (IN);Whitley County (IN)",
+      "phone": "(800) 589-3506",
+      "email": "ssvf@mybrightpoint.org"
+    },
+    {
+      "organization": "Three Oaks Homeless Shelter, Inc.",
+      "fain": "13-MD-107",
+      "states": "MD",
+      "areas_served": "Calvert County (MD);Charles County (MD);St. Mary's County (MD)",
+      "phone": "(301) 863-9535",
+      "email": "eraska@threeoakscenter.org"
+    },
+    {
+      "organization": "Northwest Michigan Community Action Agency, Inc.",
+      "fain": "13-MI-108",
+      "states": "MI",
+      "areas_served": "Alcona County (MI);Alpena County (MI);Antrim County (MI);Benzie County (MI);Charlevoix County (MI);Cheboygan County (MI);Crawford County (MI);Emmet County (MI);Grand Traverse County (MI);Iosco County (MI);Kalkaska County (MI);Leelanau County (MI);Manistee County (MI);Mason County (MI);Missaukee County (MI);Montmorency County (MI);Oceana County (MI);Ogemaw County (MI);Oscoda County (MI);Otsego County (MI);Presque Isle County (MI);Roscommon County (MI);Wexford County (MI)",
+      "phone": "(844) 900-0500",
+      "email": "homeless@nmcaa.net"
+    },
+    {
+      "organization": "Harbor Homes, Inc.",
+      "fain": "13-NH-115",
+      "states": "NH",
+      "areas_served": "Belknap County (NH);Carroll County (NH);Cheshire County (NH);Coos County (NH);Grafton County (NH);Hillsborough County (NH);Merrimack County (NH);Rockingham County (NH);Strafford County (NH);Sullivan County (NH)",
+      "phone": "(603) 305-1122",
+      "email": "s.dahlberg@harborcarenh.org"
+    },
+    {
+      "organization": "Catholic Charities of the Roman Catholic Diocese of Syracuse NY",
+      "fain": "13-NY-119",
+      "states": "NY",
+      "areas_served": "Cayuga County (NY);Onondaga County (NY);Oswego County (NY)",
+      "phone": "(315) 558-4387",
+      "email": "lmercer@ccoc.us"
+    },
+    {
+      "organization": "Soldier On of Delaware, Inc.",
+      "fain": "13-NY-121",
+      "states": "NY",
+      "areas_served": "Allegany County (NY);Cattaraugus County (NY);Cayuga County (NY);Chautauqua County (NY);Chemung County (NY);Cortland County (NY);Erie County (NY);Genesee County (NY);Herkimer County (NY);Jefferson County (NY);Lewis County (NY);Livingston County (NY);Monroe County (NY);Niagara County (NY);Onondaga County (NY);Ontario County (NY);Orleans County (NY);Oswego County (NY);Schuyler County (NY);Seneca County (NY);St. Lawrence County (NY);Steuben County (NY);Tioga County (NY);Tompkins County (NY);Wayne County (NY);Wyoming County (NY);Yates County (NY)",
+      "phone": "(866) 406-8449",
+      "email": "ssvfintake@wesoldieron.org"
+    },
+    {
+      "organization": "Maumee Valley Guidance Center, Inc.",
+      "fain": "13-OH-124",
+      "states": "OH",
+      "areas_served": "Defiance County (OH);Fulton County (OH);Henry County (OH);Paulding County (OH);Williams County (OH)",
+      "phone": "(419) 782-8856",
+      "email": "mvgc@mvgcohio.org"
+    },
+    {
+      "organization": "Community Action Team, Inc.",
+      "fain": "13-OR-125",
+      "states": "OR",
+      "areas_served": "Clatsop County (OR);Columbia County (OR);Tillamook County (OR);Washington County (OR)",
+      "phone": "(503) 397-3511",
+      "email": "Housing_solutions@cat-team.org"
+    },
+    {
+      "organization": "Central Oregon Veteran & Community Outreach, Inc",
+      "fain": "13-OR-126",
+      "states": "OR",
+      "areas_served": "Crook County (OR);Deschutes County (OR);Jefferson County (OR)",
+      "phone": "(541) 383-2793",
+      "email": "ssvf@covo-us.org"
+    },
+    {
+      "organization": "Veterans Leadership Program of Western Pennsylvania, Inc.",
+      "fain": "13-PA-129",
+      "states": "PA",
+      "areas_served": "Allegheny County (PA);Armstrong County (PA);Beaver County (PA);Bedford County (PA);Blair County (PA);Butler County (PA);Cambria County (PA);Centre County (PA);Clearfield County (PA);Crawford County (PA);Elk County (PA);Erie County (PA);Fayette County (PA);Forest County (PA);Fulton County (PA);Greene County (PA);Huntingdon County (PA);Indiana County (PA);Lawrence County (PA);McKean County (PA);Somerset County (PA);Venango County (PA);Warren County (PA);Washington County (PA);Westmoreland County (PA)",
+      "phone": "(412) 481-8200",
+      "email": "info@vlpwpa.org"
+    },
+    {
+      "organization": "YWCA of Seattle - King County - Snohomish County",
+      "fain": "13-WA-148",
+      "states": "WA",
+      "areas_served": "King County (WA);Snohomish County (WA)",
+      "phone": "(206) 730-9356",
+      "email": "kcastillo@ywcaworks.org"
+    },
+    {
+      "organization": "Community Action Coalition for South Central Wisconsin, Inc.",
+      "fain": "13-WI-151",
+      "states": "WI",
+      "areas_served": "Dane County (WI);Jefferson County (WI);Waukesha County (WI)",
+      "phone": "(608) 237-1255",
+      "email": "cac@cacscw.org"
+    },
+    {
+      "organization": "Operation Stand Down Rhode Island",
+      "fain": "13-ZZ-133",
+      "states": "RI",
+      "areas_served": "Bristol County (RI);Kent County (RI);Newport County (RI);Providence County (RI);Washington County (RI)",
+      "phone": "(401) 383-4730",
+      "email": "osdri@osdri.org"
+    },
+    {
+      "organization": "University of Vermont and State Agricultural College",
+      "fain": "13-ZZ-145",
+      "states": "NY;VT",
+      "areas_served": "Clinton County (NY);Addison County (VT);Bennington County (VT);Caledonia County (VT);Chittenden County (VT);Essex County (VT);Franklin County (VT);Grand Isle County (VT);Lamoille County (VT);Orange County (VT);Orleans County (VT);Rutland County (VT);Washington County (VT);Windham County (VT);Windsor County (VT)",
+      "phone": "(802) 656-3232",
+      "email": "ssvf@ssvf-uvm.com"
+    },
+    {
+      "organization": "National Community Health Partners",
+      "fain": "14-AZ-157",
+      "states": "AZ;CA",
+      "areas_served": "La Paz County (AZ);Maricopa County (AZ);Pinal County (AZ);Yuma County (AZ);Imperial County (CA)",
+      "phone": "(480) 361-0177",
+      "email": "info@nchponline.org"
+    },
+    {
+      "organization": "Catholic Charities Community Services, Inc.",
+      "fain": "14-AZ-160",
+      "states": "AZ",
+      "areas_served": "Coconino County (AZ);Mohave County (AZ);Yavapai County (AZ)",
+      "phone": "(855) 256-9419",
+      "email": "ssvf@cc-az.org"
+    },
+    {
+      "organization": "Housing Matters",
+      "fain": "14-CA-169",
+      "states": "CA",
+      "areas_served": "Santa Cruz County (CA)",
+      "phone": "(831) 222-0127",
+      "email": "ssvf@housingmatterssc.org"
+    },
+    {
+      "organization": "Catholic Charities of the Diocese of Stockton",
+      "fain": "14-CA-177",
+      "states": "CA",
+      "areas_served": "Amador County (CA);Calaveras County (CA);Mariposa County (CA);San Joaquin County (CA);Stanislaus County (CA);Tuolumne County (CA)",
+      "phone": "(209) 396-6913",
+      "email": "djone@ccstockton.org"
+    },
+    {
+      "organization": "Columbus House, Inc.",
+      "fain": "14-CT-178",
+      "states": "CT",
+      "areas_served": "Middlesex County (CT);New Haven County (CT);New London County (CT)",
+      "phone": "203-401-4400",
+      "email": "ademusis@columbushouse.org"
+    },
+    {
+      "organization": "Big Bend Homeless Coalition, Inc.",
+      "fain": "14-FL-179",
+      "states": "FL",
+      "areas_served": "Bay County (FL);Calhoun County (FL);Dixie County (FL);Franklin County (FL);Gadsden County (FL);Gulf County (FL);Holmes County (FL);Jackson County (FL);Jefferson County (FL);Leon County (FL);Liberty County (FL);Madison County (FL);Taylor County (FL);Wakulla County (FL);Washington County (FL)",
+      "phone": "(850) 597-5595",
+      "email": "veteran@familypromisebigbend.org"
+    },
+    {
+      "organization": "United Way of Broward County, Inc.",
+      "fain": "14-FL-181",
+      "states": "FL",
+      "areas_served": "Broward County (FL);Miami-Dade County (FL)",
+      "phone": "(954) 486-4833",
+      "email": "jmorgan@unitedwaybroward.org"
+    },
+    {
+      "organization": "Treasure Coast Homeless Services Council, Inc.",
+      "fain": "14-FL-322",
+      "states": "FL",
+      "areas_served": "Indian River County (FL);Martin County (FL);St. Lucie County (FL)",
+      "phone": "(772) 213-9040",
+      "email": "ssvf@tchelpspot.org"
+    },
+    {
+      "organization": "Family Alliance For Veterans of America, Inc.",
+      "fain": "14-IA-191",
+      "states": "IA",
+      "areas_served": "Allamakee County (IA);Boone County (IA);Bremer County (IA);Buena Vista County (IA);Butler County (IA);Calhoun County (IA);Carroll County (IA);Cerro Gordo County (IA);Cherokee County (IA);Chickasaw County (IA);Clay County (IA);Clayton County (IA);Crawford County (IA);Dickinson County (IA);Emmet County (IA);Fayette County (IA);Floyd County (IA);Franklin County (IA);Greene County (IA);Grundy County (IA);Hamilton County (IA);Hancock County (IA);Hardin County (IA);Howard County (IA);Humboldt County (IA);Ida County (IA);Kossuth County (IA);Lyon County (IA);Mitchell County (IA);Monona County (IA);O'Brien County (IA);Osceola County (IA);Palo Alto County (IA);Plymouth County (IA);Pocahontas County (IA);Sac County (IA);Sioux County (IA);Webster County (IA);Winnebago County (IA);Winneshiek County (IA);Woodbury County (IA);Worth County (IA);Wright County (IA)",
+      "phone": "(641) 243-4103",
+      "email": "fava@westcare.com"
+    },
+    {
+      "organization": "Featherfist",
+      "fain": "14-IL-194",
+      "states": "IL",
+      "areas_served": "Cook County (IL)",
+      "phone": "(773) 251-7254",
+      "email": "abraham.houseel@featherfist.org"
+    },
+    {
+      "organization": "Midwest Shelter for Homeless Veterans, Inc.",
+      "fain": "14-IL-196",
+      "states": "IL",
+      "areas_served": "Bureau County (IL);Cook County (IL);DeKalb County (IL);DuPage County (IL);Grundy County (IL);Iroquois County (IL);Kane County (IL);Kankakee County (IL);Kendall County (IL);La Salle County (IL);Lake County (IL);Putnam County (IL);Will County (IL)",
+      "phone": "630-871-8387",
+      "email": "intake@mshv.org"
+    },
+    {
+      "organization": "Chestnut Health Systems, Inc.",
+      "fain": "14-IL-197",
+      "states": "IL",
+      "areas_served": "Madison County (IL);St. Clair County (IL)",
+      "phone": "(618) 512-1823",
+      "email": "SSVF_Dept@chestnut.org"
+    },
+    {
+      "organization": "Lafayette Transitional Housing Center, Inc.",
+      "fain": "14-IN-199",
+      "states": "IN",
+      "areas_served": "Benton County (IN);Carroll County (IN);Clinton County (IN);Fountain County (IN);Montgomery County (IN);Tippecanoe County (IN);Warren County (IN);White County (IN)",
+      "phone": "(765) 423-4880",
+      "email": "info@lthc.net"
+    },
+    {
+      "organization": "InteCare, Inc.",
+      "fain": "14-IN-200",
+      "states": "IN",
+      "areas_served": "Boone County (IN);Clay County (IN);Hamilton County (IN);Hancock County (IN);Johnson County (IN);Madison County (IN);Marion County (IN);Parke County (IN);Putnam County (IN);Shelby County (IN);Sullivan County (IN);Vermillion County (IN);Vigo County (IN)",
+      "phone": "(855) 896-4345",
+      "email": "intake@intecare.org"
+    },
+    {
+      "organization": "Catholic Charities, Inc. (Diocese of Wichita)",
+      "fain": "14-KS-479",
+      "states": "KS",
+      "areas_served": "Allen County (KS);Bourbon County (KS);Butler County (KS);Chase County (KS);Chautauqua County (KS);Cherokee County (KS);Coffey County (KS);Cowley County (KS);Crawford County (KS);Elk County (KS);Greenwood County (KS);Harper County (KS);Harvey County (KS);Kingman County (KS);Labette County (KS);Lyon County (KS);Marion County (KS);McPherson County (KS);Montgomery County (KS);Morris County (KS);Neosho County (KS);Osage County (KS);Reno County (KS);Rice County (KS);Sedgwick County (KS);Shawnee County (KS);Sumner County (KS);Wabaunsee County (KS);Wilson County (KS);Woodson County (KS)",
+      "phone": "(316) 202-0637",
+      "email": "lfernz@catholiccharitieswichita.org"
+    },
+    {
+      "organization": "Hope Center, Inc.",
+      "fain": "14-LA-205",
+      "states": "LA",
+      "areas_served": "Jefferson Parish (LA);Orleans Parish (LA);Plaquemines Parish (LA);St. Bernard Parish (LA);St. Tammany Parish (LA);Tangipahoa Parish (LA)",
+      "phone": "(504) 363-4034",
+      "email": "vethelp@hopecenterla.org"
+    },
+    {
+      "organization": "Project PLASE, Inc.",
+      "fain": "14-MD-214",
+      "states": "MD",
+      "areas_served": "Anne Arundel County (MD);Baltimore city (MD);Baltimore County (MD)",
+      "phone": "410-837-1400",
+      "email": "shorton@projectplase.net"
+    },
+    {
+      "organization": "New Vision House of Hope, Inc.",
+      "fain": "14-MD-215",
+      "states": "MD",
+      "areas_served": "Baltimore city (MD)",
+      "phone": "(410) 466-8558",
+      "email": "mtowson2k0@yahoo.com"
+    },
+    {
+      "organization": "Diakonia, Inc.",
+      "fain": "14-MD-216",
+      "states": "MD",
+      "areas_served": "Somerset County (MD);Wicomico County (MD);Worcester County (MD)",
+      "phone": "(410) 213-0923",
+      "email": "vstone@diakoniaoc.org"
+    },
+    {
+      "organization": "St. James A.M.E. Zion Church-Zion House",
+      "fain": "14-MD-217",
+      "states": "MD",
+      "areas_served": "Caroline County (MD);Cecil County (MD);Dorchester County (MD);Harford County (MD);Kent County (MD);Queen Anne's County (MD);Somerset County (MD);Talbot County (MD);Wicomico County (MD);Worcester County (MD)",
+      "phone": "(410) 742-4950",
+      "email": "zionhouse03@outlook.com"
+    },
+    {
+      "organization": "Community Action Agency",
+      "fain": "14-MI-220",
+      "states": "MI",
+      "areas_served": "Branch County (MI);Cass County (MI);Hillsdale County (MI);Jackson County (MI);Lenawee County (MI);St. Joseph County (MI)",
+      "phone": "800-491-0004",
+      "email": "tcrockett@caajlh.org"
+    },
+    {
+      "organization": "Community Rebuilders",
+      "fain": "14-MI-223",
+      "states": "MI",
+      "areas_served": "Kent County (MI)",
+      "phone": "(616) 458-5102",
+      "email": "jshields@communityrebuilders.org"
+    },
+    {
+      "organization": "Kitchen Inc",
+      "fain": "14-MO-228",
+      "states": "MO",
+      "areas_served": "Christian County (MO);Greene County (MO);Webster County (MO)",
+      "phone": "1417225743",
+      "email": "echindlund@thekitcheninc.org"
+    },
+    {
+      "organization": "Mississippi United To End Homelessness",
+      "fain": "14-MS-231",
+      "states": "MS",
+      "areas_served": "Adams County (MS);Alcorn County (MS);Amite County (MS);Attala County (MS);Benton County (MS);Bolivar County (MS);Calhoun County (MS);Carroll County (MS);Chickasaw County (MS);Choctaw County (MS);Clay County (MS);Coahoma County (MS);Copiah County (MS);DeSoto County (MS);Franklin County (MS);Grenada County (MS);Hinds County (MS);Holmes County (MS);Humphreys County (MS);Issaquena County (MS);Itawamba County (MS);Jasper County (MS);Jefferson County (MS);Kemper County (MS);Lafayette County (MS);Lauderdale County (MS);Leake County (MS);Lee County (MS);Leflore County (MS);Lincoln County (MS);Lowndes County (MS);Madison County (MS);Marshall County (MS);Monroe County (MS);Montgomery County (MS);Neshoba County (MS);Newton County (MS);Noxubee County (MS);Oktibbeha County (MS);Panola County (MS);Pike County (MS);Pontotoc County (MS);Prentiss County (MS);Quitman County (MS);Rankin County (MS);Scott County (MS);Sharkey County (MS);Simpson County (MS);Smith County (MS);Sunflower County (MS);Tallahatchie County (MS);Tate County (MS);Tippah County (MS);Tishomingo County (MS);Tunica County (MS);Union County (MS);Warren County (MS);Washington County (MS);Webster County (MS);Wilkinson County (MS);Winston County (MS);Yalobusha County (MS);Yazoo County (MS)",
+      "phone": "(601) 960-0557",
+      "email": "info@muteh.org"
+    },
+    {
+      "organization": "Hancock Resource Center",
+      "fain": "14-MS-232",
+      "states": "MS",
+      "areas_served": "Hancock County (MS);Harrison County (MS);Jackson County (MS);Pearl River County (MS)",
+      "phone": "(228) 463-8887",
+      "email": "adeloach@hancockhrc.org"
+    },
+    {
+      "organization": "Northeast Nebraska Community Action Partnership Inc",
+      "fain": "14-NE-238",
+      "states": "NE",
+      "areas_served": "Antelope County (NE);Burt County (NE);Cedar County (NE);Cuming County (NE);Dakota County (NE);Dixon County (NE);Dodge County (NE);Knox County (NE);Madison County (NE);Pierce County (NE);Stanton County (NE);Thurston County (NE);Washington County (NE);Wayne County (NE)",
+      "phone": "(402) 385-6300",
+      "email": "kheineman@nencap.org"
+    },
+    {
+      "organization": "Catholic Family & Community Services",
+      "fain": "14-NJ-242",
+      "states": "NJ",
+      "areas_served": "Bergen County (NJ);Essex County (NJ);Hudson County (NJ);Morris County (NJ);Passaic County (NJ);Sussex County (NJ);Union County (NJ)",
+      "phone": "(855) 767-8387",
+      "email": "mschaber@ccpaterson.org"
+    },
+    {
+      "organization": "New Mexico Veterans Integration Centers",
+      "fain": "14-NM-246",
+      "states": "NM",
+      "areas_served": "Bernalillo County (NM);Chaves County (NM);Eddy County (NM);Grant County (NM);Guadalupe County (NM);Hidalgo County (NM);Lincoln County (NM);Luna County (NM);Otero County (NM);Sandoval County (NM);Santa Fe County (NM);Sierra County (NM);Torrance County (NM);Valencia County (NM)",
+      "phone": "(505) 296-0800",
+      "email": "info@nmvic.us"
+    },
+    {
+      "organization": "Mesilla Valley Community of Hope",
+      "fain": "14-NM-247",
+      "states": "NM",
+      "areas_served": "Dona Ana County (NM)",
+      "phone": "(575) 523-2219",
+      "email": "nmartinez@mvchlc.org"
+    },
+    {
+      "organization": "Utica Center for Development, Inc.",
+      "fain": "14-NY-249",
+      "states": "NY",
+      "areas_served": "Delaware County (NY);Herkimer County (NY);Jefferson County (NY);Lewis County (NY);Madison County (NY);Oneida County (NY);Otsego County (NY);St. Lawrence County (NY)",
+      "phone": "(315) 765-0975",
+      "email": "frontdesk@ucdevelopment.org"
+    },
+    {
+      "organization": "Veterans & Community Housing Coalition Inc",
+      "fain": "14-NY-251",
+      "states": "NY",
+      "areas_served": "Fulton County (NY);Montgomery County (NY);Saratoga County (NY);Schenectady County (NY);Schoharie County (NY);Warren County (NY);Washington County (NY)",
+      "phone": "(518) 885-0091",
+      "email": "info@vchcny.org"
+    },
+    {
+      "organization": "Economic Opportunity Council Of Suffolk Inc",
+      "fain": "14-NY-254",
+      "states": "NY",
+      "areas_served": "Suffolk County (NY)",
+      "phone": "(631) 289-2601",
+      "email": "ychicas@eoc-suffolk.com"
+    },
+    {
+      "organization": "Albany Housing Coalition, Inc.",
+      "fain": "14-NY-256",
+      "states": "NY",
+      "areas_served": "Albany County (NY);Rensselaer County (NY);Schenectady County (NY)",
+      "phone": "(518) 694-0645",
+      "email": "p.bigness@ahcvets.org"
+    },
+    {
+      "organization": "Volunteers of America-Greater New York, Inc.",
+      "fain": "14-NY-259",
+      "states": "NY",
+      "areas_served": "Bronx County (NY);Kings County (NY);New York County (NY);Queens County (NY);Richmond County (NY)",
+      "phone": "(718) 993-3564",
+      "email": "voa4vets@voa-gny.org"
+    },
+    {
+      "organization": "Licking County Coalition For Housing",
+      "fain": "14-OH-261",
+      "states": "OH",
+      "areas_served": "Coshocton County (OH);Holmes County (OH);Knox County (OH);Licking County (OH)",
+      "phone": "(740) 345-1970",
+      "email": "lkennedy@lcchousing.org"
+    },
+    {
+      "organization": "Axess Family Services, Inc.",
+      "fain": "14-OH-262",
+      "states": "OH",
+      "areas_served": "Lorain County (OH);Mahoning County (OH);Portage County (OH);Stark County (OH);Summit County (OH);Trumbull County (OH)",
+      "phone": "(781) 510-0317",
+      "email": "hokai@axessfamily.org"
+    },
+    {
+      "organization": "Community Action Agency of Columbiana County, Inc.",
+      "fain": "14-OH-264",
+      "states": "OH",
+      "areas_served": "Carroll County (OH);Columbiana County (OH);Harrison County (OH);Jefferson County (OH);Tuscarawas County (OH)",
+      "phone": "(330) 424-4013",
+      "email": "Tami.plunkett@caaofcc.org"
+    },
+    {
+      "organization": "Community Action Program Corporation of Washington-Morgan Counties, Ohio",
+      "fain": "14-OH-265",
+      "states": "OH",
+      "areas_served": "Athens County (OH);Belmont County (OH);Gallia County (OH);Guernsey County (OH);Jackson County (OH);Lawrence County (OH);Meigs County (OH);Monroe County (OH);Morgan County (OH);Muskingum County (OH);Noble County (OH);Pike County (OH);Scioto County (OH);Vinton County (OH);Washington County (OH)",
+      "phone": "(740) 373-3745",
+      "email": "cmorrow@wmcap.org"
+    },
+    {
+      "organization": "Faith Mission, Inc.",
+      "fain": "14-OH-266",
+      "states": "OH",
+      "areas_served": "Franklin County (OH)",
+      "phone": "(614) 224-6617",
+      "email": "Rmckay@Lssnetworkofhope.org"
+    },
+    {
+      "organization": "Community Support Services, Inc.",
+      "fain": "14-OH-267",
+      "states": "OH",
+      "areas_served": "Summit County (OH)",
+      "phone": "(330) 762-4663",
+      "email": "ssvf@cssbh.org"
+    },
+    {
+      "organization": "The Salvation Army, Inc.",
+      "fain": "14-OH-268",
+      "states": "OH",
+      "areas_served": "Ashland County (OH);Crawford County (OH);Delaware County (OH);Hardin County (OH);Logan County (OH);Madison County (OH);Marion County (OH);Morrow County (OH);Richland County (OH);Union County (OH);Wayne County (OH)",
+      "phone": "(614) 437-2130",
+      "email": "Cassandra.Myers@USE.SalvationArmy.Org"
+    },
+    {
+      "organization": "KI BOIS Community Action Foundation, Inc.",
+      "fain": "14-OK-270",
+      "states": "OK",
+      "areas_served": "Adair County (OK);Atoka County (OK);Bryan County (OK);Carter County (OK);Cherokee County (OK);Choctaw County (OK);Coal County (OK);Haskell County (OK);Hughes County (OK);Johnston County (OK);Latimer County (OK);Le Flore County (OK);Love County (OK);Marshall County (OK);McCurtain County (OK);McIntosh County (OK);Murray County (OK);Muskogee County (OK);Okfuskee County (OK);Okmulgee County (OK);Pittsburg County (OK);Pontotoc County (OK);Pushmataha County (OK);Sequoyah County (OK)",
+      "phone": "(918) 681-3525",
+      "email": "ssvf@kibois.org"
+    },
+    {
+      "organization": "YWCA of Greater Harrisburg",
+      "fain": "14-PA-273",
+      "states": "PA",
+      "areas_served": "Adams County (PA);Cumberland County (PA);Dauphin County (PA);Franklin County (PA);Juniata County (PA);Lebanon County (PA);Mifflin County (PA);Perry County (PA);York County (PA)",
+      "phone": "(717) 234-7931",
+      "email": "vets@ywcahbg.org"
+    },
+    {
+      "organization": "Community Action Agency of Delaware County, Inc.",
+      "fain": "14-PA-276",
+      "states": "PA",
+      "areas_served": "Delaware County (PA);Philadelphia County (PA)",
+      "phone": "(267) 431-5223",
+      "email": "lfryer@caadc.org"
+    },
+    {
+      "organization": "Lawrence County Social Services, Inc.",
+      "fain": "14-PA-277",
+      "states": "PA",
+      "areas_served": "Armstrong County (PA);Beaver County (PA);Butler County (PA);Clarion County (PA);Jefferson County (PA);Lawrence County (PA);Mercer County (PA)",
+      "phone": "(724) 658-7258",
+      "email": "mrussell@lccap.org"
+    },
+    {
+      "organization": "Soldier On of Delaware, Inc.",
+      "fain": "14-PA-280",
+      "states": "PA",
+      "areas_served": "Allegheny County (PA);Armstrong County (PA);Beaver County (PA);Butler County (PA);Cameron County (PA);Clarion County (PA);Clearfield County (PA);Crawford County (PA);Elk County (PA);Erie County (PA);Fayette County (PA);Forest County (PA);Greene County (PA);Indiana County (PA);Jefferson County (PA);Lawrence County (PA);McKean County (PA);Mercer County (PA);Potter County (PA);Venango County (PA);Warren County (PA);Washington County (PA);Westmoreland County (PA)",
+      "phone": "(866) 406-8449",
+      "email": "ssvfintake@wesoldieron.org"
+    },
+    {
+      "organization": "Catholic Charities of the Diocese of Allentown",
+      "fain": "14-PA-281",
+      "states": "PA",
+      "areas_served": "Berks County (PA);Carbon County (PA);Lehigh County (PA);Northampton County (PA);Schuylkill County (PA)",
+      "phone": "(610) 435-1541",
+      "email": "ssvfreferrals@doallentown.onmicrosoft.com"
+    },
+    {
+      "organization": "Volunteers of America of Pennsylvania, Inc.",
+      "fain": "14-PA-282",
+      "states": "PA",
+      "areas_served": "Adams County (PA);Cumberland County (PA);Dauphin County (PA);Lancaster County (PA);Lebanon County (PA);Perry County (PA);York County (PA)",
+      "phone": "(855) 202-4741",
+      "email": "Veterans@VOAPA.org"
+    },
+    {
+      "organization": "Volunteer Behavioral Health Care System",
+      "fain": "14-TN-284",
+      "states": "GA;TN",
+      "areas_served": "Catoosa County (GA);Dade County (GA);Murray County (GA);Walker County (GA);Whitfield County (GA);Bedford County (TN);Bledsoe County (TN);Bradley County (TN);Cannon County (TN);Clay County (TN);Coffee County (TN);Cumberland County (TN);DeKalb County (TN);Dickson County (TN);Fentress County (TN);Franklin County (TN);Giles County (TN);Grundy County (TN);Hamilton County (TN);Hickman County (TN);Jackson County (TN);Lawrence County (TN);Lincoln County (TN);Macon County (TN);Marion County (TN);Marshall County (TN);Maury County (TN);McMinn County (TN);Meigs County (TN);Moore County (TN);Overton County (TN);Pickett County (TN);Polk County (TN);Putnam County (TN);Rhea County (TN);Rutherford County (TN);Sequatchie County (TN);Smith County (TN);Sumner County (TN);Trousdale County (TN);Van Buren County (TN);Warren County (TN);White County (TN);Williamson County (TN);Wilson County (TN)",
+      "phone": "877-567-6051",
+      "email": "ssvf@vbhcs.org"
+    },
+    {
+      "organization": "Operation Stand Down Tennessee",
+      "fain": "14-TN-285",
+      "states": "TN",
+      "areas_served": "Cheatham County (TN);Davidson County (TN);Dickson County (TN);Giles County (TN);Hickman County (TN);Houston County (TN);Humphreys County (TN);Lawrence County (TN);Lewis County (TN);Marshall County (TN);Maury County (TN);Montgomery County (TN);Perry County (TN);Robertson County (TN);Rutherford County (TN);Stewart County (TN);Sumner County (TN);Trousdale County (TN);Williamson County (TN);Wilson County (TN)",
+      "phone": "(615) 248-1981",
+      "email": "ssvf@osdtn.org"
+    },
+    {
+      "organization": "Catholic Charities Of The Diocese Of Memphis Inc",
+      "fain": "14-TN-287",
+      "states": "TN",
+      "areas_served": "Shelby County (TN)",
+      "phone": "(901) 722-4757",
+      "email": "ssvf.intake@ccwtn.org"
+    },
+    {
+      "organization": "Total Action Against Poverty In Roanoke Valley",
+      "fain": "14-VA-294",
+      "states": "VA",
+      "areas_served": "Alleghany County (VA);Amherst County (VA);Appomattox County (VA);Augusta County (VA);Bedford city (VA);Bedford County (VA);Botetourt County (VA);Buena Vista city (VA);Campbell County (VA);Clifton Forge city (VA);Covington city (VA);Craig County (VA);Danville city (VA);Floyd County (VA);Franklin County (VA);Giles County (VA);Henry County (VA);Lexington city (VA);Lynchburg city (VA);Martinsville city (VA);Montgomery County (VA);Pittsylvania County (VA);Pulaski County (VA);Radford city (VA);Roanoke city (VA);Roanoke County (VA);Rockbridge County (VA);Salem city (VA);Staunton city (VA)",
+      "phone": "(540) 283-4800",
+      "email": "tapwebforms@gmail.com"
+    },
+    {
+      "organization": "Virginia Beach Community Development Corporation",
+      "fain": "14-VA-297",
+      "states": "VA",
+      "areas_served": "Chesapeake city (VA);Franklin city (VA);Hampton city (VA);Isle of Wight County (VA);James City County (VA);Newport News city (VA);Norfolk city (VA);Poquoson city (VA);Portsmouth city (VA);Southampton County (VA);Suffolk city (VA);Virginia Beach city (VA);Williamsburg city (VA);York County (VA)",
+      "phone": "(757) 500-2754",
+      "email": "ssvfintake@VBCDC.org"
+    },
+    {
+      "organization": "Meeting the Needs of Our Community, INC",
+      "fain": "14-VI-299",
+      "states": "VI",
+      "areas_served": "No Counties (AS,GU,MP,PR,VI)",
+      "phone": "(340) 714-7782",
+      "email": "info@mtocvi.org"
+    },
+    {
+      "organization": "Indianhead Community Action Agency",
+      "fain": "14-WI-302",
+      "states": "WI",
+      "areas_served": "Ashland County (WI);Barron County (WI);Bayfield County (WI);Burnett County (WI);Clark County (WI);Douglas County (WI);Florence County (WI);Forest County (WI);Iron County (WI);Langlade County (WI);Marinette County (WI);Menominee County (WI);Oconto County (WI);Oneida County (WI);Price County (WI);Rusk County (WI);Sawyer County (WI);Taylor County (WI);Vilas County (WI);Washburn County (WI)",
+      "phone": "(715) 532-1500",
+      "email": "angela.fox@indianheadcaa.org"
+    },
+    {
+      "organization": "The Greater Wheeling Coalition for the Homeless, Inc.",
+      "fain": "14-WV-303",
+      "states": "WV",
+      "areas_served": "Brooke County (WV);Hancock County (WV);Marshall County (WV);Ohio County (WV);Wetzel County (WV)",
+      "phone": "(304) 232-6105",
+      "email": "general@wheelinghomeless.org"
+    },
+    {
+      "organization": "Helping Heroes, Inc.",
+      "fain": "14-WV-304",
+      "states": "WV",
+      "areas_served": "Brooke County (WV);Hancock County (WV);Marshall County (WV);Ohio County (WV);Wetzel County (WV)",
+      "phone": "(304) 232-0114",
+      "email": "kc@helpingheroesinc.org"
+    },
+    {
+      "organization": "West Virginia Community Action Partnerships Inc",
+      "fain": "14-WV-305",
+      "states": "WV",
+      "areas_served": "Barbour County (WV);Berkeley County (WV);Boone County (WV);Braxton County (WV);Brooke County (WV);Cabell County (WV);Calhoun County (WV);Clay County (WV);Doddridge County (WV);Fayette County (WV);Gilmer County (WV);Grant County (WV);Greenbrier County (WV);Hampshire County (WV);Hancock County (WV);Hardy County (WV);Harrison County (WV);Jackson County (WV);Jefferson County (WV);Kanawha County (WV);Lewis County (WV);Lincoln County (WV);Logan County (WV);Marion County (WV);Marshall County (WV);Mason County (WV);McDowell County (WV);Mercer County (WV);Mineral County (WV);Mingo County (WV);Monongalia County (WV);Monroe County (WV);Morgan County (WV);Nicholas County (WV);Ohio County (WV);Pendleton County (WV);Pleasants County (WV);Pocahontas County (WV);Preston County (WV);Putnam County (WV);Raleigh County (WV);Randolph County (WV);Ritchie County (WV);Roane County (WV);Summers County (WV);Taylor County (WV);Tucker County (WV);Tyler County (WV);Upshur County (WV);Wayne County (WV);Webster County (WV);Wetzel County (WV);Wirt County (WV);Wood County (WV);Wyoming County (WV)",
+      "phone": "(304) 347-2277",
+      "email": "mkleinschmidt@wvcap.org"
+    },
+    {
+      "organization": "United Way of Central Alabama",
+      "fain": "14-ZZ-153",
+      "states": "AL;FL",
+      "areas_served": "Autauga County (AL);Barbour County (AL);Bibb County (AL);Blount County (AL);Bullock County (AL);Butler County (AL);Calhoun County (AL);Chambers County (AL);Cherokee County (AL);Chilton County (AL);Choctaw County (AL);Clarke County (AL);Clay County (AL);Cleburne County (AL);Coffee County (AL);Colbert County (AL);Conecuh County (AL);Coosa County (AL);Covington County (AL);Crenshaw County (AL);Cullman County (AL);Dale County (AL);Dallas County (AL);DeKalb County (AL);Elmore County (AL);Escambia County (AL);Etowah County (AL);Fayette County (AL);Franklin County (AL);Geneva County (AL);Greene County (AL);Hale County (AL);Henry County (AL);Houston County (AL);Jackson County (AL);Jefferson County (AL);Lamar County (AL);Lauderdale County (AL);Lawrence County (AL);Lee County (AL);Limestone County (AL);Lowndes County (AL);Macon County (AL);Madison County (AL);Marengo County (AL);Marion County (AL);Marshall County (AL);Monroe County (AL);Montgomery County (AL);Morgan County (AL);Perry County (AL);Pickens County (AL);Pike County (AL);Randolph County (AL);Russell County (AL);Shelby County (AL);St. Clair County (AL);Sumter County (AL);Talladega County (AL);Tallapoosa County (AL);Tuscaloosa County (AL);Walker County (AL);Washington County (AL);Wilcox County (AL);Winston County (AL);Escambia County (FL);Okaloosa County (FL);Santa Rosa County (FL);Walton County (FL)",
+      "phone": "866-460-3827",
+      "email": "alabamaveterans@priorityveteran.org"
+    },
+    {
+      "organization": "St. Vincent de Paul Social Services, Inc.",
+      "fain": "14-ZZ-260",
+      "states": "IN;OH",
+      "areas_served": "Fayette County (IN);Franklin County (IN);Union County (IN);Wayne County (IN);Allen County (OH);Auglaize County (OH);Champaign County (OH);Clark County (OH);Clinton County (OH);Darke County (OH);Greene County (OH);Mercer County (OH);Miami County (OH);Montgomery County (OH);Preble County (OH);Shelby County (OH)",
+      "phone": "(937) 222-0403",
+      "email": "ssvf@stvincentdayton.org"
+    },
+    {
+      "organization": "Transitional Living Services",
+      "fain": "14-ZZ-308",
+      "states": "IL;WI",
+      "areas_served": "Boone County (IL);Cook County (IL);Lake County (IL);McHenry County (IL);Winnebago County (IL);Kenosha County (WI)",
+      "phone": "(224) 634-0029",
+      "email": "rjacobsen@vphope.org"
+    },
+    {
+      "organization": "Housing Counseling Services, Inc.",
+      "fain": "14-ZZ-313",
+      "states": "DC;MD;VA",
+      "areas_served": "District of Columbia (DC);Montgomery County (MD);Prince George's County (MD);Alexandria city (VA);Arlington County (VA);Fairfax County (VA)",
+      "phone": "(202) 667-7366",
+      "email": "ssvf@housingetc.org"
+    },
+    {
+      "organization": "Operation Renewed Hope",
+      "fain": "14-ZZ-318",
+      "states": "DC;MD;VA",
+      "areas_served": "District of Columbia (DC);Montgomery County (MD);Prince George's County (MD);Alexandria city (VA);Arlington County (VA);Fairfax city (VA);Fairfax County (VA);Loudoun County (VA);Prince William County (VA)",
+      "phone": "(703) 887-8117",
+      "email": "info@orhfoundation.org"
+    },
+    {
+      "organization": "Volunteers of America Southeast, Inc.",
+      "fain": "15-GA-325",
+      "states": "GA",
+      "areas_served": "Baldwin County (GA);Bibb County (GA);Chattahoochee County (GA);Crawford County (GA);Crisp County (GA);Dooly County (GA);Harris County (GA);Houston County (GA);Jones County (GA);Laurens County (GA);Macon County (GA);Marion County (GA);Muscogee County (GA);Peach County (GA);Pulaski County (GA);Schley County (GA);Stewart County (GA);Sumter County (GA);Talbot County (GA);Taylor County (GA);Troup County (GA);Twiggs County (GA);Webster County (GA);Wilkinson County (GA)",
+      "phone": "(478) 919-2377",
+      "email": "ssvf@voase.org"
+    },
+    {
+      "organization": "WestCare Pacific Islands, Inc.",
+      "fain": "15-GU-326",
+      "states": "GU",
+      "areas_served": "No Counties (AS,GU,MP,PR,VI)",
+      "phone": "(671) 472-0218",
+      "email": "pacificislandsssvf@westcare.com"
+    },
+    {
+      "organization": "Hawkeye Area Community Action Program, Inc.",
+      "fain": "15-IA-192",
+      "states": "IA",
+      "areas_served": "Benton County (IA);Black Hawk County (IA);Buchanan County (IA);Cedar County (IA);Delaware County (IA);Dubuque County (IA);Iowa County (IA);Jackson County (IA);Johnson County (IA);Jones County (IA);Linn County (IA);Washington County (IA)",
+      "phone": "(319) 560-3826",
+      "email": "housing@hacap.org"
+    },
+    {
+      "organization": "Volunteers of America of Indiana, Inc.",
+      "fain": "15-IN-201",
+      "states": "IN",
+      "areas_served": "Gibson County (IN);Marion County (IN);Posey County (IN);Vanderburgh County (IN);Warrick County (IN)",
+      "phone": "(812) 962-6797",
+      "email": "cecily.king@voaohin.org"
+    },
+    {
+      "organization": "Alger Marquette Community Action Board",
+      "fain": "15-MI-328",
+      "states": "MI",
+      "areas_served": "Alger County (MI);Baraga County (MI);Chippewa County (MI);Delta County (MI);Dickinson County (MI);Gogebic County (MI);Houghton County (MI);Iron County (MI);Keweenaw County (MI);Luce County (MI);Mackinac County (MI);Marquette County (MI);Menominee County (MI);Ontonagon County (MI);Schoolcraft County (MI)",
+      "phone": null,
+      "email": null
+    },
+    {
+      "organization": "Catholic Charities of Southern Missouri, Inc.",
+      "fain": "15-MO-330",
+      "states": "MO",
+      "areas_served": "Barry County (MO);Barton County (MO);Bollinger County (MO);Butler County (MO);Cape Girardeau County (MO);Carter County (MO);Cedar County (MO);Dade County (MO);Dallas County (MO);Dent County (MO);Douglas County (MO);Dunklin County (MO);Howell County (MO);Iron County (MO);Jasper County (MO);Laclede County (MO);Lawrence County (MO);Madison County (MO);McDonald County (MO);Mississippi County (MO);New Madrid County (MO);Newton County (MO);Oregon County (MO);Ozark County (MO);Pemiscot County (MO);Perry County (MO);Polk County (MO);Reynolds County (MO);Ripley County (MO);Scott County (MO);Shannon County (MO);Stoddard County (MO);Stone County (MO);Taney County (MO);Texas County (MO);Wayne County (MO);Wright County (MO)",
+      "phone": "(417) 720-4213",
+      "email": "jbuffington@ccsomo.org"
+    },
+    {
+      "organization": "Lutheran Social Services Of Central Ohio Inc",
+      "fain": "15-OH-333",
+      "states": "OH",
+      "areas_served": "Adams County (OH);Brown County (OH);Fairfield County (OH);Fayette County (OH);Highland County (OH);Hocking County (OH);Perry County (OH);Pickaway County (OH);Ross County (OH)",
+      "phone": "(740) 277-2334",
+      "email": "kdreyer@lssnetworkofhope.org"
+    },
+    {
+      "organization": "Commission on Economic Opportunity of Luzerne County",
+      "fain": "15-PA-068",
+      "states": "PA",
+      "areas_served": "Bradford County (PA);Carbon County (PA);Columbia County (PA);Lackawanna County (PA);Luzerne County (PA);Lycoming County (PA);Monroe County (PA);Montour County (PA);Northumberland County (PA);Pike County (PA);Schuylkill County (PA);Sullivan County (PA);Susquehanna County (PA);Tioga County (PA);Wayne County (PA);Wyoming County (PA)",
+      "phone": "(570) 826-0510",
+      "email": "kdouglas@ceopeoplehelpingpeople.org"
+    },
+    {
+      "organization": "The Road Home",
+      "fain": "15-UT-336",
+      "states": "UT",
+      "areas_served": "Salt Lake County (UT)",
+      "phone": "(385) 977-2920",
+      "email": "veterans@theroadhome.org"
+    },
+    {
+      "organization": "St. Patrick Center",
+      "fain": "16-MO-048",
+      "states": "MO",
+      "areas_served": "Crawford County (MO);Franklin County (MO);Jefferson County (MO);Lincoln County (MO);St. Charles County (MO);St. Francois County (MO);St. Louis city (MO);St. Louis County (MO);Ste. Genevieve County (MO);Warren County (MO);Washington County (MO)",
+      "phone": "(314) 356-0657",
+      "email": "jholloway@stpatrickcenter.org"
+    },
+    {
+      "organization": "Community Hope, Inc.",
+      "fain": "16-NJ-054",
+      "states": "NJ",
+      "areas_served": "Bergen County (NJ);Burlington County (NJ);Essex County (NJ);Hudson County (NJ);Hunterdon County (NJ);Mercer County (NJ);Middlesex County (NJ);Monmouth County (NJ);Morris County (NJ);Ocean County (NJ);Passaic County (NJ);Somerset County (NJ);Sussex County (NJ);Union County (NJ);Warren County (NJ)",
+      "phone": "855-483-8466",
+      "email": "SSVF@CommunityHope-NJ.org"
+    },
+    {
+      "organization": "Soldier On, Inc.",
+      "fain": "16-ZZ-058",
+      "states": "DE;MA;NJ;NY",
+      "areas_served": "Kent County (DE);New Castle County (DE);Sussex County (DE);Berkshire County (MA);Franklin County (MA);Hampden County (MA);Hampshire County (MA);Bergen County (NJ);Burlington County (NJ);Essex County (NJ);Hudson County (NJ);Mercer County (NJ);Middlesex County (NJ);Monmouth County (NJ);Ocean County (NJ);Somerset County (NJ);Albany County (NY);Broome County (NY);Chenango County (NY);Clinton County (NY);Columbia County (NY);Delaware County (NY);Essex County (NY);Franklin County (NY);Fulton County (NY);Greene County (NY);Hamilton County (NY);Madison County (NY);Montgomery County (NY);Oneida County (NY);Otsego County (NY);Rensselaer County (NY);Saratoga County (NY);Schenectady County (NY);Schoharie County (NY);Ulster County (NY);Warren County (NY);Washington County (NY)",
+      "phone": "(866) 406-8449",
+      "email": "ssvfintake@wesoldieron.org"
+    },
+    {
+      "organization": "Central Nebraska Community Action Partnership, Inc",
+      "fain": "17-NE-052",
+      "states": "NE",
+      "areas_served": "Adams County (NE);Arthur County (NE);Banner County (NE);Blaine County (NE);Boone County (NE);Box Butte County (NE);Boyd County (NE);Brown County (NE);Buffalo County (NE);Chase County (NE);Cherry County (NE);Cheyenne County (NE);Clay County (NE);Colfax County (NE);Custer County (NE);Dawes County (NE);Dawson County (NE);Deuel County (NE);Dundy County (NE);Franklin County (NE);Frontier County (NE);Furnas County (NE);Garden County (NE);Garfield County (NE);Gosper County (NE);Grant County (NE);Greeley County (NE);Hall County (NE);Hamilton County (NE);Harlan County (NE);Hayes County (NE);Hitchcock County (NE);Holt County (NE);Hooker County (NE);Howard County (NE);Kearney County (NE);Keith County (NE);Keya Paha County (NE);Kimball County (NE);Lancaster County (NE);Lincoln County (NE);Logan County (NE);Loup County (NE);McPherson County (NE);Merrick County (NE);Morrill County (NE);Nance County (NE);Nuckolls County (NE);Perkins County (NE);Phelps County (NE);Platte County (NE);Red Willow County (NE);Rock County (NE);Saunders County (NE);Scotts Bluff County (NE);Sheridan County (NE);Sherman County (NE);Sioux County (NE);Thomas County (NE);Valley County (NE);Webster County (NE);Wheeler County (NE)",
+      "phone": "(308) 385-5500",
+      "email": "csummers@centralnebraskacap.com"
+    },
+    {
+      "organization": "United States Veterans Initiative",
+      "fain": "18-CA-008",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA);Orange County (CA);Riverside County (CA);San Bernardino County (CA)",
+      "phone": "(213) 276-9212",
+      "email": "ssvfintake.ing@usvets.org"
+    },
+    {
+      "organization": "WestCare California, Inc.",
+      "fain": "18-CA-011",
+      "states": "CA",
+      "areas_served": "Fresno County (CA);Kings County (CA);Madera County (CA);Merced County (CA);San Joaquin County (CA);Stanislaus County (CA);Tulare County (CA)",
+      "phone": "(559) 255-8838",
+      "email": "staff.sjvv@westcare.com"
+    },
+    {
+      "organization": "Swords To Plowshares Veterans Rights Organization",
+      "fain": "18-CA-091",
+      "states": "CA",
+      "areas_served": "Alameda County (CA);Marin County (CA);San Francisco County (CA)",
+      "phone": "(510) 844-7500",
+      "email": "ssvf-sf@stp-sf.org"
+    },
+    {
+      "organization": "Lighthouse Social Service Centers",
+      "fain": "18-CA-171",
+      "states": "CA",
+      "areas_served": "Riverside County (CA);San Bernardino County (CA)",
+      "phone": "(951) 616-0347",
+      "email": "HeatherB@LightHouse-ssc.org"
+    },
+    {
+      "organization": "United States Veterans Initiative",
+      "fain": "18-CA-354",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA)",
+      "phone": "(562) 936-8127",
+      "email": "AAbu-Bakar@usvets.org"
+    },
+    {
+      "organization": "Community Action Partnership of San Luis Obispo County, Inc.",
+      "fain": "18-CA-358",
+      "states": "CA",
+      "areas_served": "San Luis Obispo County (CA)",
+      "phone": "(805) 788-8318",
+      "email": "cstanley@capslo.org"
+    },
+    {
+      "organization": "Homeless Services Network of Central Florida, Inc.",
+      "fain": "18-FL-023",
+      "states": "FL",
+      "areas_served": "Orange County (FL);Osceola County (FL);Seminole County (FL)",
+      "phone": "(407) 743-5117",
+      "email": "veteran@hsncfl.org"
+    },
+    {
+      "organization": "Volunteers of America of Florida, Inc.",
+      "fain": "18-FL-187",
+      "states": "FL",
+      "areas_served": "Alachua County (FL);Bradford County (FL);Brevard County (FL);Columbia County (FL);Gilchrist County (FL);Hamilton County (FL);Lafayette County (FL);Levy County (FL);Marion County (FL);Putnam County (FL);Suwannee County (FL);Union County (FL)",
+      "phone": "(352) 260-1374",
+      "email": "cboone@voa-fla.org"
+    },
+    {
+      "organization": "United States Veterans Initiative",
+      "fain": "18-HI-190",
+      "states": "HI",
+      "areas_served": "Hawaii County (HI);Honolulu County (HI);Kalawao County (HI);Kauai County (HI);Maui County (HI)",
+      "phone": "(808) 208-0361",
+      "email": "HISSVF@usvets.onmicrosoft.com"
+    },
+    {
+      "organization": "Catholic Charities Hawaii",
+      "fain": "18-HI-374",
+      "states": "HI",
+      "areas_served": "Honolulu County (HI)",
+      "phone": "(808) 527-4986",
+      "email": "veteransinfo@catholiccharitieshawaii.org"
+    },
+    {
+      "organization": "Homeward Bound of Western North Carolina, Inc.",
+      "fain": "18-NC-387",
+      "states": "NC",
+      "areas_served": "Buncombe County (NC)",
+      "phone": "(828) 772-2847",
+      "email": "alixandra@homewardboundwnc.org"
+    },
+    {
+      "organization": "St. Vincent de Paul Society of Lane County, Inc.",
+      "fain": "18-OR-066",
+      "states": "OR",
+      "areas_served": "Lane County (OR)",
+      "phone": "(541) 554-1299",
+      "email": "stefanie.brosemer@svdp.us"
+    },
+    {
+      "organization": "Casa del Peregrino Aguadilla, Inc.",
+      "fain": "18-PR-132",
+      "states": "PR",
+      "areas_served": "No Counties (AS,GU,MP,PR,VI)",
+      "phone": "787-891-0059",
+      "email": "casaperegrinossvf@gmail.com"
+    },
+    {
+      "organization": "One-Eighty Place",
+      "fain": "18-SC-069",
+      "states": "SC",
+      "areas_served": "Aiken County (SC);Allendale County (SC);Bamberg County (SC);Barnwell County (SC);Beaufort County (SC);Berkeley County (SC);Calhoun County (SC);Charleston County (SC);Chester County (SC);Colleton County (SC);Dorchester County (SC);Fairfield County (SC);Hampton County (SC);Jasper County (SC);Lancaster County (SC);Lexington County (SC);Newberry County (SC);Orangeburg County (SC);Richland County (SC);York County (SC)",
+      "phone": "(843) 212-8668",
+      "email": "ssvfcharlestonvm@one80place.org"
+    },
+    {
+      "organization": "Front Steps, Inc.",
+      "fain": "18-TX-404",
+      "states": "TX",
+      "areas_served": "Travis County (TX)",
+      "phone": "(512) 915-4852",
+      "email": "nstrother@frontsteps.org"
+    },
+    {
+      "organization": "Center for Veterans Issues, Ltd.",
+      "fain": "18-WI-080",
+      "states": "WI",
+      "areas_served": "Adams County (WI);Barron County (WI);Brown County (WI);Buffalo County (WI);Calumet County (WI);Chippewa County (WI);Clark County (WI);Columbia County (WI);Crawford County (WI);Dodge County (WI);Door County (WI);Dunn County (WI);Eau Claire County (WI);Fond du Lac County (WI);Grant County (WI);Green County (WI);Green Lake County (WI);Iowa County (WI);Jackson County (WI);Juneau County (WI);Kenosha County (WI);Kewaunee County (WI);La Crosse County (WI);Lafayette County (WI);Lincoln County (WI);Manitowoc County (WI);Marathon County (WI);Marquette County (WI);Milwaukee County (WI);Monroe County (WI);Oconto County (WI);Outagamie County (WI);Ozaukee County (WI);Pepin County (WI);Pierce County (WI);Polk County (WI);Portage County (WI);Racine County (WI);Richland County (WI);Rock County (WI);Rusk County (WI);Sauk County (WI);Shawano County (WI);Sheboygan County (WI);St. Croix County (WI);Taylor County (WI);Trempealeau County (WI);Vernon County (WI);Walworth County (WI);Washington County (WI);Waukesha County (WI);Waupaca County (WI);Waushara County (WI);Winnebago County (WI);Wood County (WI)",
+      "phone": "(414) 345-4269",
+      "email": "rachel.trainor@cvivet.org"
+    },
+    {
+      "organization": "Volunteers of America of Illinois",
+      "fain": "18-ZZ-034",
+      "states": "IL;IN",
+      "areas_served": "Cook County (IL);Will County (IL);Jasper County (IN);Lake County (IN);LaPorte County (IN);Newton County (IN);Porter County (IN);Pulaski County (IN);Starke County (IN)",
+      "phone": "(312) 564-2300",
+      "email": "ask@voail.org"
+    },
+    {
+      "organization": "Blue Valley Community Action, Inc.",
+      "fain": "18-ZZ-239",
+      "states": "IA;NE",
+      "areas_served": "Pottawattamie County (IA);Butler County (NE);Cass County (NE);Douglas County (NE);Fillmore County (NE);Gage County (NE);Jefferson County (NE);Johnson County (NE);Nemaha County (NE);Otoe County (NE);Pawnee County (NE);Polk County (NE);Richardson County (NE);Saline County (NE);Sarpy County (NE);Seward County (NE);Thayer County (NE);York County (NE)",
+      "phone": "(402) 587-0050",
+      "email": "rjackson@bvca.net"
+    },
+    {
+      "organization": "Primavera Foundation",
+      "fain": "19-AZ-004",
+      "states": "AZ",
+      "areas_served": "Cochise County (AZ);Graham County (AZ);Greenlee County (AZ);Pima County (AZ);Santa Cruz County (AZ)",
+      "phone": "(520) 882-5383",
+      "email": "ssvfintake@primavera.org"
+    },
+    {
+      "organization": "Community Bridges, Inc.",
+      "fain": "19-AZ-436",
+      "states": "AZ",
+      "areas_served": "Maricopa County (AZ)",
+      "phone": "(602) 268-4775",
+      "email": "SSVF@cbridges.com"
+    },
+    {
+      "organization": "Mental Health America of Los Angeles",
+      "fain": "19-CA-005",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA)",
+      "phone": "(424) 570-0241",
+      "email": "veteransLB@mhala.org"
+    },
+    {
+      "organization": "Homefirst Services Of Santa Clara County",
+      "fain": "19-CA-010",
+      "states": "CA",
+      "areas_served": "Santa Clara County (CA)",
+      "phone": "(408) 510-7572",
+      "email": "veteransinfo@homefirstscc.org"
+    },
+    {
+      "organization": "PATH",
+      "fain": "19-CA-014",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA)",
+      "phone": "(213) 399-0214",
+      "email": "veteranintake@epath.org"
+    },
+    {
+      "organization": "Vietnam Veterans Of San Diego",
+      "fain": "19-CA-173",
+      "states": "CA",
+      "areas_served": "San Diego County (CA)",
+      "phone": "(619) 339-0111",
+      "email": "ssvf@vvsd.net"
+    },
+    {
+      "organization": "Minnesota Assistance Council For Veterans",
+      "fain": "19-MN-046",
+      "states": "MN",
+      "areas_served": "Aitkin County (MN);Anoka County (MN);Becker County (MN);Beltrami County (MN);Benton County (MN);Big Stone County (MN);Blue Earth County (MN);Brown County (MN);Carlton County (MN);Carver County (MN);Cass County (MN);Chippewa County (MN);Chisago County (MN);Clay County (MN);Clearwater County (MN);Cook County (MN);Cottonwood County (MN);Crow Wing County (MN);Dakota County (MN);Dodge County (MN);Douglas County (MN);Faribault County (MN);Fillmore County (MN);Freeborn County (MN);Goodhue County (MN);Grant County (MN);Hennepin County (MN);Houston County (MN);Hubbard County (MN);Isanti County (MN);Itasca County (MN);Jackson County (MN);Kanabec County (MN);Kandiyohi County (MN);Kittson County (MN);Koochiching County (MN);Lac qui Parle County (MN);Lake County (MN);Lake of the Woods County (MN);Le Sueur County (MN);Lincoln County (MN);Lyon County (MN);Mahnomen County (MN);Marshall County (MN);Martin County (MN);McLeod County (MN);Meeker County (MN);Mille Lacs County (MN);Morrison County (MN);Mower County (MN);Murray County (MN);Nicollet County (MN);Nobles County (MN);Norman County (MN);Olmsted County (MN);Otter Tail County (MN);Pennington County (MN);Pine County (MN);Pipestone County (MN);Polk County (MN);Pope County (MN);Ramsey County (MN);Red Lake County (MN);Redwood County (MN);Renville County (MN);Rice County (MN);Rock County (MN);Roseau County (MN);Scott County (MN);Sherburne County (MN);Sibley County (MN);St. Louis County (MN);Stearns County (MN);Steele County (MN);Stevens County (MN);Swift County (MN);Todd County (MN);Traverse County (MN);Wabasha County (MN);Wadena County (MN);Waseca County (MN);Washington County (MN);Watonwan County (MN);Wilkin County (MN);Winona County (MN);Wright County (MN);Yellow Medicine County (MN)",
+      "phone": "(833) 222-6228",
+      "email": "mac-v@mac-v.org"
+    },
+    {
+      "organization": "Region XII Commission on Mental Health & Retardation",
+      "fain": "19-MS-111",
+      "states": "MS",
+      "areas_served": "Adams County (MS);Amite County (MS);Claiborne County (MS);Clarke County (MS);Copiah County (MS);Covington County (MS);Forrest County (MS);Franklin County (MS);George County (MS);Greene County (MS);Hancock County (MS);Harrison County (MS);Hinds County (MS);Jackson County (MS);Jasper County (MS);Jefferson County (MS);Jefferson Davis County (MS);Jones County (MS);Lamar County (MS);Lauderdale County (MS);Lawrence County (MS);Lincoln County (MS);Madison County (MS);Marion County (MS);Newton County (MS);Pearl River County (MS);Perry County (MS);Pike County (MS);Rankin County (MS);Scott County (MS);Simpson County (MS);Smith County (MS);Stone County (MS);Walthall County (MS);Warren County (MS);Wayne County (MS);Wilkinson County (MS)",
+      "phone": "(601) 545-3668",
+      "email": "lakinta.griffin@pbmhr.org"
+    },
+    {
+      "organization": "Volunteers of America of Greater Ohio, Inc.",
+      "fain": "19-OH-269",
+      "states": "OH",
+      "areas_served": "Cuyahoga County (OH);Franklin County (OH);Montgomery County (OH)",
+      "phone": "(216) 541-9000",
+      "email": "michael.harrison@voaohin.org"
+    },
+    {
+      "organization": "Access",
+      "fain": "19-OR-128",
+      "states": "OR",
+      "areas_served": "Coos County (OR);Curry County (OR);Douglas County (OR);Jackson County (OR);Josephine County (OR)",
+      "phone": "(458) 488-1340",
+      "email": "jgriese@accesshelps.org"
+    },
+    {
+      "organization": "The Salvation Army",
+      "fain": "19-TX-140",
+      "states": "TX",
+      "areas_served": "Fort Bend County (TX);Harris County (TX);Montgomery County (TX)",
+      "phone": "(713) 223-8889",
+      "email": "TexHouVeterans@uss.salvationarmy.org"
+    },
+    {
+      "organization": "United States Veterans Initiative",
+      "fain": "19-TX-288",
+      "states": "TX",
+      "areas_served": "Brazoria County (TX);Fort Bend County (TX);Harris County (TX);Montgomery County (TX)",
+      "phone": "(346) 262-3755",
+      "email": "wwells@usvets.org"
+    },
+    {
+      "organization": "Baker Ripley",
+      "fain": "19-TX-290",
+      "states": "TX",
+      "areas_served": "Brazoria County (TX);Brazos County (TX);Fort Bend County (TX);Harris County (TX);Montgomery County (TX);Waller County (TX)",
+      "phone": "(832) 799-2714",
+      "email": "vetsinfo@bakerripley.org"
+    },
+    {
+      "organization": "Sound",
+      "fain": "19-WA-078",
+      "states": "WA",
+      "areas_served": "King County (WA)",
+      "phone": "(206) 444-7806",
+      "email": "SSVFAdmin@sound.health"
+    },
+    {
+      "organization": "Opportunity Council",
+      "fain": "19-WA-079",
+      "states": "WA",
+      "areas_served": "Clallam County (WA);Island County (WA);Jefferson County (WA);San Juan County (WA);Skagit County (WA);Whatcom County (WA)",
+      "phone": "(360) 734-5121",
+      "email": "ssvf@oppco.org"
+    },
+    {
+      "organization": "Friendship Place",
+      "fain": "19-ZZ-094",
+      "states": "DC;MD;VA",
+      "areas_served": "District of Columbia (DC);Allegany County (MD);Anne Arundel County (MD);Carroll County (MD);Frederick County (MD);Garrett County (MD);Howard County (MD);Montgomery County (MD);Prince George's County (MD);Washington County (MD);Alexandria city (VA);Arlington County (VA);Fairfax County (VA);Falls Church city (VA);Loudoun County (VA);Manassas city (VA);Manassas Park city (VA);Prince William County (VA)",
+      "phone": "(202) 658-9599",
+      "email": "vfscreen@friendshipplace.org"
+    },
+    {
+      "organization": "Transition Projects, Inc.",
+      "fain": "19-ZZ-127",
+      "states": "OR;WA",
+      "areas_served": "Clackamas County (OR);Multnomah County (OR);Washington County (OR);Clark County (WA)",
+      "phone": "(855) 425-5544",
+      "email": "ssvf.screening@tprojects.org"
+    },
+    {
+      "organization": "Talbert House",
+      "fain": "19-ZZ-263",
+      "states": "IN;KY;OH",
+      "areas_served": "Dearborn County (IN);Ohio County (IN);Switzerland County (IN);Boone County (KY);Campbell County (KY);Kenton County (KY);Butler County (OH);Clermont County (OH);Hamilton County (OH);Warren County (OH)",
+      "phone": "(513) 993-7230",
+      "email": "Deborah.wiley@talberthouse.org"
+    },
+    {
+      "organization": "Homeless Veterans Fellowship",
+      "fain": "19-ZZ-317",
+      "states": "ID;UT",
+      "areas_served": "Bannock County (ID);Bear Lake County (ID);Bingham County (ID);Blaine County (ID);Camas County (ID);Caribou County (ID);Cassia County (ID);Franklin County (ID);Gooding County (ID);Jerome County (ID);Lincoln County (ID);Minidoka County (ID);Oneida County (ID);Power County (ID);Twin Falls County (ID);Beaver County (UT);Box Elder County (UT);Cache County (UT);Carbon County (UT);Daggett County (UT);Davis County (UT);Duchesne County (UT);Emery County (UT);Garfield County (UT);Grand County (UT);Iron County (UT);Juab County (UT);Kane County (UT);Millard County (UT);Morgan County (UT);Piute County (UT);Rich County (UT);San Juan County (UT);Sanpete County (UT);Sevier County (UT);Summit County (UT);Tooele County (UT);Uintah County (UT);Utah County (UT);Wasatch County (UT);Washington County (UT);Wayne County (UT);Weber County (UT)",
+      "phone": "(801) 689-1516",
+      "email": "ssvf@homelessveterans.org"
+    },
+    {
+      "organization": "Fairbanks Rescue Mission, Inc.",
+      "fain": "20-AK-152",
+      "states": "AK",
+      "areas_served": "Aleutians East Borough (AK);Aleutians West Census Area (AK);Bethel Census Area (AK);Bristol Bay Borough (AK);Denali Borough (AK);Dillingham Census Area (AK);Fairbanks North Star Borough (AK);Haines Borough (AK);Hoonah-Angoon Census Area (AK);Juneau City and Borough (AK);Kenai Peninsula Borough (AK);Ketchikan Gateway Borough (AK);Kodiak Island Borough (AK);Kusilvak Census Area (AK);Lake and Peninsula Borough (AK);Nome Census Area (AK);North Slope Borough (AK);Northwest Arctic Borough (AK);Petersburg Census Area (AK);Prince of Wales-Hyder Census Area (AK);Prince of Wales-Outer Ket (AK);Sitka City and Borough (AK);Skagway Municipality (AK);Skagway-Hoonah-Angoon Census Area (AK);Southeast Fairbanks Census Area (AK);Valdez-Cordova Census Area (AK);Wade Hampton Census Area (AK);Wrangell City and Borough (AK);Wrangell-Petersburg Census Area (AK);Yakutat City and Borough (AK);Yukon-Koyukuk Census Area (AK)",
+      "phone": "(907) 331-6292",
+      "email": "niko@fairbanksrescuemission.org"
+    },
+    {
+      "organization": "Volunteers of America Southeast, Inc.",
+      "fain": "20-AL-439",
+      "states": "AL",
+      "areas_served": "Bibb County (AL);Blount County (AL);Cullman County (AL);Jefferson County (AL);Shelby County (AL);St. Clair County (AL);Talladega County (AL);Tuscaloosa County (AL);Walker County (AL)",
+      "phone": "(205) 945-7172",
+      "email": "ssvf@voase.org"
+    },
+    {
+      "organization": "St. Francis House, Inc.",
+      "fain": "20-AR-086",
+      "states": "AR",
+      "areas_served": "Arkansas County (AR);Ashley County (AR);Baxter County (AR);Benton County (AR);Boone County (AR);Bradley County (AR);Calhoun County (AR);Carroll County (AR);Chicot County (AR);Clark County (AR);Clay County (AR);Cleburne County (AR);Cleveland County (AR);Columbia County (AR);Conway County (AR);Craighead County (AR);Crawford County (AR);Crittenden County (AR);Cross County (AR);Dallas County (AR);Desha County (AR);Drew County (AR);Faulkner County (AR);Franklin County (AR);Fulton County (AR);Garland County (AR);Grant County (AR);Greene County (AR);Hempstead County (AR);Hot Spring County (AR);Howard County (AR);Independence County (AR);Izard County (AR);Jackson County (AR);Jefferson County (AR);Johnson County (AR);Lafayette County (AR);Lawrence County (AR);Lee County (AR);Lincoln County (AR);Little River County (AR);Logan County (AR);Lonoke County (AR);Madison County (AR);Marion County (AR);Miller County (AR);Mississippi County (AR);Monroe County (AR);Montgomery County (AR);Nevada County (AR);Newton County (AR);Ouachita County (AR);Perry County (AR);Phillips County (AR);Pike County (AR);Poinsett County (AR);Polk County (AR);Pope County (AR);Prairie County (AR);Pulaski County (AR);Randolph County (AR);Saline County (AR);Scott County (AR);Searcy County (AR);Sebastian County (AR);Sevier County (AR);Sharp County (AR);St. Francis County (AR);Stone County (AR);Union County (AR);Van Buren County (AR);Washington County (AR);White County (AR);Woodruff County (AR);Yell County (AR)",
+      "phone": "(501) 916-2514",
+      "email": "ssvf-cmas@stfrancishouselr.org"
+    },
+    {
+      "organization": "United States Veterans Initiative",
+      "fain": "20-AZ-159",
+      "states": "AZ",
+      "areas_served": "Maricopa County (AZ)",
+      "phone": "(602) 441-0612",
+      "email": "SSVFintake_Phx@usvets.org"
+    },
+    {
+      "organization": "The Salvation Army",
+      "fain": "20-CA-017",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA);Santa Barbara County (CA);Ventura County (CA)",
+      "phone": "(213) 431-4456",
+      "email": "Bill.Gonzalez@usw.salvationarmy.org"
+    },
+    {
+      "organization": "Good Samaritan Shelter",
+      "fain": "20-CA-359",
+      "states": "CA",
+      "areas_served": "San Luis Obispo County (CA);Santa Barbara County (CA)",
+      "phone": "(805) 202-3056",
+      "email": "ithatchergeis@goodsamaritanshelter.org"
+    },
+    {
+      "organization": "PATH",
+      "fain": "20-CA-440",
+      "states": "CA",
+      "areas_served": "San Diego County (CA)",
+      "phone": "(619) 657-0134",
+      "email": "veteransd@epath.org"
+    },
+    {
+      "organization": "1736 Family Crisis Center",
+      "fain": "20-CA-441",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA);Orange County (CA)",
+      "phone": "(866) 249-2557",
+      "email": "SSVF@1736fcc.org"
+    },
+    {
+      "organization": "Rocky Mountain Human Services",
+      "fain": "20-CO-020",
+      "states": "CO",
+      "areas_served": "Adams County (CO);Alamosa County (CO);Arapahoe County (CO);Archuleta County (CO);Baca County (CO);Bent County (CO);Boulder County (CO);Broomfield County (CO);Chaffee County (CO);Cheyenne County (CO);Clear Creek County (CO);Conejos County (CO);Costilla County (CO);Crowley County (CO);Custer County (CO);Delta County (CO);Denver County (CO);Dolores County (CO);Douglas County (CO);Eagle County (CO);El Paso County (CO);Elbert County (CO);Fremont County (CO);Garfield County (CO);Gilpin County (CO);Grand County (CO);Gunnison County (CO);Hinsdale County (CO);Huerfano County (CO);Jackson County (CO);Jefferson County (CO);Kiowa County (CO);Kit Carson County (CO);La Plata County (CO);Lake County (CO);Larimer County (CO);Las Animas County (CO);Lincoln County (CO);Logan County (CO);Mesa County (CO);Mineral County (CO);Moffat County (CO);Montezuma County (CO);Montrose County (CO);Morgan County (CO);Otero County (CO);Ouray County (CO);Park County (CO);Phillips County (CO);Pitkin County (CO);Prowers County (CO);Pueblo County (CO);Rio Blanco County (CO);Rio Grande County (CO);Routt County (CO);Saguache County (CO);San Juan County (CO);San Miguel County (CO);Sedgwick County (CO);Summit County (CO);Teller County (CO);Washington County (CO);Weld County (CO);Yuma County (CO)",
+      "phone": "(855) 838-7428",
+      "email": "HAVReferrals@rmhumanservices.org"
+    },
+    {
+      "organization": "Travelers Aid of Metro Atlanta, Inc.",
+      "fain": "20-GA-188",
+      "states": "GA",
+      "areas_served": "Banks County (GA);Barrow County (GA);Bartow County (GA);Butts County (GA);Carroll County (GA);Cherokee County (GA);Clayton County (GA);Cobb County (GA);Coweta County (GA);DeKalb County (GA);Douglas County (GA);Fayette County (GA);Floyd County (GA);Forsyth County (GA);Franklin County (GA);Fulton County (GA);Hall County (GA);Hart County (GA);Henry County (GA);Jackson County (GA);Madison County (GA);Newton County (GA);Oconee County (GA);Paulding County (GA);Rockdale County (GA);Spalding County (GA);Stephens County (GA);Walton County (GA)",
+      "phone": "(404) 574-1681",
+      "email": "ssvfintake@hopeatlanta.org"
+    },
+    {
+      "organization": "Project Community Connections, Inc.",
+      "fain": "20-GA-369",
+      "states": "GA",
+      "areas_served": "Clayton County (GA);DeKalb County (GA);Douglas County (GA);Fulton County (GA);Gwinnett County (GA);Henry County (GA);Rockdale County (GA)",
+      "phone": "(470) 645-3220",
+      "email": "ssvf@pccihome.org"
+    },
+    {
+      "organization": "HVAF of Indiana, Inc.",
+      "fain": "20-IN-451",
+      "states": "IN",
+      "areas_served": "Boone County (IN);Hamilton County (IN);Hancock County (IN);Hendricks County (IN);Johnson County (IN);Marion County (IN);Morgan County (IN);Shelby County (IN)",
+      "phone": "(317) 789-8404",
+      "email": "RRHProgramScreeners@HVAF.org"
+    },
+    {
+      "organization": "Salvation Army",
+      "fain": "20-KS-443",
+      "states": "KS",
+      "areas_served": "Allen County (KS);Anderson County (KS);Atchison County (KS);Barber County (KS);Barton County (KS);Bourbon County (KS);Brown County (KS);Butler County (KS);Chase County (KS);Chautauqua County (KS);Cherokee County (KS);Cheyenne County (KS);Clark County (KS);Clay County (KS);Cloud County (KS);Coffey County (KS);Comanche County (KS);Cowley County (KS);Crawford County (KS);Decatur County (KS);Dickinson County (KS);Doniphan County (KS);Douglas County (KS);Edwards County (KS);Elk County (KS);Ellis County (KS);Ellsworth County (KS);Finney County (KS);Ford County (KS);Franklin County (KS);Geary County (KS);Gove County (KS);Graham County (KS);Grant County (KS);Gray County (KS);Greeley County (KS);Greenwood County (KS);Hamilton County (KS);Harper County (KS);Harvey County (KS);Haskell County (KS);Hodgeman County (KS);Jackson County (KS);Jefferson County (KS);Jewell County (KS);Kearny County (KS);Kingman County (KS);Kiowa County (KS);Labette County (KS);Lane County (KS);Leavenworth County (KS);Lincoln County (KS);Linn County (KS);Logan County (KS);Lyon County (KS);Marion County (KS);Marshall County (KS);McPherson County (KS);Meade County (KS);Miami County (KS);Mitchell County (KS);Montgomery County (KS);Morris County (KS);Morton County (KS);Nemaha County (KS);Neosho County (KS);Ness County (KS);Norton County (KS);Osage County (KS);Osborne County (KS);Ottawa County (KS);Pawnee County (KS);Phillips County (KS);Pottawatomie County (KS);Pratt County (KS);Rawlins County (KS);Reno County (KS);Republic County (KS);Rice County (KS);Riley County (KS);Rooks County (KS);Rush County (KS);Russell County (KS);Saline County (KS);Scott County (KS);Seward County (KS);Sheridan County (KS);Sherman County (KS);Smith County (KS);Stafford County (KS);Stanton County (KS);Stevens County (KS);Sumner County (KS);Thomas County (KS);Trego County (KS);Wabaunsee County (KS);Wallace County (KS);Washington County (KS);Wichita County (KS);Wilson County (KS);Woodson County (KS)",
+      "phone": "844-596-7783",
+      "email": "KANSSVFReferrals@usc.salvationarmy.org"
+    },
+    {
+      "organization": "Kentucky River Foothills Development Council, Inc.",
+      "fain": "20-KY-204",
+      "states": "KY",
+      "areas_served": "Bath County (KY);Breathitt County (KY);Clark County (KY);Clay County (KY);Estill County (KY);Jackson County (KY);Laurel County (KY);Lee County (KY);Madison County (KY);Menifee County (KY);Montgomery County (KY);Morgan County (KY);Owsley County (KY);Perry County (KY);Powell County (KY);Pulaski County (KY);Rockcastle County (KY);Rowan County (KY);Russell County (KY);Wayne County (KY);Wolfe County (KY)",
+      "phone": "(859) 408-7017",
+      "email": "SSVF@Foothillscap.org"
+    },
+    {
+      "organization": "Start Corporation",
+      "fain": "20-LA-208",
+      "states": "LA",
+      "areas_served": "Allen Parish (LA);Ascension Parish (LA);Assumption Parish (LA);Beauregard Parish (LA);Calcasieu Parish (LA);Cameron Parish (LA);East Baton Rouge Parish (LA);East Feliciana Parish (LA);Iberville Parish (LA);Jefferson Davis Parish (LA);Jefferson Parish (LA);Lafayette Parish (LA);Lafourche Parish (LA);Livingston Parish (LA);Natchitoches Parish (LA);Orleans Parish (LA);Plaquemines Parish (LA);Pointe Coupee Parish (LA);Sabine Parish (LA);St. Bernard Parish (LA);St. Charles Parish (LA);St. James Parish (LA);St. John the Baptist Parish (LA);St. Mary Parish (LA);Terrebonne Parish (LA);West Baton Rouge Parish (LA);West Feliciana Parish (LA)",
+      "phone": "(504) 584-8760",
+      "email": "jamal.perkins@startcorp.org"
+    },
+    {
+      "organization": "Vietnam Veterans Workshop, Inc.",
+      "fain": "20-MA-211",
+      "states": "MA",
+      "areas_served": "Bristol County (MA);Essex County (MA);Middlesex County (MA);Norfolk County (MA);Plymouth County (MA);Suffolk County (MA)",
+      "phone": "(800) 365-3665",
+      "email": "amanda.pastyrnak@nechv.org"
+    },
+    {
+      "organization": "Oakland Livingston Human Service Agency",
+      "fain": "20-MI-221",
+      "states": "MI",
+      "areas_served": "Genesee County (MI);Lapeer County (MI);Livingston County (MI);Macomb County (MI);Oakland County (MI);Shiawassee County (MI)",
+      "phone": "(517) 599-6954",
+      "email": "veterans@olhsa.org"
+    },
+    {
+      "organization": "Mid Michigan Community Action Agency Inc",
+      "fain": "20-MI-222",
+      "states": "MI",
+      "areas_served": "Arenac County (MI);Bay County (MI);Clare County (MI);Gladwin County (MI);Gratiot County (MI);Ionia County (MI);Isabella County (MI);Lake County (MI);Mecosta County (MI);Midland County (MI);Montcalm County (MI);Newaygo County (MI);Osceola County (MI);Saginaw County (MI)",
+      "phone": "(877) 213-5955",
+      "email": "homeless@mmcaa.org"
+    },
+    {
+      "organization": "Volunteers of America of Michigan, Inc.",
+      "fain": "20-MI-226",
+      "states": "MI",
+      "areas_served": "Allegan County (MI);Barry County (MI);Berrien County (MI);Calhoun County (MI);Clinton County (MI);Eaton County (MI);Ingham County (MI);Jackson County (MI);Kalamazoo County (MI);Kent County (MI);Muskegon County (MI);Ottawa County (MI);Van Buren County (MI);Wayne County (MI)",
+      "phone": "877-509-8387",
+      "email": "veteransocialservices@voami.org"
+    },
+    {
+      "organization": "Catholic Charities Diocese Of Charlotte",
+      "fain": "20-NC-444",
+      "states": "NC",
+      "areas_served": "Mecklenburg County (NC)",
+      "phone": "(704) 370-3236",
+      "email": "ssvf@ccdoc.org"
+    },
+    {
+      "organization": "United States Veterans Initiative",
+      "fain": "20-NV-056",
+      "states": "NV",
+      "areas_served": "Clark County (NV)",
+      "phone": "(702) 218-3832",
+      "email": "LV_SSVFoutreach@usvets.org"
+    },
+    {
+      "organization": "The Salvation Army",
+      "fain": "20-NV-118",
+      "states": "NV",
+      "areas_served": "Clark County (NV);Nye County (NV)",
+      "phone": "(702) 420-5039",
+      "email": "yazmin.gollas@usw.salvationarmy.org"
+    },
+    {
+      "organization": "Services for the UnderServed, Inc.",
+      "fain": "20-NY-062",
+      "states": "NY",
+      "areas_served": "Bronx County (NY);Kings County (NY);Nassau County (NY);New York County (NY);Richmond County (NY);Suffolk County (NY)",
+      "phone": "(646) 790-2449",
+      "email": "ssvfintakes@sus.org"
+    },
+    {
+      "organization": "The Jericho Project",
+      "fain": "20-NY-250",
+      "states": "NY",
+      "areas_served": "Bronx County (NY);Kings County (NY);New York County (NY);Queens County (NY);Richmond County (NY)",
+      "phone": "(646) 970-7170",
+      "email": "ssvf@jerichoproject.org"
+    },
+    {
+      "organization": "Veterans One-stop Center of WNY, Inc.",
+      "fain": "20-NY-446",
+      "states": "NY",
+      "areas_served": "Allegany County (NY);Cattaraugus County (NY);Chautauqua County (NY);Erie County (NY);Genesee County (NY);Livingston County (NY);Niagara County (NY);Ontario County (NY);Orleans County (NY);Steuben County (NY);Wyoming County (NY);Yates County (NY)",
+      "phone": "(716) 898-0110",
+      "email": "ssvf@vocwny.org"
+    },
+    {
+      "organization": "Community Service Council of Greater Tulsa, Inc.",
+      "fain": "20-OK-065",
+      "states": "OK",
+      "areas_served": "Alfalfa County (OK);Beaver County (OK);Beckham County (OK);Blaine County (OK);Caddo County (OK);Canadian County (OK);Cherokee County (OK);Cimarron County (OK);Cleveland County (OK);Comanche County (OK);Cotton County (OK);Craig County (OK);Creek County (OK);Custer County (OK);Delaware County (OK);Dewey County (OK);Ellis County (OK);Garfield County (OK);Garvin County (OK);Grady County (OK);Grant County (OK);Greer County (OK);Harmon County (OK);Harper County (OK);Jackson County (OK);Jefferson County (OK);Kay County (OK);Kingfisher County (OK);Kiowa County (OK);Lincoln County (OK);Logan County (OK);Major County (OK);Mayes County (OK);McClain County (OK);Muskogee County (OK);Noble County (OK);Nowata County (OK);Oklahoma County (OK);Okmulgee County (OK);Osage County (OK);Ottawa County (OK);Pawnee County (OK);Payne County (OK);Pottawatomie County (OK);Roger Mills County (OK);Rogers County (OK);Seminole County (OK);Stephens County (OK);Texas County (OK);Tillman County (OK);Tulsa County (OK);Wagoner County (OK);Washington County (OK);Washita County (OK);Woods County (OK);Woodward County (OK)",
+      "phone": "(918) 600-1406",
+      "email": "info@okvetunited.org"
+    },
+    {
+      "organization": "Easter Seals Oregon",
+      "fain": "20-OR-272",
+      "states": "OR",
+      "areas_served": "Marion County (OR);Multnomah County (OR);Polk County (OR)",
+      "phone": "(971) 317-9660",
+      "email": "rzadak@or.easterseals.com"
+    },
+    {
+      "organization": "Community Action Partnership Of Oregon",
+      "fain": "20-OR-430",
+      "states": "OR",
+      "areas_served": "Baker County (OR);Benton County (OR);Grant County (OR);Harney County (OR);Hood River County (OR);Klamath County (OR);Lake County (OR);Lincoln County (OR);Linn County (OR);Malheur County (OR);Sherman County (OR);Wasco County (OR);Yamhill County (OR)",
+      "phone": "(971) 612-9772",
+      "email": "SSVFSupport@caporegon.org"
+    },
+    {
+      "organization": "Eastern Carolina Homelessness Organization, Inc.",
+      "fain": "20-SC-402",
+      "states": "NC;SC",
+      "areas_served": "Columbus County (NC);Robeson County (NC);Scotland County (NC);Chesterfield County (SC);Clarendon County (SC);Darlington County (SC);Dillon County (SC);Florence County (SC);Georgetown County (SC);Horry County (SC);Lee County (SC);Marion County (SC);Marlboro County (SC);Sumter County (SC);Williamsburg County (SC)",
+      "phone": "(843) 213-1798",
+      "email": "frontdesk@echousing.org"
+    },
+    {
+      "organization": "Cornerstone Rescue Mission",
+      "fain": "20-SD-136",
+      "states": "SD",
+      "areas_served": "Aurora County (SD);Beadle County (SD);Bennett County (SD);Bon Homme County (SD);Brookings County (SD);Brown County (SD);Brule County (SD);Buffalo County (SD);Butte County (SD);Campbell County (SD);Charles Mix County (SD);Clark County (SD);Clay County (SD);Codington County (SD);Corson County (SD);Custer County (SD);Davison County (SD);Day County (SD);Deuel County (SD);Dewey County (SD);Douglas County (SD);Edmunds County (SD);Fall River County (SD);Faulk County (SD);Grant County (SD);Gregory County (SD);Haakon County (SD);Hamlin County (SD);Hand County (SD);Hanson County (SD);Harding County (SD);Hughes County (SD);Hutchinson County (SD);Hyde County (SD);Jackson County (SD);Jerauld County (SD);Jones County (SD);Kingsbury County (SD);Lake County (SD);Lawrence County (SD);Lincoln County (SD);Lyman County (SD);Marshall County (SD);McCook County (SD);McPherson County (SD);Meade County (SD);Mellette County (SD);Miner County (SD);Minnehaha County (SD);Moody County (SD);Oglala Lakota County (SD);Pennington County (SD);Perkins County (SD);Potter County (SD);Roberts County (SD);Sanborn County (SD);Shannon County (SD);Spink County (SD);Stanley County (SD);Sully County (SD);Todd County (SD);Tripp County (SD);Turner County (SD);Union County (SD);Walworth County (SD);Yankton County (SD);Ziebach County (SD)",
+      "phone": "(605) 484-9209",
+      "email": "tconrad@cornerstonemission.org"
+    },
+    {
+      "organization": "Caritas of Austin",
+      "fain": "20-TX-072",
+      "states": "TX",
+      "areas_served": "Bastrop County (TX);Travis County (TX);Williamson County (TX)",
+      "phone": "(512) 735-2019",
+      "email": "tcanciglia@caritasofaustin.org"
+    },
+    {
+      "organization": "West Central Texas Regional Foundation",
+      "fain": "20-TX-141",
+      "states": "TX",
+      "areas_served": "Brown County (TX);Callahan County (TX);Coke County (TX);Coleman County (TX);Comanche County (TX);Eastland County (TX);Fisher County (TX);Haskell County (TX);Howard County (TX);Jones County (TX);Kent County (TX);Knox County (TX);McCulloch County (TX);Mills County (TX);Mitchell County (TX);Nolan County (TX);Runnels County (TX);San Saba County (TX);Scurry County (TX);Shackelford County (TX);Stephens County (TX);Stonewall County (TX);Taylor County (TX);Throckmorton County (TX);Tom Green County (TX)",
+      "phone": "(800) 928-2262",
+      "email": "jmeier@westcentraltexas.org"
+    },
+    {
+      "organization": "Volunteers of America Chesapeake",
+      "fain": "20-VA-144",
+      "states": "VA",
+      "areas_served": "Alexandria city (VA);Arlington County (VA);Bristol city (VA);Buchanan County (VA);Caroline County (VA);Clarke County (VA);Culpeper County (VA);Cumberland County (VA);Dickenson County (VA);Essex County (VA);Fairfax city (VA);Fairfax County (VA);Falls Church city (VA);Fauquier County (VA);Frederick County (VA);Fredericksburg city (VA);Harrisonburg city (VA);King and Queen County (VA);King George County (VA);King William County (VA);Lee County (VA);Loudoun County (VA);Manassas city (VA);Manassas Park city (VA);Norton city (VA);Page County (VA);Prince William County (VA);Rappahannock County (VA);Rockingham County (VA);Russell County (VA);Scott County (VA);Shenandoah County (VA);Spotsylvania County (VA);Stafford County (VA);Tazewell County (VA);Warren County (VA);Washington County (VA);Winchester city (VA);Wise County (VA)",
+      "phone": "(571) 765-1075",
+      "email": "hmullis@voaches.org"
+    },
+    {
+      "organization": "Catholic Community Services Of Western Washington",
+      "fain": "20-WA-146",
+      "states": "WA",
+      "areas_served": "Cowlitz County (WA);Grays Harbor County (WA);King County (WA);Kitsap County (WA);Lewis County (WA);Mason County (WA);Pacific County (WA);Pierce County (WA);Thurston County (WA);Wahkiakum County (WA)",
+      "phone": "(206) 814-1660",
+      "email": "ssvfccs@ccsww.org"
+    },
+    {
+      "organization": "Hopesource",
+      "fain": "20-WA-338",
+      "states": "WA",
+      "areas_served": "Adams County (WA);Chelan County (WA);Douglas County (WA);Grant County (WA);Kittitas County (WA);Okanogan County (WA)",
+      "phone": "(509) 925-1448",
+      "email": "info@hopesource.us"
+    },
+    {
+      "organization": "Volunteers of America Colorado Branch",
+      "fain": "20-ZZ-092",
+      "states": "CO;NM",
+      "areas_served": "Adams County (CO);Alamosa County (CO);Arapahoe County (CO);Archuleta County (CO);Baca County (CO);Bent County (CO);Boulder County (CO);Broomfield County (CO);Chaffee County (CO);Cheyenne County (CO);Clear Creek County (CO);Conejos County (CO);Costilla County (CO);Crowley County (CO);Custer County (CO);Delta County (CO);Denver County (CO);Dolores County (CO);Douglas County (CO);Eagle County (CO);El Paso County (CO);Elbert County (CO);Fremont County (CO);Garfield County (CO);Gilpin County (CO);Grand County (CO);Gunnison County (CO);Hinsdale County (CO);Huerfano County (CO);Jackson County (CO);Jefferson County (CO);Kiowa County (CO);Kit Carson County (CO);La Plata County (CO);Lake County (CO);Larimer County (CO);Las Animas County (CO);Lincoln County (CO);Logan County (CO);Mesa County (CO);Mineral County (CO);Moffat County (CO);Montezuma County (CO);Montrose County (CO);Morgan County (CO);Otero County (CO);Ouray County (CO);Park County (CO);Phillips County (CO);Pitkin County (CO);Prowers County (CO);Pueblo County (CO);Rio Blanco County (CO);Rio Grande County (CO);Routt County (CO);Saguache County (CO);San Juan County (CO);San Miguel County (CO);Sedgwick County (CO);Summit County (CO);Teller County (CO);Washington County (CO);Weld County (CO);Yuma County (CO);San Juan County (NM)",
+      "phone": "(720) 501-3367",
+      "email": "ssvfintake@voacolorado.org"
+    },
+    {
+      "organization": "Volunteers of America, Northern Rockies",
+      "fain": "20-ZZ-113",
+      "states": "MT;WY",
+      "areas_served": "Beaverhead County (MT);Big Horn County (MT);Blaine County (MT);Broadwater County (MT);Carbon County (MT);Carter County (MT);Cascade County (MT);Chouteau County (MT);Custer County (MT);Daniels County (MT);Dawson County (MT);Deer Lodge County (MT);Fallon County (MT);Fergus County (MT);Flathead County (MT);Gallatin County (MT);Garfield County (MT);Glacier County (MT);Golden Valley County (MT);Granite County (MT);Hill County (MT);Jefferson County (MT);Judith Basin County (MT);Lake County (MT);Lewis and Clark County (MT);Liberty County (MT);Lincoln County (MT);Madison County (MT);McCone County (MT);Meagher County (MT);Mineral County (MT);Missoula County (MT);Musselshell County (MT);Park County (MT);Petroleum County (MT);Phillips County (MT);Pondera County (MT);Powder River County (MT);Powell County (MT);Prairie County (MT);Ravalli County (MT);Richland County (MT);Roosevelt County (MT);Rosebud County (MT);Sanders County (MT);Sheridan County (MT);Silver Bow County (MT);Stillwater County (MT);Sweet Grass County (MT);Teton County (MT);Toole County (MT);Treasure County (MT);Valley County (MT);Wheatland County (MT);Wibaux County (MT);Yellowstone County (MT);Albany County (WY);Big Horn County (WY);Campbell County (WY);Carbon County (WY);Converse County (WY);Crook County (WY);Fremont County (WY);Goshen County (WY);Hot Springs County (WY);Johnson County (WY);Laramie County (WY);Lincoln County (WY);Natrona County (WY);Niobrara County (WY);Park County (WY);Platte County (WY);Sheridan County (WY);Sublette County (WY);Sweetwater County (WY);Teton County (WY);Uinta County (WY);Washakie County (WY);Weston County (WY)",
+      "phone": "(307) 381-7877",
+      "email": "nikki.steele@voanr.org"
+    },
+    {
+      "organization": "Blue Mountain Action Council",
+      "fain": "20-ZZ-147",
+      "states": "ID;OR;WA",
+      "areas_served": "Clearwater County (ID);Idaho County (ID);Lewis County (ID);Nez Perce County (ID);Morrow County (OR);Umatilla County (OR);Union County (OR);Wallowa County (OR);Asotin County (WA);Benton County (WA);Columbia County (WA);Franklin County (WA);Garfield County (WA);Klickitat County (WA);Skamania County (WA);Walla Walla County (WA);Yakima County (WA)",
+      "phone": "509-529-3859",
+      "email": "ssvf@bmacww.org"
+    },
+    {
+      "organization": "Goodwill Industries Of The Inland Northwest",
+      "fain": "20-ZZ-301",
+      "states": "ID;WA",
+      "areas_served": "Benewah County (ID);Bonner County (ID);Boundary County (ID);Kootenai County (ID);Latah County (ID);Shoshone County (ID);Ferry County (WA);Lincoln County (WA);Pend Oreille County (WA);Spokane County (WA);Stevens County (WA);Whitman County (WA)",
+      "phone": "(509) 828-2449",
+      "email": "Programhelp@giin.org"
+    },
+    {
+      "organization": "Volunteers of America of the Carolinas, Inc.",
+      "fain": "21-NC-237",
+      "states": "NC",
+      "areas_served": "Alamance County (NC);Alexander County (NC);Anson County (NC);Beaufort County (NC);Bertie County (NC);Bladen County (NC);Brunswick County (NC);Cabarrus County (NC);Carteret County (NC);Caswell County (NC);Chatham County (NC);Columbus County (NC);Craven County (NC);Cumberland County (NC);Davidson County (NC);Davie County (NC);Duplin County (NC);Durham County (NC);Edgecombe County (NC);Franklin County (NC);Graham County (NC);Granville County (NC);Greene County (NC);Halifax County (NC);Harnett County (NC);Hertford County (NC);Hoke County (NC);Iredell County (NC);Johnston County (NC);Jones County (NC);Lee County (NC);Lenoir County (NC);Martin County (NC);Montgomery County (NC);Moore County (NC);Nash County (NC);New Hanover County (NC);Northampton County (NC);Onslow County (NC);Orange County (NC);Pamlico County (NC);Pender County (NC);Person County (NC);Pitt County (NC);Randolph County (NC);Richmond County (NC);Robeson County (NC);Rockingham County (NC);Rowan County (NC);Sampson County (NC);Scotland County (NC);Stanly County (NC);Stokes County (NC);Surry County (NC);Union County (NC);Vance County (NC);Wake County (NC);Warren County (NC);Washington County (NC);Wayne County (NC);Wilson County (NC);Yadkin County (NC)",
+      "phone": "(919) 530-1100",
+      "email": "durhamreferrals@voacarolinas.org"
+    },
+    {
+      "organization": "Family Endeavors, Inc.",
+      "fain": "21-TX-074",
+      "states": "TX",
+      "areas_served": "Angelina County (TX);Aransas County (TX);Atascosa County (TX);Austin County (TX);Bandera County (TX);Bee County (TX);Bell County (TX);Bexar County (TX);Blanco County (TX);Bosque County (TX);Bowie County (TX);Brazoria County (TX);Brazos County (TX);Brooks County (TX);Burnet County (TX);Caldwell County (TX);Calhoun County (TX);Cameron County (TX);Camp County (TX);Cass County (TX);Chambers County (TX);Collin County (TX);Colorado County (TX);Comal County (TX);Concho County (TX);Dallas County (TX);DeWitt County (TX);Dimmit County (TX);Duval County (TX);Edwards County (TX);El Paso County (TX);Ellis County (TX);Erath County (TX);Falls County (TX);Fannin County (TX);Fayette County (TX);Franklin County (TX);Freestone County (TX);Frio County (TX);Galveston County (TX);Gillespie County (TX);Goliad County (TX);Gonzales County (TX);Grayson County (TX);Gregg County (TX);Guadalupe County (TX);Hamilton County (TX);Hardin County (TX);Harrison County (TX);Hays County (TX);Henderson County (TX);Hidalgo County (TX);Hill County (TX);Hood County (TX);Houston County (TX);Hunt County (TX);Jack County (TX);Jackson County (TX);Jasper County (TX);Jefferson County (TX);Jim Hogg County (TX);Jim Wells County (TX);Johnson County (TX);Karnes County (TX);Kendall County (TX);Kenedy County (TX);Kerr County (TX);Kimble County (TX);Kinney County (TX);Kleberg County (TX);La Salle County (TX);Lamar County (TX);Lampasas County (TX);Lavaca County (TX);Lee County (TX);Liberty County (TX);Limestone County (TX);Live Oak County (TX);Llano County (TX);Marion County (TX);Mason County (TX);Matagorda County (TX);Maverick County (TX);McCulloch County (TX);McLennan County (TX);McMullen County (TX);Medina County (TX);Menard County (TX);Montague County (TX);Morris County (TX);Nacogdoches County (TX);Navarro County (TX);Newton County (TX);Nueces County (TX);Orange County (TX);Palo Pinto County (TX);Panola County (TX);Parker County (TX);Polk County (TX);Real County (TX);Red River County (TX);Refugio County (TX);Rusk County (TX);Sabine County (TX);San Augustine County (TX);San Jacinto County (TX);San Patricio County (TX);Schleicher County (TX);Shelby County (TX);Smith County (TX);Starr County (TX);Sutton County (TX);Tarrant County (TX);Titus County (TX);Trinity County (TX);Tyler County (TX);Upshur County (TX);Uvalde County (TX);Val Verde County (TX);Victoria County (TX);Waller County (TX);Washington County (TX);Webb County (TX);Wharton County (TX);Willacy County (TX);Wilson County (TX);Wise County (TX);Wood County (TX);Zapata County (TX);Zavala County (TX)",
+      "phone": "(210) 469-9664",
+      "email": "SSVF-SA@endeavors.org"
+    },
+    {
+      "organization": "American GI Forum National Veterans Outreach Program, Inc.",
+      "fain": "21-TX-292",
+      "states": "TX",
+      "areas_served": "Atascosa County (TX);Bexar County (TX);Collin County (TX);Comal County (TX);Dallas County (TX);El Paso County (TX);Guadalupe County (TX);Medina County (TX);Tarrant County (TX);Wilson County (TX)",
+      "phone": "(210) 223-4088",
+      "email": "Intake@agif-nvop.org"
+    },
+    {
+      "organization": "Adjoin",
+      "fain": "22-CA-019",
+      "states": "CA",
+      "areas_served": "Imperial County (CA);San Diego County (CA)",
+      "phone": "(800) 974-9909",
+      "email": "veterans@adjoin.org"
+    },
+    {
+      "organization": "Disability Network Oakland & Macomb",
+      "fain": "22-MI-218",
+      "states": "MI",
+      "areas_served": "Huron County (MI);Lapeer County (MI);Macomb County (MI);Monroe County (MI);Oakland County (MI);Sanilac County (MI);St. Clair County (MI);Tuscola County (MI);Washtenaw County (MI);Wayne County (MI)",
+      "phone": "(586) 268-4160",
+      "email": "Info@dnemichigan.org"
+    },
+    {
+      "organization": "Recovery Resource Council",
+      "fain": "22-TX-075",
+      "states": "TX",
+      "areas_served": "Armstrong County (TX);Bailey County (TX);Briscoe County (TX);Carson County (TX);Castro County (TX);Childress County (TX);Cochran County (TX);Collin County (TX);Collingsworth County (TX);Crosby County (TX);Dallam County (TX);Dallas County (TX);Deaf Smith County (TX);Denton County (TX);Dickens County (TX);Donley County (TX);Floyd County (TX);Garza County (TX);Gray County (TX);Hale County (TX);Hall County (TX);Hansford County (TX);Hartley County (TX);Hemphill County (TX);Hockley County (TX);Hutchinson County (TX);King County (TX);Lamb County (TX);Lipscomb County (TX);Lubbock County (TX);Lynn County (TX);Moore County (TX);Motley County (TX);Ochiltree County (TX);Oldham County (TX);Palo Pinto County (TX);Parker County (TX);Parmer County (TX);Potter County (TX);Randall County (TX);Roberts County (TX);Sherman County (TX);Swisher County (TX);Tarrant County (TX);Terry County (TX);Wheeler County (TX);Wichita County (TX);Wise County (TX);Yoakum County (TX)",
+      "phone": "(817) 413-3921",
+      "email": "ssvfmail@recoverycouncil.org"
+    },
+    {
+      "organization": "NBCC (DBA New Beginnings)",
+      "fain": "23-CA-163",
+      "states": "CA",
+      "areas_served": "Santa Barbara County (CA)",
+      "phone": "(805) 455-6878",
+      "email": "mdurham@sbnbcc.org"
+    },
+    {
+      "organization": "Volunteers of America of Los Angeles",
+      "fain": "23-CA-176",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA);Orange County (CA)",
+      "phone": "(323) 657-5550",
+      "email": "ssvfoc@voala.org"
+    },
+    {
+      "organization": "Insight Housing",
+      "fain": "23-CA-437",
+      "states": "CA",
+      "areas_served": "Alameda County (CA);Amador County (CA);Contra Costa County (CA);Sacramento County (CA);San Francisco County (CA);San Joaquin County (CA);Solano County (CA)",
+      "phone": "(925) 957-6042",
+      "email": "info@insighthousing.org"
+    },
+    {
+      "organization": "VILLAGE FOR VETS",
+      "fain": "23-CA-457",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA)",
+      "phone": "(323) 740-0167",
+      "email": "omar@villageforvets.org"
+    },
+    {
+      "organization": "JVS SOCAL",
+      "fain": "23-CA-458",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA)",
+      "phone": "(626) 377-4022",
+      "email": "ssvf@jvs-socal.org"
+    },
+    {
+      "organization": "Society of St. Vincent de Paul South Pinellas, Inc.",
+      "fain": "23-FL-099",
+      "states": "FL",
+      "areas_served": "Charlotte County (FL);Citrus County (FL);Collier County (FL);DeSoto County (FL);Glades County (FL);Hardee County (FL);Hendry County (FL);Hernando County (FL);Highlands County (FL);Hillsborough County (FL);Lake County (FL);Lee County (FL);Manatee County (FL);Okeechobee County (FL);Orange County (FL);Osceola County (FL);Pasco County (FL);Pinellas County (FL);Polk County (FL);Sarasota County (FL);Seminole County (FL);Sumter County (FL)",
+      "phone": "844-455-7783",
+      "email": "ssvfinfo@svdpsp.org"
+    },
+    {
+      "organization": "Welcome Home, Inc.",
+      "fain": "23-MO-229",
+      "states": "MO",
+      "areas_served": "Adair County (MO);Audrain County (MO);Boone County (MO);Callaway County (MO);Camden County (MO);Carroll County (MO);Chariton County (MO);Cole County (MO);Cooper County (MO);Gasconade County (MO);Howard County (MO);Linn County (MO);Macon County (MO);Maries County (MO);Miller County (MO);Moniteau County (MO);Monroe County (MO);Montgomery County (MO);Morgan County (MO);Osage County (MO);Pettis County (MO);Phelps County (MO);Pulaski County (MO);Randolph County (MO);Saline County (MO);Shelby County (MO)",
+      "phone": "573-443-8001",
+      "email": "tmartin@welcomeveterans.org"
+    },
+    {
+      "organization": "Veterans Inc.",
+      "fain": "23-MT-454",
+      "states": "MT",
+      "areas_served": "Beaverhead County (MT);Big Horn County (MT);Blaine County (MT);Broadwater County (MT);Carbon County (MT);Carter County (MT);Cascade County (MT);Chouteau County (MT);Custer County (MT);Daniels County (MT);Dawson County (MT);Deer Lodge County (MT);Fallon County (MT);Fergus County (MT);Flathead County (MT);Gallatin County (MT);Garfield County (MT);Glacier County (MT);Golden Valley County (MT);Granite County (MT);Hill County (MT);Jefferson County (MT);Judith Basin County (MT);Lake County (MT);Lewis and Clark County (MT);Liberty County (MT);Lincoln County (MT);Madison County (MT);McCone County (MT);Meagher County (MT);Mineral County (MT);Missoula County (MT);Musselshell County (MT);Park County (MT);Petroleum County (MT);Phillips County (MT);Pondera County (MT);Powder River County (MT);Powell County (MT);Prairie County (MT);Ravalli County (MT);Richland County (MT);Roosevelt County (MT);Rosebud County (MT);Sanders County (MT);Sheridan County (MT);Silver Bow County (MT);Stillwater County (MT);Sweet Grass County (MT);Teton County (MT);Toole County (MT);Treasure County (MT);Valley County (MT);Wheatland County (MT);Wibaux County (MT);Yellowstone County (MT)",
+      "phone": "(800) 482-2565",
+      "email": "info@veteransinc.org"
+    },
+    {
+      "organization": "Asheville Buncombe Community Christian Ministry, Inc.",
+      "fain": "23-NC-114",
+      "states": "NC",
+      "areas_served": "Alleghany County (NC);Ashe County (NC);Avery County (NC);Buncombe County (NC);Burke County (NC);Caldwell County (NC);Carteret County (NC);Catawba County (NC);Cherokee County (NC);Clay County (NC);Cleveland County (NC);Craven County (NC);Cumberland County (NC);Gaston County (NC);Graham County (NC);Haywood County (NC);Henderson County (NC);Jackson County (NC);Jones County (NC);Lincoln County (NC);Macon County (NC);Madison County (NC);McDowell County (NC);Mecklenburg County (NC);Mitchell County (NC);New Hanover County (NC);Onslow County (NC);Pamlico County (NC);Pender County (NC);Polk County (NC);Rutherford County (NC);Swain County (NC);Transylvania County (NC);Watauga County (NC);Wilkes County (NC);Yancey County (NC)",
+      "phone": "(855) 962-8387",
+      "email": "Intake-SSVF@abccm.org"
+    },
+    {
+      "organization": "United States Veterans Initiative",
+      "fain": "23-VA-455",
+      "states": "VA",
+      "areas_served": "Chesterfield County (VA);Hanover County (VA);Henrico County (VA);Richmond city (VA)",
+      "phone": "(202) 940-7954",
+      "email": "dcoutreach@usvets.org"
+    },
+    {
+      "organization": "The Salvation Army",
+      "fain": "23-ZZ-104",
+      "states": "IA;IL;KY",
+      "areas_served": "Des Moines County (IA);Henry County (IA);Jefferson County (IA);Keokuk County (IA);Lee County (IA);Louisa County (IA);Van Buren County (IA);Adams County (IL);Alexander County (IL);Bond County (IL);Brown County (IL);Bureau County (IL);Calhoun County (IL);Carroll County (IL);Cass County (IL);Champaign County (IL);Christian County (IL);Clark County (IL);Clay County (IL);Clinton County (IL);Coles County (IL);Crawford County (IL);Cumberland County (IL);De Witt County (IL);Douglas County (IL);Edgar County (IL);Edwards County (IL);Effingham County (IL);Fayette County (IL);Ford County (IL);Franklin County (IL);Fulton County (IL);Gallatin County (IL);Greene County (IL);Hamilton County (IL);Hancock County (IL);Hardin County (IL);Henderson County (IL);Iroquois County (IL);Jackson County (IL);Jasper County (IL);Jefferson County (IL);Jersey County (IL);Jo Daviess County (IL);Johnson County (IL);Knox County (IL);Lawrence County (IL);Livingston County (IL);Logan County (IL);Macon County (IL);Macoupin County (IL);Marion County (IL);Marshall County (IL);Mason County (IL);Massac County (IL);McDonough County (IL);McLean County (IL);Menard County (IL);Monroe County (IL);Montgomery County (IL);Morgan County (IL);Moultrie County (IL);Ogle County (IL);Peoria County (IL);Perry County (IL);Piatt County (IL);Pike County (IL);Pope County (IL);Pulaski County (IL);Putnam County (IL);Randolph County (IL);Richland County (IL);Saline County (IL);Sangamon County (IL);Schuyler County (IL);Scott County (IL);Shelby County (IL);Stark County (IL);Stephenson County (IL);Tazewell County (IL);Union County (IL);Vermilion County (IL);Wabash County (IL);Warren County (IL);Washington County (IL);Wayne County (IL);White County (IL);Williamson County (IL);Woodford County (IL);Ballard County (KY);Caldwell County (KY);Calloway County (KY);Carlisle County (KY);Christian County (KY);Crittenden County (KY);Fulton County (KY);Graves County (KY);Hickman County (KY);Hopkins County (KY);Livingston County (KY);Lyon County (KY);Marshall County (KY);McCracken County (KY);Todd County (KY);Trigg County (KY)",
+      "phone": "(217) 278-9897",
+      "email": "nancy.buckles@usc.salvationarmy.org"
+    },
+    {
+      "organization": "Veterans Multi-Service Center, Inc.",
+      "fain": "23-ZZ-278",
+      "states": "DE;NJ;PA",
+      "areas_served": "Kent County (DE);New Castle County (DE);Sussex County (DE);Atlantic County (NJ);Burlington County (NJ);Camden County (NJ);Cape May County (NJ);Cumberland County (NJ);Gloucester County (NJ);Salem County (NJ);Berks County (PA);Bucks County (PA);Cameron County (PA);Centre County (PA);Chester County (PA);Clinton County (PA);Dauphin County (PA);Delaware County (PA);Franklin County (PA);Fulton County (PA);Juniata County (PA);Lancaster County (PA);Lebanon County (PA);Lycoming County (PA);Mifflin County (PA);Montgomery County (PA);Northumberland County (PA);Philadelphia County (PA);Potter County (PA);Schuylkill County (PA);Snyder County (PA);Tioga County (PA);Union County (PA)",
+      "phone": "(215) 923-2600",
+      "email": "passvfinfo@vmcenter.org"
+    },
+    {
+      "organization": "Changing Homelessness, Inc.",
+      "fain": "23-ZZ-324",
+      "states": "FL;GA",
+      "areas_served": "Baker County (FL);Clay County (FL);Duval County (FL);Flagler County (FL);Nassau County (FL);St. Johns County (FL);Volusia County (FL);Appling County (GA);Atkinson County (GA);Bacon County (GA);Baker County (GA);Ben Hill County (GA);Berrien County (GA);Bleckley County (GA);Brantley County (GA);Brooks County (GA);Bryan County (GA);Bulloch County (GA);Calhoun County (GA);Camden County (GA);Candler County (GA);Charlton County (GA);Chatham County (GA);Clinch County (GA);Coffee County (GA);Colquitt County (GA);Cook County (GA);Decatur County (GA);Dodge County (GA);Dougherty County (GA);Early County (GA);Echols County (GA);Effingham County (GA);Emanuel County (GA);Evans County (GA);Glynn County (GA);Grady County (GA);Irwin County (GA);Jeff Davis County (GA);Johnson County (GA);Lanier County (GA);Laurens County (GA);Lee County (GA);Liberty County (GA);Long County (GA);Lowndes County (GA);McIntosh County (GA);Mitchell County (GA);Montgomery County (GA);Pierce County (GA);Seminole County (GA);Tattnall County (GA);Telfair County (GA);Terrell County (GA);Thomas County (GA);Tift County (GA);Toombs County (GA);Treutlen County (GA);Turner County (GA);Ware County (GA);Wayne County (GA);Wheeler County (GA);Wilcox County (GA);Worth County (GA)",
+      "phone": "(904) 354-1100",
+      "email": "vetreferrals@changinghomelessness.org"
+    },
+    {
+      "organization": "VILLAGE FOR VETS",
+      "fain": "24-CA-467",
+      "states": "CA",
+      "areas_served": "Los Angeles County (CA)",
+      "phone": "(323) 609-9206",
+      "email": "omar@villageforvets.org"
+    },
+    {
+      "organization": "Clear Path for Veterans New England Inc.",
+      "fain": "24-MA-460",
+      "states": "MA;NH",
+      "areas_served": "Barnstable County (MA);Berkshire County (MA);Bristol County (MA);Dukes County (MA);Essex County (MA);Franklin County (MA);Hampden County (MA);Hampshire County (MA);Middlesex County (MA);Nantucket County (MA);Norfolk County (MA);Plymouth County (MA);Suffolk County (MA);Worcester County (MA);Belknap County (NH);Carroll County (NH);Cheshire County (NH);Coos County (NH);Grafton County (NH);Hillsborough County (NH);Merrimack County (NH);Rockingham County (NH);Strafford County (NH);Sullivan County (NH)",
+      "phone": "(978) 362-9757",
+      "email": "SSVF@clearpathne.org"
+    },
+    {
+      "organization": "ST VINCENT DE PAUL OF BALTIMORE INC",
+      "fain": "24-MD-464",
+      "states": "MD",
+      "areas_served": "Baltimore city (MD);Baltimore County (MD)",
+      "phone": "(410) 462-5770",
+      "email": "veteran_support@vincentbaltimore.org"
+    },
+    {
+      "organization": "TENNESSEE HOMELESS SOLUTIONS",
+      "fain": "24-TN-465",
+      "states": "TN",
+      "areas_served": "Benton County (TN);Carroll County (TN);Chester County (TN);Crockett County (TN);Decatur County (TN);Dyer County (TN);Fayette County (TN);Gibson County (TN);Hardeman County (TN);Hardin County (TN);Haywood County (TN);Henderson County (TN);Henry County (TN);Lake County (TN);Lauderdale County (TN);Madison County (TN);McNairy County (TN);Obion County (TN);Tipton County (TN);Weakley County (TN)",
+      "phone": "866-307-5469",
+      "email": "tnebeker@thstn.org"
+    },
+    {
+      "organization": "LINK OF HAMPTON ROADS INCORPORATED",
+      "fain": "24-VA-463",
+      "states": "VA",
+      "areas_served": "Accomack County (VA);Chesapeake city (VA);Franklin County (VA);Gloucester County (VA);Hampton city (VA);Isle of Wight County (VA);James City County (VA);Newport News city (VA);Norfolk city (VA);Northampton County (VA);Poquoson city (VA);Portsmouth city (VA);Southampton County (VA);Suffolk city (VA);Virginia Beach city (VA);Williamsburg city (VA);York County (VA)",
+      "phone": "(757) 947-5880",
+      "email": "ssvf@linkhr.org"
+    },
+    {
+      "organization": "Alston Wilkes Society",
+      "fain": "25-SC-134",
+      "states": "SC",
+      "areas_served": "Abbeville County (SC);Aiken County (SC);Allendale County (SC);Anderson County (SC);Bamberg County (SC);Barnwell County (SC);Beaufort County (SC);Berkeley County (SC);Calhoun County (SC);Charleston County (SC);Cherokee County (SC);Chester County (SC);Colleton County (SC);Dorchester County (SC);Edgefield County (SC);Fairfield County (SC);Greenville County (SC);Greenwood County (SC);Hampton County (SC);Jasper County (SC);Kershaw County (SC);Lancaster County (SC);Laurens County (SC);Lexington County (SC);McCormick County (SC);Newberry County (SC);Oconee County (SC);Orangeburg County (SC);Pickens County (SC);Richland County (SC);Saluda County (SC);Spartanburg County (SC);Union County (SC);York County (SC)",
+      "phone": "(803) 995-8464",
+      "email": "mnascimento@aws1962.org"
+    },
+    {
+      "organization": "Volunteers of America Mid-States, Inc.",
+      "fain": "25-ZZ-037",
+      "states": "IN;KY;TN;WV",
+      "areas_served": "Clark County (IN);Floyd County (IN);Adair County (KY);Allen County (KY);Anderson County (KY);Barren County (KY);Bell County (KY);Bourbon County (KY);Boyd County (KY);Boyle County (KY);Bracken County (KY);Breckinridge County (KY);Bullitt County (KY);Butler County (KY);Carroll County (KY);Carter County (KY);Casey County (KY);Clinton County (KY);Cumberland County (KY);Daviess County (KY);Edmonson County (KY);Elliott County (KY);Fayette County (KY);Fleming County (KY);Floyd County (KY);Franklin County (KY);Gallatin County (KY);Garrard County (KY);Grant County (KY);Grayson County (KY);Green County (KY);Greenup County (KY);Hancock County (KY);Hardin County (KY);Harlan County (KY);Harrison County (KY);Hart County (KY);Henderson County (KY);Henry County (KY);Jefferson County (KY);Jessamine County (KY);Johnson County (KY);Knott County (KY);Knox County (KY);Larue County (KY);Lawrence County (KY);Leslie County (KY);Letcher County (KY);Lewis County (KY);Lincoln County (KY);Logan County (KY);Magoffin County (KY);Marion County (KY);Martin County (KY);Mason County (KY);McCreary County (KY);McLean County (KY);Meade County (KY);Mercer County (KY);Metcalfe County (KY);Monroe County (KY);Muhlenberg County (KY);Nelson County (KY);Nicholas County (KY);Ohio County (KY);Oldham County (KY);Owen County (KY);Pendleton County (KY);Pike County (KY);Robertson County (KY);Scott County (KY);Shelby County (KY);Simpson County (KY);Spencer County (KY);Taylor County (KY);Trimble County (KY);Union County (KY);Warren County (KY);Washington County (KY);Webster County (KY);Whitley County (KY);Woodford County (KY);Anderson County (TN);Blount County (TN);Campbell County (TN);Carter County (TN);Claiborne County (TN);Cocke County (TN);Grainger County (TN);Greene County (TN);Hamblen County (TN);Hancock County (TN);Hawkins County (TN);Jefferson County (TN);Johnson County (TN);Knox County (TN);Loudon County (TN);McMinn County (TN);Monroe County (TN);Morgan County (TN);Roane County (TN);Scott County (TN);Sevier County (TN);Sullivan County (TN);Unicoi County (TN);Union County (TN);Washington County (TN);Boone County (WV);Cabell County (WV);Clay County (WV);Fayette County (WV);Greenbrier County (WV);Jackson County (WV);Kanawha County (WV);Lincoln County (WV);Logan County (WV);Mason County (WV);McDowell County (WV);Mercer County (WV);Mingo County (WV);Nicholas County (WV);Putnam County (WV);Raleigh County (WV);Roane County (WV);Summers County (WV);Wayne County (WV);Wyoming County (WV)",
+      "phone": "(859) 254-3469",
+      "email": "voahonor@voamid.org"
+    },
+    {
+      "organization": "Nation's Finest",
+      "fain": "25-ZZ-158",
+      "states": "AZ;CA;NV",
+      "areas_served": "Apache County (AZ);Coconino County (AZ);Gila County (AZ);Mohave County (AZ);Navajo County (AZ);Yavapai County (AZ);Butte County (CA);Colusa County (CA);Del Norte County (CA);Glenn County (CA);Humboldt County (CA);Lake County (CA);Lassen County (CA);Marin County (CA);Mendocino County (CA);Modoc County (CA);Monterey County (CA);Napa County (CA);Nevada County (CA);Placer County (CA);Plumas County (CA);Sacramento County (CA);San Benito County (CA);San Mateo County (CA);Santa Clara County (CA);Santa Cruz County (CA);Shasta County (CA);Sierra County (CA);Siskiyou County (CA);Solano County (CA);Sonoma County (CA);Sutter County (CA);Tehama County (CA);Trinity County (CA);Yolo County (CA);Yuba County (CA);Carson City (NV);Churchill County (NV);Clark County (NV);Douglas County (NV);Elko County (NV);Eureka County (NV);Humboldt County (NV);Lander County (NV);Lyon County (NV);Mineral County (NV);Pershing County (NV);Storey County (NV);Washoe County (NV);White Pine County (NV)",
+      "phone": "(928) 350-8335",
+      "email": "tisakson@nationsfinest.org"
+    },
+    {
+      "organization": "Volunteers of America of North Louisiana",
+      "fain": "26-AR-470",
+      "states": "AR",
+      "areas_served": "Arkansas County (AR);Ashley County (AR);Bradley County (AR);Calhoun County (AR);Chicot County (AR);Clark County (AR);Cleveland County (AR);Dallas County (AR);Desha County (AR);Drew County (AR);Hempstead County (AR);Howard County (AR);Jefferson County (AR);Lincoln County (AR);Nevada County (AR);Ouachita County (AR);Phillips County (AR);Pike County (AR);Union County (AR)",
+      "phone": "(870) 275-4066",
+      "email": "SSVF@voanorthla.org"
+    },
+    {
+      "organization": "Volunteers of America Southeast, Inc.",
+      "fain": "26-GA-471",
+      "states": "GA",
+      "areas_served": "Chattooga County (GA);Clay County (GA);Dawson County (GA);Fannin County (GA);Gilmer County (GA);Gordon County (GA);Habersham County (GA);Haralson County (GA);Heard County (GA);Jasper County (GA);Lamar County (GA);Lumpkin County (GA);Meriwether County (GA);Monroe County (GA);Morgan County (GA);Pickens County (GA);Pike County (GA);Polk County (GA);Putnam County (GA);Quitman County (GA);Rabun County (GA);Randolph County (GA);Spalding County (GA);Towns County (GA);Union County (GA);Upson County (GA);White County (GA)",
+      "phone": "(478) 919-2377",
+      "email": "ssvf@voase.org"
+    },
+    {
+      "organization": "Catholic Charities Hawaii",
+      "fain": "26-HI-472",
+      "states": "HI",
+      "areas_served": "Hawaii County (HI);Kalawao County (HI);Kauai County (HI);Maui County (HI)",
+      "phone": "(808) 527-4986",
+      "email": "veteransinfo@catholiccharitieshawaii.org"
+    },
+    {
+      "organization": "THE CAPE AND ISLANDS VETERANS OUTREACH CENTER INC",
+      "fain": "26-MA-477",
+      "states": "MA",
+      "areas_served": "Barnstable County (MA);Dukes County (MA);Nantucket County (MA)",
+      "phone": "(508) 778-1590",
+      "email": "info@capeveterans.com"
+    },
+    {
+      "organization": "PETTIS COUNTY COMMUNITY PARTNERSHIP INC",
+      "fain": "26-MO-476",
+      "states": "MO",
+      "areas_served": "Benton County (MO);Cass County (MO);Henry County (MO);Johnson County (MO);Lafayette County (MO);Morgan County (MO);Pettis County (MO);Saline County (MO);St. Clair County (MO)",
+      "phone": "(660) 827-0560",
+      "email": "mari@pcmcpartners.org"
+    },
+    {
+      "organization": "Kiowa Tribe of Oklahoma",
+      "fain": "26-OK-473",
+      "states": "OK",
+      "areas_served": "Caddo County (OK);Comanche County (OK);Cotton County (OK);Grady County (OK);Kiowa County (OK);Tillman County (OK);Washita County (OK)",
+      "phone": null,
+      "email": null
+    },
+    {
+      "organization": "Society of St. Vincent de Paul South Pinellas, Inc.",
+      "fain": "26-PR-469",
+      "states": "PR",
+      "areas_served": "No Counties (AS,GU,MP,PR,VI)",
+      "phone": null,
+      "email": "ssvfpr@svdp.care"
+    },
+    {
+      "organization": "SER-JOBS FOR PROGRESS NATIONAL INC",
+      "fain": "26-SD-475",
+      "states": "SD",
+      "areas_served": "Buffalo County (SD);Lyman County (SD);Oglala Lakota County (SD);Todd County (SD)",
+      "phone": "(916) 224-8049",
+      "email": "frankramirez101@gmail.com"
+    },
+    {
+      "organization": "Operation Stand Down Tennessee",
+      "fain": "26-TN-474",
+      "states": "TN",
+      "areas_served": "Bedford County (TN);Coffee County (TN);Decatur County (TN);Hardeman County (TN);Hardin County (TN);Haywood County (TN);Henderson County (TN);Lincoln County (TN);McNairy County (TN);Moore County (TN);Wayne County (TN)",
+      "phone": "(615) 248-1981",
+      "email": "ssvf@osdtn.org"
+    },
+    {
+      "organization": "Catholic Charities of Kansas City - St Joseph, Inc.",
+      "fain": "26-ZZ-110",
+      "states": "KS;MO",
+      "areas_served": "Johnson County (KS);Wyandotte County (KS);Andrew County (MO);Atchison County (MO);Bates County (MO);Benton County (MO);Buchanan County (MO);Caldwell County (MO);Cass County (MO);Clay County (MO);Clinton County (MO);DeKalb County (MO);Henry County (MO);Holt County (MO);Jackson County (MO);Johnson County (MO);Lafayette County (MO);Livingston County (MO);Nodaway County (MO);Platte County (MO);Ray County (MO);St. Clair County (MO);Vernon County (MO)",
+      "phone": "(816) 659-8263",
+      "email": "veterans@ccharities.com"
+    },
+    {
+      "organization": "Ponca Tribe of Nebraska",
+      "fain": "26-ZZ-478",
+      "states": "IA;NE;SD",
+      "areas_served": "Pottawattamie County (IA);Woodbury County (IA);Boyd County (NE);Burt County (NE);Douglas County (NE);Hall County (NE);Holt County (NE);Knox County (NE);Lancaster County (NE);Madison County (NE);Platte County (NE);Sarpy County (NE);Stanton County (NE);Wayne County (NE);Charles Mix County (SD)",
+      "phone": "(402) 438-9222",
+      "email": "ptnservices@poncatribe-ne.gov"
+    }
+  ]
+}

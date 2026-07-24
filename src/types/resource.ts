@@ -8,9 +8,9 @@ import type { Ionicons } from '@expo/vector-icons';
  * contract every screen, card, map pin, and the trust surfacing depend on. See
  * `docs/obsidian/03 Technical/Resource Data Model.md`.
  *
- * All resources are REAL, ingested from official sources (VA, HRSA, SAMHSA, HUD,
- * USAJOBS, College Scorecard) via `ingestion/`. There is no simulated resource
- * data anywhere in the app.
+ * All resources are REAL, ingested from official and directory sources (VA,
+ * USAJOBS, GI Bill Comparison Tool, LSC, HUD, curated veteran referrals) via
+ * `ingestion/`. There is no simulated resource data anywhere in the app.
  */
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -41,13 +41,16 @@ export type SourceType =
 export type VerificationStatus = 'verified' | 'needs_review' | 'unverified';
 
 /**
- * Why this resource belongs in a veterans' app — the strict inclusion rule.
+ * Why this resource belongs in a veterans' app — the hybrid inclusion rule.
  * `veteran_specific`: exists to serve veterans (VA, Vet Centers, VSOs, GPD/SSVF,
  * DAV, CVSOs). `veteran_benefit`: a place/program that offers a concrete veteran
- * benefit (GI Bill-approved school, veterans' hiring preference). Nothing else is
- * ingested — the app holds only veteran-relevant resources.
+ * benefit (GI Bill-approved school, veterans' hiring preference). `general`:
+ * open to everyone and clearly labeled so — used to backfill categories with no
+ * veteran-specific local coverage (legal aid, housing counseling, food pantries).
+ * Veteran rows always take priority: they fill the per-category result cap first
+ * and win distance ties. Every row must carry one of these labels (DB NOT NULL).
  */
-export type VeteranRelevance = 'veteran_specific' | 'veteran_benefit';
+export type VeteranRelevance = 'veteran_specific' | 'veteran_benefit' | 'general';
 
 export interface Resource {
   id: string;
@@ -71,7 +74,7 @@ export interface Resource {
   documents_needed: string[];
   source_url: string | null;
   source_type: SourceType;
-  /** Why it's in a veterans' app — every resource is one or the other. */
+  /** Why it's in a veterans' app — veteran-first, general clearly labeled. */
   veteran_relevance: VeteranRelevance;
   verification_status: VerificationStatus;
   /** ISO date the info was last confirmed. Stale dates trigger a warning. */

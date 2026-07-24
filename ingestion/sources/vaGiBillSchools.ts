@@ -10,8 +10,11 @@
  * `data[].attributes`). It lists ~33k approved institutions; we keep the ones
  * that are actual schools (`type` public / private / for profit), US-based, and
  * not online-only — excluding OJT (~19k), flight, foreign, and correspondence.
- * The list has full addresses but **no coordinates**, so we place each school at
- * its ZIP centroid (`ingestion/geocode.ts`).
+ * The list has full street addresses but **no coordinates** (and no phone; the
+ * `insturl` website field is often absent from the current payload). Rows are
+ * emitted with null coords + `geocode` address parts; the runner resolves them
+ * to exact coordinates via the Census batch geocoder, and addresses that don't
+ * match stay null — listed, never pinned at an approximate spot.
  *
  * Official → `source_type:'official'` / `verification_status:'verified'`.
  * Shapes verified against a live sample (via `--dry-run`) before any write.
@@ -23,7 +26,6 @@ import type {
   SourceConfig,
   SourceFactory,
 } from '../types.ts';
-import { zipCentroid } from '../geocode.ts';
 
 const PROVIDER = 'va-gi-bill';
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -111,12 +113,11 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
   if (!externalId || !rawName) return null;
 
   const zip = trimOrNull(a.physical_zip) ?? trimOrNull(a.zip);
-  const coords = zipCentroid(zip);
-  if (!coords) return null; // needs a mappable ZIP
-
   const street = trimOrNull(a.physical_address_1) ?? trimOrNull(a.address_1);
   const city = trimOrNull(a.physical_city) ?? trimOrNull(a.city);
   const state = trimOrNull(a.physical_state) ?? trimOrNull(a.state);
+  if (!street && !city) return null; // nothing the geocoder or a veteran can use
+
   const address = [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
     .filter(Boolean)
     .join(', ');
@@ -128,8 +129,10 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
     category: 'education',
     description: describe(a),
     address: address || null,
-    latitude: coords.latitude,
-    longitude: coords.longitude,
+    // Coordinates come from the Census geocoder in the runner; unmatched stays null.
+    latitude: null,
+    longitude: null,
+    geocode: { street, city, state, zip },
     phone: null,
     website,
     hours: null,

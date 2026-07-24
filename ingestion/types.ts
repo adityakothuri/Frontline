@@ -20,6 +20,21 @@ export interface NormalizedResource extends Resource {
   source_provider: string;
   ingested_at: string;
   raw: unknown;
+  /**
+   * Structured address parts for providers that give an address but no
+   * coordinates. The runner resolves these to exact coordinates via the Census
+   * batch geocoder (`censusGeocode.ts`) before upsert; unmatched addresses keep
+   * null coords (listed, never pinned). Stripped before the DB write.
+   */
+  geocode?: AddressParts;
+}
+
+/** Address parts the Census geocoder accepts. */
+export interface AddressParts {
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
 }
 
 /** What the caller wants pulled. A source honors the fields it supports. */

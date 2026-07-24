@@ -23,6 +23,11 @@ import { createVaFacilitiesSource } from './sources/vaFacilities.ts';
 import { createUsaJobsSource } from './sources/usaJobs.ts';
 import { createVaGiBillSchoolsSource } from './sources/vaGiBillSchools.ts';
 import { createCuratedNationalSource } from './sources/curatedNational.ts';
+import { createLscLegalAidSource } from './sources/lscLegalAid.ts';
+import { createHudCounselingSource } from './sources/hudCounseling.ts';
+import { createSsvfProvidersSource } from './sources/ssvfProviders.ts';
+import { createFeedAmericaFoodSource } from './sources/feedAmericaFood.ts';
+import { geocodeResources } from './censusGeocode.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
 
@@ -30,6 +35,9 @@ const root = resolve(import.meta.dirname, '..');
 const VA_SANDBOX_BASE = 'https://sandbox-api.va.gov/services/va_facilities/v1';
 const USAJOBS_BASE = 'https://data.usajobs.gov/api';
 const VA_GIBILL_BASE = 'https://api.va.gov/v0/gi/institutions/search';
+const HUD_HCS_BASE = 'https://data.hud.gov/Housing_Counselor';
+const LSC_BASE =
+  'https://services3.arcgis.com/n7h3cEoHTyNCwjCf/arcgis/rest/services/LSC_offices_grantees_main_branch_(Public)/FeatureServer/0';
 
 /** A registered source: how to build it and how to read its secrets from env. */
 interface SourceDef {
@@ -60,12 +68,44 @@ const SOURCES: Record<string, SourceDef> = {
     // VA GI Bill Comparison Tool institutions API — keyless.
     resolveConfig: () => ({ apiKey: '', baseUrl: process.env.VA_GIBILL_BASE_URL ?? VA_GIBILL_BASE }),
   },
+  'lsc-legal': {
+    factory: createLscLegalAidSource,
+    // LSC's public ArcGIS feature server is keyless. General (hybrid rule).
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.LSC_BASE_URL ?? LSC_BASE,
+    }),
+  },
+  'hud-housing': {
+    factory: createHudCounselingSource,
+    // HUD's housing-counselor locator is public and keyless. General (hybrid rule).
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.HUD_HCS_BASE_URL ?? HUD_HCS_BASE,
+    }),
+  },
   'curated-national': {
     factory: createCuratedNationalSource,
     // Reads a local JSON file of hand-verified national resources (no API).
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: resolve(root, 'ingestion/data/curated-national.json'),
+    }),
+  },
+  'ssvf-providers': {
+    factory: createSsvfProvidersSource,
+    // Reads the converted VA SSVF grantee list (no API — quarterly manual refresh).
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: resolve(root, 'ingestion/data/ssvf-providers.json'),
+    }),
+  },
+  'feed-america': {
+    factory: createFeedAmericaFoodSource,
+    // Open HSDS feed, keyless. PILOT-GATED: run --state XX + spot-check first.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.FEEDAM_BASE_URL ?? 'https://feedam.org/hsds/v3',
     }),
   },
 };
@@ -178,10 +218,18 @@ async function main(): Promise<void> {
 
   const normalized = await source.fetch(query);
   console.log(`[ingest] normalized ${normalized.length} resources`);
-  const { valid, rejected } = validate(normalized);
-  if (rejected > 0) console.warn(`[ingest] rejected ${rejected} invalid row(s)`);
+
+  // Sources with addresses but no provider coordinates (gi-bill) get exact
+  // coords from the Census batch geocoder — cache-backed, so it needs the
+  // service role. Dry runs skip it: rows print with null coords + `geocode`.
+  const needsGeocoding = normalized.some((item) => item.geocode);
+  if (needsGeocoding && dryRun) {
+    console.log('[ingest] dry run — skipping Census geocoding (rows keep null coords).');
+  }
 
   if (dryRun) {
+    const { valid, rejected } = validate(normalized);
+    if (rejected > 0) console.warn(`[ingest] rejected ${rejected} invalid row(s)`);
     console.log('[ingest] sample (first 3):');
     console.log(JSON.stringify(valid.slice(0, 3), null, 2));
     console.log(`[ingest] dry run — no writes. ${valid.length} rows ready to upsert.`);
@@ -197,6 +245,16 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   const admin: AdminConfig = { url, serviceKey };
+
+  if (needsGeocoding) {
+    const { matched, unmatched, fromCache } = await geocodeResources(admin, normalized);
+    console.log(
+      `[ingest] geocoded ${matched} matched / ${unmatched} unmatched (no pin) — ${fromCache} from cache`,
+    );
+  }
+
+  const { valid, rejected } = validate(normalized);
+  if (rejected > 0) console.warn(`[ingest] rejected ${rejected} invalid row(s)`);
 
   if (valid.length === 0) {
     console.log('[ingest] nothing to write.');

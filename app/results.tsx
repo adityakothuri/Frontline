@@ -12,6 +12,7 @@ import {
 } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import { useProfile } from '@/services/profile';
+import { isNationalReferral } from '@/services/resources';
 import { CrisisBanner } from '@/features/resources/CrisisBanner';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { ResourceMap } from '@/features/resources/ResourceMap';
@@ -42,6 +43,16 @@ export default function ResultsScreen() {
   // Selection is shared so the map preview and the list stay in sync across toggles.
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // National veteran help lines get their own strip at the top — a crisis line
+  // has no distance, and letting it sort last (null distance) buries it.
+  const { referrals, locals } = useMemo(() => {
+    const results = state.status === 'ready' ? state.results : [];
+    return {
+      referrals: results.filter((r) => isNationalReferral(r.resource)),
+      locals: results.filter((r) => !isNationalReferral(r.resource)),
+    };
+  }, [state]);
+
   // One-shot cross-layout ease so list⇄map doesn't snap. (No-op on web.)
   const changeView = (next: ResultsView) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -54,8 +65,9 @@ export default function ResultsScreen() {
   const isEmergency = need.category === 'emergency';
 
   // Map view is the whole screen — edge-to-edge under the header, with the toggle
-  // floating over it — so it reads as a real map, not a widget.
-  if (state.status === 'ready' && state.results.length > 0 && view === 'map') {
+  // floating over it — so it reads as a real map, not a widget. Gated on located
+  // results: referral-only results (national help lines) would map to zero pins.
+  if (state.status === 'ready' && locals.length > 0 && view === 'map') {
     return (
       <View style={styles.mapScreen}>
         <Stack.Screen options={{ title: categoryLabel }} />
@@ -121,15 +133,38 @@ export default function ResultsScreen() {
             <AppText variant="body" color="textSecondary">
               {state.results.length} {state.results.length === 1 ? 'resource' : 'resources'}
             </AppText>
-            <ViewToggle value={view} onChange={changeView} />
+            {/* No toggle when nothing is mappable — a map of zero pins is a dead end. */}
+            {locals.length > 0 ? <ViewToggle value={view} onChange={changeView} /> : null}
           </View>
           <FlatList
             style={styles.fill}
-            data={state.results}
+            data={locals}
             keyExtractor={(item) => item.resource.id}
             renderItem={({ item }) => (
               <ResourceCard result={item} needCategory={need.category} />
             )}
+            ListHeaderComponent={
+              referrals.length > 0 ? (
+                <View style={styles.referralSection}>
+                  <AppText variant="label" color="textSecondary" accessibilityRole="header">
+                    National help lines
+                  </AppText>
+                  {referrals.map((item) => (
+                    <ResourceCard key={item.resource.id} result={item} needCategory={need.category} />
+                  ))}
+                  {locals.length > 0 ? (
+                    <AppText
+                      variant="label"
+                      color="textSecondary"
+                      accessibilityRole="header"
+                      style={styles.nearYouLabel}
+                    >
+                      Near you
+                    </AppText>
+                  ) : null}
+                </View>
+              ) : null
+            }
             ListFooterComponent={
               <>
                 <OfficialSourcesWidget category={need.category} />
@@ -176,6 +211,8 @@ const styles = StyleSheet.create({
   },
   fill: { flex: 1 },
   list: { gap: spacing.md, paddingBottom: spacing.xl },
+  referralSection: { gap: spacing.md },
+  nearYouLabel: { marginTop: spacing.sm },
   emptyScroll: { paddingBottom: spacing.xl },
   emptyMsg: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xxl },
   emptyIcon: {

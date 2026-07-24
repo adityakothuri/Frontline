@@ -1,39 +1,105 @@
 # Frontline resource ingestion
 
-Standalone backend tooling that pulls **real, verified** resources from provider
-APIs and upserts them into the live `resources` table — the same data the app
-already reads through the unchanged `ResourceService`. This is **not** part of
-the app bundle (it never ships to a device); it runs like `scripts/seed.ts`.
+Standalone backend tooling that pulls **real** resources from provider APIs and
+upserts them into the live `resources` table — the same data the app already
+reads through the unchanged `ResourceService`. This is **not** part of the app
+bundle (it never ships to a device); it runs like `scripts/seed.ts`.
 
-Sources so far:
-- **VA Lighthouse Facilities API** — official VA health, benefits, and Vet Center
-  locations (→ `healthcare`, `benefits_help`).
-- **USAJOBS API** — official federal job openings, veteran-preference relevant
-  (→ `jobs`). Postings **expire**, so this is a location-scoped snapshot.
+## The hybrid inclusion rule (2026-07-23)
 
-See `docs/obsidian/04 Build Roadmap/Backend to Production Master Plan.md` §WS-7.
+Veteran resources come first, always: veteran rows fill the per-category result
+cap before any general row and win distance ties. Categories with no
+veteran-specific local dataset are backfilled with high-quality **general**
+sources, labeled `veteran_relevance: 'general'` and shown as "Open to everyone"
+in the app. Every row MUST carry a `veteran_relevance`
+(`veteran_specific` / `veteran_benefit` / `general`) — the DB rejects anything
+unlabeled. This supersedes the 2026-07-22 strict veteran-only rule (see
+`docs/obsidian/08 Decisions/Decision Log.md`).
+
+## Sources
+
+| `--source` | Provider | Categories | Relevance | Auth | Cadence |
+|---|---|---|---|---|---|
+| `va-facilities` | VA Lighthouse Facilities API | `healthcare`, `benefits_help`, Vet Centers also cross-listed → `community_support` | veteran_specific | `VA_API_KEY` | monthly |
+| `gi-bill` | VA GI Bill Comparison Tool API | `education` | veteran_benefit | keyless | monthly |
+| `usajobs` | USAJOBS API | `jobs` | veteran_benefit | `USAJOBS_API_KEY` + `USAJOBS_USER_AGENT` | **weekly** + 21-day purge |
+| `lsc-legal` | LSC legal aid offices (ArcGIS) | `legal` | general | keyless | monthly |
+| `hud-housing` | HUD housing counseling locator | `housing` | general | keyless | monthly (21-point national sweep) |
+| `ssvf-providers` | VA SSVF grantee list (converted XLSX → `data/ssvf-providers.json`) | `housing` | veteran_specific | none (local file) | **quarterly, manual** |
+| `curated-national` | Hand-verified veteran hotlines (`data/curated-national.json`) | thin categories | veteran_specific | none (local file) | **quarterly, manual review** |
+| `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | pilot-gated (see below) |
+
+### Geocoding (exact pins or none)
+
+Sources whose provider gives street addresses but no coordinates (GI Bill
+schools) set `geocode` address parts; the runner resolves them through the
+**US Census batch geocoder** (`ingestion/censusGeocode.ts`, keyless), cached in
+the `geocode_cache` table so re-runs don't re-submit. Addresses that don't
+match keep **null coordinates — listed, never pinned** at an approximate spot.
+ZIP-centroid placement was removed on 2026-07-24.
+
+### Trust labels (what the app shows)
+
+- Official APIs (VA, LSC, HUD, USAJOBS): `source_type: 'official'`,
+  `verification_status: 'verified'`, `last_checked` = fetch date. The app
+  renders this as "From official VA/gov data · updated <date>" — the label
+  claims a fresh pull, not a human visit.
+- Hand-maintained lists (`curated-national`, `ssvf-providers`):
+  `last_checked` = the file's real human-review date (`verified_on` /
+  `retrieved_on`), NOT the run date — an unreviewed entry goes stale on
+  schedule (the app warns after 90 days; the freshness gate fails at 120).
+- Aggregators (`feed-america`): `source_type: 'directory'`,
+  `verification_status: 'needs_review'` — the app shows the amber
+  "call ahead" treatment. Aggregator rows must never ship as `verified`.
+
+### Feed America attribution + pilot gate
+
+The food feed is CC BY-SA 4.0 and requires attribution
+("Data from Feed America, feedam.org, EIN 92-1761881") — carried via
+`source_url` and this README. **Rollout is pilot-gated:** run `--state XX
+--dry-run`, hand-spot-check ~20 rows, and get an explicit go-ahead (license +
+DB size — the full feed is ~310k rows) before any national ingest.
 
 ## What it does
 
 1. **Fetch** a source (paginated) — `ingestion/sources/*.ts`.
 2. **Normalize** each record to the `Resource` shape (category mapping,
    coordinate/field sanity, hours → the app's controlled format).
-3. **Validate** (defense-in-depth), then **upsert** idempotently —
+3. **Geocode** (only sources that need it) — Census batch, cache-first.
+4. **Validate** (defense-in-depth), then **upsert** idempotently —
    `ingestion/upsert.ts`. Resources merge on a deterministic id
-   (`va:<facility_id>`); raw provider payloads go to `resource_sources` for
-   lineage. Re-running never duplicates.
+   (`va:<facility_id>`, `gibill:<facility_code>`, …); raw provider payloads go
+   to `resource_sources` for lineage. Re-running never duplicates.
 
-**Trust:** VA is an official API, so its rows are `source_type: 'official'`,
-`verification_status: 'verified'`, with `last_checked` = the fetch date (for an
-official source, the fetch *is* the confirmation). Future non-official sources
-must default to `needs_review`.
+## Scheduled refresh
+
+`.github/workflows/refresh-data.yml` runs `ingestion/refresh.sh`:
+**jobs weekly** (Mondays, + purge of postings not seen in 21 days),
+**places monthly** (1st). After each run, `ingestion/freshnessGate.ts` fails
+the workflow if any source is older than its cadence + slack (jobs 10d,
+places 40d, manual lists 120d), and a failure opens/updates a GitHub issue.
+
+For the cron to actually run: the workflow must be on the **default branch**
+(`main`) and these repo secrets must be set: `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, `VA_API_KEY`, `USAJOBS_API_KEY`,
+`USAJOBS_USER_AGENT`. Verify with a manual `workflow_dispatch` run.
+
+### Quarterly manual refreshes
+
+- **SSVF**: download the current FY "SSVF Provider Intake List" XLSX from
+  <https://department.va.gov/homeless/supportive-services-for-veteran-families/>,
+  regenerate `data/ssvf-providers.json` (organization/FAIN/states/areas/intake
+  phone + email per row, plus `retrieved_on` = download date), re-run
+  `--source ssvf-providers`.
+- **Curated referrals**: re-check each entry in `data/curated-national.json`
+  against its official site, bump its `verified_on`, re-run
+  `--source curated-national`.
 
 ## Prerequisites
 
 - **Node ≥ 22** (uses native TS type-stripping — the repo standard).
 - A **free VA API key**: sign up at <https://developer.va.gov>, request the
-  **VA Facilities API**. A sandbox key is instant; a production key is a short
-  approval. Put it in the git-ignored `.env.seed`:
+  **VA Facilities API**. Put it in the git-ignored `.env.seed`:
 
   ```
   VA_API_KEY=your-key
@@ -51,55 +117,49 @@ must default to `needs_review`.
 
 - For a **live write** (not `--dry-run`), `.env.seed` also needs the real
   `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (Dashboard → Settings → API →
-  reveal). ⚠️ The committed placeholder key must be replaced first.
+  reveal).
 
 ## Usage
 
 ```bash
 # Dry run — fetch + normalize + validate, print a sample, write NOTHING.
-# Verifies the mapping against live data before any DB change.
 node --experimental-strip-types ingestion/run.ts \
   --source va-facilities --state CA --dry-run
 
-# VA — nationwide load (all usable facility types; any ZIP gets real results).
-node --experimental-strip-types ingestion/run.ts \
-  --source va-facilities --national
+# Everything on its normal cadence (what CI runs):
+bash ingestion/refresh.sh places   # VA + GI Bill + curated + LSC + HUD sweep
+bash ingestion/refresh.sh jobs     # USAJOBS metro sweep + 21-day purge
 
-# VA — a single metro (alternative to nationwide).
-node --experimental-strip-types ingestion/run.ts \
-  --source va-facilities --lat 34.05 --long -118.24 --radius 25
-
-# USAJOBS — federal jobs near a place (postings churn, so scope by location).
-node --experimental-strip-types ingestion/run.ts \
-  --source usajobs --location "Dallas, Texas" --radius 50
+# Individual sources:
+node --experimental-strip-types ingestion/run.ts --source gi-bill
+node --experimental-strip-types ingestion/run.ts --source lsc-legal
+node --experimental-strip-types ingestion/run.ts --source hud-housing --lat 40.7 --long -74.0 --radius 500
+node --experimental-strip-types ingestion/run.ts --source ssvf-providers
+node --experimental-strip-types ingestion/run.ts --source feed-america --state TX --dry-run  # pilot only
 ```
 
 ### Flags
 
 | Flag | Meaning | Default |
 |------|---------|---------|
-| `--source` | `va-facilities` or `usajobs` | `va-facilities` |
+| `--source` | one of the sources table above | `va-facilities` |
 | `--national` | VA: pull the whole dataset (no geo filter) | off |
 | `--type` | VA: comma-separated types for `--national` (`health,benefits,vet_center`) | all three |
 | `--lat` / `--long` | search center (both together) | — |
 | `--radius` | miles from the center / location | provider default |
-| `--state` | VA: two-letter state, e.g. `CA` | — |
+| `--state` | two-letter state (VA filter; feed-america pilot filter) | — |
 | `--location` | USAJOBS: place name, e.g. `"Dallas, Texas"` | — |
 | `--keyword` | USAJOBS: free-text filter | — |
-| `--per-page` | page size | VA `100`, USAJOBS `25` |
-| `--max-pages` | page cap (volume bound) | `5` (national `20`, USAJOBS `4`) |
-| `--dry-run` | fetch + normalize only, no writes | off |
-
-**Scope required:** VA needs `--national`, or `--lat`+`--long`, or `--state`.
-USAJOBS needs `--location` (and usually `--radius`).
-
-> **Freshness note:** USAJOBS postings expire (`ApplicationCloseDate`). Re-run
-> periodically; a scheduled re-ingest + purge of closed postings is future work.
+| `--per-page` | page size | per-source default |
+| `--max-pages` | page cap (volume bound) | per-source default |
+| `--dry-run` | fetch + normalize only, no writes (skips geocoding) | off |
 
 ## Adding a source
 
 Create `ingestion/sources/<name>.ts` exporting a `SourceFactory` (see
-`ingestion/types.ts`), map the provider's records to `NormalizedResource`, and
-register it in the `SOURCES` map in `ingestion/run.ts`. Non-official sources
-should set `source_type` to `directory`/`nonprofit` and
-`verification_status: 'needs_review'`.
+`ingestion/types.ts`), map the provider's records to `NormalizedResource` —
+**including a `veteran_relevance`** — and register it in the `SOURCES` map in
+`ingestion/run.ts`. Non-official sources must set `source_type` to
+`directory`/`nonprofit` and `verification_status: 'needs_review'`. If the
+provider has addresses but no coordinates, set `geocode` parts and never
+approximate. Add the provider to `ingestion/freshnessGate.ts` with its cadence.

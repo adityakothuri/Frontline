@@ -30,8 +30,11 @@ export function openNowStatus(isOpenNow: boolean | null): {
   return { label: 'Hours unknown', tone: 'muted' };
 }
 
+// "Official VA/gov data", not "verified by a human" — the label must only
+// claim what the pipeline actually did: pull from that kind of source.
+// Kept short enough to stay one line on a card at caption size.
 const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
-  official: 'Official source',
+  official: 'Official VA/gov data',
   directory: 'Directory listing',
   nonprofit: 'Nonprofit',
   community: 'Community-submitted',
@@ -74,10 +77,12 @@ export function sourceStatus(resource: Resource): { label: string; tone: StatusT
   const stale = isStale(resource.last_checked);
   const verified = resource.verification_status === 'verified' && !stale;
 
+  // "updated", not "checked" — last_checked is the last successful upstream
+  // fetch (or, for curated lists, the real manual-review date), not a visit.
   const base = SOURCE_TYPE_LABEL[resource.source_type];
   const label = stale
     ? `${base} · may be outdated`
-    : `${base} · checked ${formatCheckedDate(resource.last_checked)}`;
+    : `${base} · updated ${formatCheckedDate(resource.last_checked)}`;
 
   return { label, tone: verified ? 'success' : 'warning' };
 }
