@@ -19,6 +19,7 @@ const CADENCE_DAYS: Record<string, number> = {
   'va-gi-bill': 40, // monthly
   'lsc-legal-aid': 40, // monthly
   'hud-housing-counseling': 40, // monthly
+  'feed-america': 40, // monthly (8 veteran-dense states)
   'curated-national': 120, // quarterly manual review (last_checked = verified_on)
   'ssvf-providers': 120, // quarterly manual refresh from the VA FY list
 };

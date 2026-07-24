@@ -65,6 +65,9 @@ refresh_places() {
   log "Veteran national referrals";            $RUN --source curated-national
   log "SSVF providers (from committed JSON)";  $RUN --source ssvf-providers
   log "LSC legal aid (national)";              $RUN --source lsc-legal
+  # Veteran-dense states only (decision 2026-07-24) — national needs a
+  # Supabase tier decision first.
+  log "Feed America food (8 states)";          $RUN --source feed-america --state "TX,FL,CA,VA,NC,GA,AZ,PA"
 
   # HUD locator caps at ~1,329/query, so sweep regional points (CONUS + HI + AK);
   # the idempotent upsert dedups by agency id.

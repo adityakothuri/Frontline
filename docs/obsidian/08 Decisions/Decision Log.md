@@ -603,10 +603,12 @@ Running log of notable product, design, and technical decisions (lightweight ADR
   strip above local results instead of sorting last on a null distance.
 - **Sources:** restored LSC legal aid (854, `legal`) and HUD counseling (~1.3k, `housing`) as
   `general`; added **SSVF grantees** (235, `veteran_specific`, from the VA FY26 XLSX → curated
-  JSON) and **Vet Center cross-listing** into `community_support`; piloted the **Feed America
+  JSON) and **Vet Center cross-listing** into `community_support`; the **Feed America
   HSDS feed** for `food` (aggregator → `directory`/`needs_review`, CC BY-SA attribution,
-  national rollout gated on license sign-off). HRSA/SAMHSA stay out (healthcare already has
-  1,816 VA facilities; 37k general rows would drown the veteran identity).
+  taxonomy-filtered to real food distribution). **Food scope (user, 2026-07-24): 8
+  veteran-dense states** — TX,FL,CA,VA,NC,GA,AZ,PA (~100k rows); national (~310k rows,
+  DB ≳500MB) deferred to a Supabase-tier decision. HRSA/SAMHSA stay out (healthcare already
+  has 1,816 VA facilities; 37k general rows would drown the veteran identity).
 - **Also decided:** GI Bill school pins move from **ZIP centroids to Census-geocoded street
   addresses** (`0015` cache; unmatched = no pin, never approximate); `last_checked` semantics are
   now honest ("From official VA/gov data · updated <date>"; curated lists carry their real
