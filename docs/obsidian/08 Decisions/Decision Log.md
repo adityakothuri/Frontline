@@ -655,6 +655,28 @@ Running log of notable product, design, and technical decisions (lightweight ADR
   not "is the data available." Keeps the app in its niche. See
   [[2026-07-24 Data cycle final audit and hybrid rebuild]].
 
+### 2026-07-24 — Scoped food + real-veteran-legal plan (refines the niche trim)
+- **Status:** accepted (user decision)
+- **Context:** After trimming general data, several categories were too thin to give real benefit.
+  Diagnosis: the data is **bimodal** — 6 categories have strong veteran data (~7,400 real
+  resources), 5 are referral-only. The thin 5 differ: emergency (crisis line) is *correct* thin;
+  legal is fixable with real veteran data; food/clothing have no veteran dataset.
+- **Decisions:**
+  - **Food — scoped general re-add.** Veterans face food insecurity and no veteran-specific food
+    dataset exists, so bring back Feed America (8 states) but **cap to the nearest ~20 general
+    pantries per search** in the client (`DENSE_GENERAL_CAPS`), badged "Open to everyone", veteran
+    food referral always shown. Useful without flooding the veteran feed (the earlier 116k-dominates
+    problem is a display cap, not a purge).
+  - **Legal — enrich with real veteran data.** Ingest the **VA-accredited representatives**
+    directory (attorneys, claims agents, VSO reps — accredited to help veterans with VA claims).
+    It's downloadable only via the VA's browser Excel export (no API/bulk URL), so it follows the
+    **SSVF pattern**: manual export → committed file → adapter, quarterly refresh. Pending the
+    export file.
+  - **Keep all categories.** Thin ones lead with the veteran referral + the AI next-steps layer —
+    the real differentiator vs a generic 211 directory, not raw volume.
+- **Principle:** real veteran data where it exists + a clear next step everywhere. See
+  [[2026-07-24 Data cycle final audit and hybrid rebuild]].
+
 ## Related
 
 [[Technical Architecture]] · [[AI Feature Design]] · [[Non-MVP Ideas]] · [[Frontline Command Center]]
