@@ -1,7 +1,7 @@
 ---
 tags: [command-center, start-here]
 status: active
-phase: "Data cycle FINAL (2026-07-24): hybrid relevance (veteran-first + labeled general), ~17k live rows across every category, Census-geocoded pins, honest trust labels, scheduled refresh with a freshness gate. Remaining: user merges to main + sets 5 secrets; Feed America pilot sign-off; VA-key re-ingest."
+phase: "Data cycle FINAL (2026-07-24): hybrid relevance (veteran-first + labeled general), live rows across every category refreshed 2026-07-24, Census-geocoded pins, honest trust labels, scheduled refresh with a freshness gate (all 5 secrets set, dispatch run green, VA sandbox healthy). Latest: Food+Clothing merged into 'Essentials', HUD general capped like food, data-model docs de-staled. Remaining: merge this branch to main; Feed America pilot sign-off."
 updated: 2026-07-24
 ---
 
@@ -52,12 +52,21 @@ Data integrity clean: 0 unpaired coords, 0 null-island pins, 0 orphans, 0 mislab
 succeeded** (USAJOBS 306→345, purge + freshness gate green). Workflow VA base-URL bug fixed (PR #13,
 was defaulting to sandbox). The cron is real and working.
 
-**⏳ One blocker left — VA key rejected:** the provided `VA_API_KEY` returns **401** on both sandbox
-and production Facilities API (the USAJOBS key from the same paste works). It's expired/revoked/wrong-
-scope. Until a valid VA Facilities key is set (GitHub secret + `.env.seed`), the ~300 Vet Center →
-community_support cross-listings can't load and the monthly `places` cron will fail on VA. The
-existing 2,261 VA rows (2026-07-21) stay live, so the app isn't degraded. See
-[[2026-07-24 Data cycle final audit and hybrid rebuild]] + [[Decision Log]].
+**✅ VA-key blocker RESOLVED (2026-07-24 audit):** the current `VA_API_KEY` is a **sandbox** key and
+works — sandbox returns **200** with the full national public facility set (health 1,399 / benefits
+444 / vet_center 417, matching the live table); only `api.va.gov` (production) 401s, which is expected
+for a sandbox key. VA facility data is public, so sandbox mirrors production — the workflow already
+defaults the base URL to sandbox to match the key (`refresh-data.yml:52`). Confirmed live: **every
+provider (incl. va-facilities) has `last_checked = 2026-07-24`**, all 5 secrets set, last dispatch run
+green. Production data would need a separately-provisioned production key, not required for MVP. See
+[[Decision Log]] "VA Facilities sandbox is the authoritative source".
+
+**🟢 Latest — Data audit + Essentials merge + hardening (2026-07-24).** Audited every data source;
+merged **Food + Clothing → "Essentials"** (need-level, no DB migration), capped general HUD housing to
+nearest ~20 like food (`DENSE_GENERAL_CAPS = { food: 20, housing: 20 }`), and de-staled the
+Resource Data Model doc + ingestion README. `npm run verify` green; qa-tester PASS; ui-reviewer Ship.
+Branch `feature/essentials-merge-data-hardening` — ready to merge. See
+[[2026-07-24 Data audit, Essentials merge, veteran-first hardening]].
 
 **Publishability (release-manager audit):** engineering is strong (clean RLS, env hygiene, green
 CI, honest data). Store-blockers are the usual pre-launch non-code work: no EAS project/`eas.json`,

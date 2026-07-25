@@ -1,7 +1,7 @@
 ---
 tags: [decisions, source-of-truth]
 status: active
-updated: 2026-07-11
+updated: 2026-07-24
 ---
 
 # Decision Log
@@ -24,6 +24,48 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 ```
 
 ---
+
+### 2026-07-24 — Merge Food + Clothing into one "Essentials" need category
+- **Status:** accepted
+- **Context:** Clothing had almost no local dataset (1 national referral) while Food is dense; two
+  near-empty-vs-dense sibling tiles read as uneven. Wanted one coherent "material basics" entry.
+- **Decision:** Merge at the **need level only** — `NeedCategory` goes 12→11, `essentials` replaces
+  `food`+`clothing`, and `needMapping.ts` fans `essentials → ['food','clothing']`. The underlying
+  `ResourceCategory` values `food`/`clothing` stay separate in the DB (no migration, cards keep their
+  distinct Food/Clothing chips for scan granularity). Label "Essentials", `basket-outline`, ochre
+  `#A56E24`.
+- **Alternatives:** a full resource-category merge (destructive DB migration, loses granularity for
+  1 clothing row — rejected); keep them separate (rejected — uneven tiles).
+- **Consequences:** One home tile spanning food + clothing; adding a real clothing dataset later needs
+  no code change (it already maps in). Reuses the existing one-need→many-resource bridge pattern.
+
+### 2026-07-24 — Cap general HUD housing in-app, like food (keep hybrid, don't purge)
+- **Status:** accepted (extends [[2026-07-24 Data cycle final audit and hybrid rebuild]])
+- **Context:** User asked to keep the app veteran-niche without losing volume. Audit showed ~89.5% of
+  rows are `general`, almost all Feeding America food (capped ~20) + HUD housing (1.3k, **uncapped**).
+  Purging general data would collapse Food to ~1 and Housing to ~240.
+- **Decision:** Keep the hybrid model; tighten it. `DENSE_GENERAL_CAPS = { food: 20, housing: 20 }` so
+  general HUD rows are capped to the nearest ~20 like food. `capDenseGeneral` only drops `general`
+  rows, so veteran SSVF/curated housing is never dropped and still ranks first.
+- **Alternatives:** strict veteran-only purge (rejected — guts Food/Housing volume, conflicts with
+  "maintain lots of data"); leave HUD uncapped (rejected — inconsistent with food, general rows could
+  crowd a metro feed).
+- **Consequences:** Housing feed stays veteran-first with a bounded general backfill. No off-niche
+  data exists beyond these two deliberately-kept, capped, labeled datasets.
+
+### 2026-07-24 — VA Facilities sandbox is the authoritative source (don't "upgrade" to production)
+- **Status:** accepted
+- **Context:** An audit note assumed "sandbox = limited data" and proposed switching VA to production.
+  Verified live: the free `VA_API_KEY` is **sandbox-scoped** (`api.va.gov` returns 401), and the
+  sandbox returns the **full national public facility set** (health 1,399 / benefits 444 /
+  vet_center 417 — matches the live table; all VA rows refreshed 2026-07-24).
+- **Decision:** Keep the sandbox host as the default (the workflow already defaults there to match the
+  key, `refresh-data.yml:52`). Document that VA facility data is public so sandbox mirrors production —
+  switching to `api.va.gov` requires a separately-provisioned production key or ingestion breaks. This
+  also resolves the stale "VA key rejected (401)" blocker in the Command Center.
+- **Alternatives:** flip the default to production (rejected — 401s with the current key, breaks the
+  cron).
+- **Consequences:** VA ingestion is healthy and complete on sandbox; no production key needed for MVP.
 
 ### 2026-07-21 — All AI tasks on Haiku (speed over the Opus cost-split)
 - **Status:** accepted (secrets set + `ai` redeployed; env-reversible)
