@@ -124,7 +124,7 @@ values in `.env`. Full run instructions, per-platform notes, and troubleshooting
 | `typecheck` | `tsc --noEmit` |
 | `lint` / `format` / `format:check` | ESLint · Prettier write · Prettier check |
 | `test` / `test:watch` | Vitest unit tests |
-| `verify` | typecheck + lint + format-check — run before every PR (also what CI runs) |
+| `verify` | typecheck + lint — run before every PR (also what CI runs) |
 
 ## Development workflow
 

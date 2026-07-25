@@ -1,8 +1,7 @@
 name: CI
 
-# Lightweight verification. Runs on PRs and on pushes to main/dev.
-# It gracefully no-ops until the app is scaffolded (no package.json yet),
-# so early PRs pass. No production/EAS builds, and no secrets required.
+# Verification for every PR and push to main/dev: typecheck, lint, and unit
+# tests. No production/EAS builds, and no secrets required.
 
 on:
   push:
@@ -20,50 +19,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect app
-        id: app
-        run: |
-          if [ -f package.json ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "No package.json yet — the app is not scaffolded. Skipping JS/TS checks."
-          fi
-
       - name: Setup Node
-        if: steps.app.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies
-        if: steps.app.outputs.exists == 'true'
-        # npm ci needs a lockfile; fall back to install if there isn't one yet.
-        run: npm ci || npm install
+        run: npm ci
 
-      - name: Run checks (verify, else typecheck/lint/test that exist)
-        if: steps.app.outputs.exists == 'true'
-        run: |
-          set -e
-          has() { node -e "process.exit(((require('./package.json').scripts)||{})['$1']?0:1)"; }
-          is_placeholder_test() {
-            node -e "const t=((require('./package.json').scripts)||{}).test||''; process.exit(/no test specified|exit 1|Error:/i.test(t)?0:1)"
-          }
-          if has verify; then
-            echo '== npm run verify =='
-            npm run verify
-          else
-            ran=0
-            if has typecheck; then echo '== npm run typecheck =='; npm run typecheck; ran=1; fi
-            if has lint; then echo '== npm run lint =='; npm run lint; ran=1; fi
-            if has test; then
-              if is_placeholder_test; then
-                echo 'test script is a placeholder — skipping'
-              else
-                echo '== npm test =='; npm test; ran=1
-              fi
-            fi
-            if [ "$ran" -eq 0 ]; then
-              echo 'No verify/typecheck/lint/test scripts found yet — nothing to check.'
-            fi
-          fi
+      - name: Verify (typecheck + lint)
+        run: npm run verify
+
+      - name: Test
+        run: npm test

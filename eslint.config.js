@@ -24,4 +24,13 @@ module.exports = defineConfig([
       'supabase/functions/**',
     ],
   },
+  {
+    // Extra TypeScript strictness on top of Expo's defaults: the codebase is
+    // deliberately `any`-free, so enforce it (and no empty catch blocks).
+    files: ['**/*.ts', '**/*.tsx'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      'no-empty': ['error', { allowEmptyCatch: false }],
+    },
+  },
 ]);
