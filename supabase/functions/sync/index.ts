@@ -10,16 +10,37 @@
  *   -> { ok: true } (writes older than the stored updated_at are ignored — a
  *      reinstall's empty local state can never clobber good backup data).
  *
- * Errors: 400 malformed, 401 bad key, 405 method, 429 rate-limited, 500 db.
+ * Errors: 400 malformed, 401 bad key, 405 method, 413 too large, 429
+ * rate-limited, 500 db.
  */
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const RATE_LIMIT_PER_HOUR = 120;
 
+// Bounds on backup blobs so a caller can't write unbounded rows to the
+// deny-all backup tables. A real saved list is dozens of items; a profile is a
+// few hundred bytes. These ceilings are generous but finite (rejected with 413).
+const MAX_SAVED_ENTRIES = 2_000;
+const MAX_SAVED_BYTES = 256_000;
+const MAX_PROFILE_BYTES = 32_000;
+
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Caller IP for rate-limiting — the RIGHT-most `x-forwarded-for` hop (appended
+ * by the trusted platform proxy). The left-most value is client-supplied and
+ * trivially spoofable, which would defeat the limiter.
+ */
+function clientIp(request: Request): string {
+  const parts = (request.headers.get('x-forwarded-for') ?? '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.at(-1) ?? 'unknown';
+}
 
 /** Service-role REST helper against PostgREST. */
 async function pg(path: string, init: RequestInit): Promise<Response> {
@@ -36,8 +57,7 @@ async function pg(path: string, init: RequestInit): Promise<Response> {
 
 async function rateLimited(request: Request): Promise<boolean> {
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`sync:${ip}`));
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`sync:${clientIp(request)}`));
     const ipHash = Array.from(new Uint8Array(digest))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
@@ -79,7 +99,12 @@ async function upsertIfNewer(
 }
 
 Deno.serve(async (request) => {
-  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'POST only' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', Allow: 'POST' },
+    });
+  }
 
   // verify_jwt is off (publishable anon keys aren't JWTs); gate on the anon key.
   const expectedKey = Deno.env.get('SUPABASE_ANON_KEY');
@@ -120,12 +145,18 @@ Deno.serve(async (request) => {
       if (!Array.isArray(body.entries) || typeof body.updatedAt !== 'string') {
         return json({ error: 'entries[] and updatedAt required' }, 400);
       }
+      if (body.entries.length > MAX_SAVED_ENTRIES || JSON.stringify(body.entries).length > MAX_SAVED_BYTES) {
+        return json({ error: 'Saved list too large' }, 413);
+      }
       return await upsertIfNewer('saved_backups', deviceId, 'entries', body.entries, body.updatedAt);
     }
 
     if (body.action === 'pushProfile') {
       if (typeof body.profile !== 'object' || body.profile === null || typeof body.updatedAt !== 'string') {
         return json({ error: 'profile and updatedAt required' }, 400);
+      }
+      if (JSON.stringify(body.profile).length > MAX_PROFILE_BYTES) {
+        return json({ error: 'Profile too large' }, 413);
       }
       return await upsertIfNewer('profile_backups', deviceId, 'profile', body.profile, body.updatedAt);
     }

@@ -35,7 +35,9 @@ acknowledge and work on a fix before any public disclosure.
 - The veteran **profile is optional** and used only to personalize results — never to gatekeep.
 - Location: prefer **ZIP entry**; if using device location, ask clearly and allow ZIP instead.
   Don't store precise location beyond the session.
-- MVP profile/saved data lives **on-device** — no account, no server, no tracking.
+- Profile/saved data lives **on-device** by default. Optional cross-device backup is **anonymous**:
+  it is keyed by a random on-device UUID (no account, no email, no tracking) and stored in
+  deny-all tables reachable only through the `sync` Edge Function.
 
 ## AI safety
 
@@ -43,6 +45,33 @@ acknowledge and work on a fix before any public disclosure.
   advice**. Eligibility language stays hedged ("you *may* qualify… confirm with the official
   source"), and every AI surface is labeled.
 - Frontline is a **navigator, not the VA / a government agency**, and must say so.
+
+## Backend security posture
+
+- **Row-Level Security is deny-by-default on every table.** `resources` and `zip_centroids` expose
+  read-only `select` to `anon` (with `insert/update/delete` revoked); every other table
+  (`saved_backups`, `profile_backups`, `rate_limits`, `ai_spend`, `resource_sources`,
+  `resource_votes`, `geocode_cache`) is service-role-only with explicit deny-all policies.
+- **No dynamic SQL.** All RPCs are parameterized SQL/PLpgSQL; every `SECURITY DEFINER` function pins
+  `search_path = public`. The `sync` function validates `deviceId` against a UUID regex before it is
+  ever interpolated into a PostgREST path.
+- **Edge-function auth model (accepted, documented risk).** `ai` and `sync` run with `verify_jwt`
+  off and gate on the project's **publishable anon key**, which is public by design (it ships in the
+  app). This is inherent to a no-account architecture. The controls that matter are therefore:
+  - **AI cost** — a per-IP rate limit (using the trusted right-most `x-forwarded-for` hop, not the
+    spoofable left-most one) plus a **global hourly spend budget**. Both are intentionally
+    *fail-open* (a database blip must never take AI down), so the **Anthropic console spend cap is
+    the load-bearing hard backstop** — keep it set.
+  - **Input abuse** — both functions bound caller-supplied payload size (AI prompt input, and the
+    `sync` saved/profile blobs) and reject oversized requests with `413` before doing work.
+  - **Sync confidentiality** — backups are readable only with the exact device UUID (unguessable),
+    and the monotonic `updated_at` write path means a stale/empty push can't clobber good data.
+- **Known limitation.** Community "found this helpful" votes take the `device_id` from the caller, so
+  the aggregate is trustworthy only for honest clients; robust anti-ballot-stuffing would require a
+  signed per-device token (out of scope for the no-account MVP) and the count is treated as a soft
+  signal accordingly.
+- **Secrets & logs.** The Anthropic key lives only in Edge Function secrets; the service-role key is
+  never in the app; functions log `error.message` only — never full errors, payloads, or keys.
 
 ## Sensitive changes need extra review
 
