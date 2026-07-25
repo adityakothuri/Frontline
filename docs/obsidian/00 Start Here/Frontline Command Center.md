@@ -36,7 +36,18 @@ engineering (EAS, Android Maps key, store assets).
 
 ## Current Active Task
 
-**🟢 Latest — Final professionalism audit + consolidation to `main` (2026-07-25).** Three expert
+**🟢 Latest — Beautiful upgrade: per-category visual identity (2026-07-25), branch
+`feature/beautiful-category-identity`.** Turned the under-used category colors into a real identity
+system: a shared `categoryVisual` helper + `CategoryMedallion`, medallion-led resource cards with a
+whisper category tint, a category-colored **detail hero** so each resource type opens distinctly, a
+warm olive-washed **Home hero**, category-hued Discover chips, warmer empty states, an "intelligent"
+AI block, and shadowed map pins. Category color is a semantic layer — **olive stays the one action
+color**; no side-rails (design-rule ban); AA contrast held. Dependency-free (`surfaceTint` solid tints
+instead of a native gradient module). `npm run verify` + `npm test` (35) green; validated on the iOS
+sim (distinct healthcare/legal heroes, color-coded lists). See
+[[2026-07-25 Beautiful upgrade — per-category identity + warm depth]].
+
+**🟢 Final professionalism audit + consolidation to `main` (2026-07-25).** Three expert
 sweeps (frontend/backend/ingestion) confirmed senior-level code; fixed what a judge docks points for.
 **Merged all 3 outstanding branches into `main`** (union-resolved the doc conflicts). **Docs:** rewrote
 the README to the real live-data + real-AI system, scrubbed stale/contradicting docs. **Tests:** added
