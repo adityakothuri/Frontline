@@ -36,7 +36,11 @@ const toResult = (row: SearchRow, now: Date): ResourceSearchResult => ({
 // can't flood a search or the map. It's the NEAREST N per category, so a veteran
 // still sees plenty of local options; the map stays balanced and fast. A focused
 // search can show a few more than a browse-everything map.
-const SEARCH_PER_CATEGORY_LIMIT = 50;
+// A focused single-category search (e.g. tapping Legal) should show ALL
+// resources within the radius, not an arbitrary slice — the radius is the
+// bound. 100 is a safety ceiling for pathological dense metros; browse-all
+// stays lower so the interleaved feed doesn't fetch everything at once.
+const SEARCH_PER_CATEGORY_LIMIT = 100;
 const BROWSE_PER_CATEGORY_LIMIT = 30;
 
 // A few categories are dense general (open-to-everyone) data — food pantries —

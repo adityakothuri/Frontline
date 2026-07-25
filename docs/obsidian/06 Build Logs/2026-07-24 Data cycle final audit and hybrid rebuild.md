@@ -234,6 +234,27 @@ food/clothing have no veteran dataset).
   adapter). Awaiting the export file from the user.
 - **Keep all categories**, lean on the AI next-steps layer for thin ones.
 
+## VSO reps for legal + strict radius + statewide section (2026-07-24)
+
+- **Legal = real veteran data.** Ingested VA-accredited **VSO representatives**
+  (7,759 placeable of ~8.7k) as `legal`/`veteran_specific` — free VA-claims help
+  — from the VA accreditation export (HTML → committed JSON → adapter, ZIP-
+  centroid placement; the list has no street address). Legal search now returns
+  VSO reps within radius (e.g. Austin: "VSO Rep — Kathleen Corwin" 0.0 mi).
+  Search per-category cap raised to 100 so "all within radius" isn't truncated.
+- **Strict radius.** Every located result is now strictly within the search
+  radius; rows with an address but no coords (un-geocoded schools/jobs) are also
+  dropped. RPC migrations 0019→0021 — final form splits located-vs-referral so
+  each uses its index (the intermediate all-rows CTE timed out on 7.7k legal
+  rows; fixed, all categories now 0.2–0.5 s).
+- **Statewide & national veteran section.** No-pinpoint veteran resources (SSVF,
+  crisis/benefit hotlines) are kept and shown in a separate labeled section
+  below local results — never mixed in as "nearby". SSVF is state-filtered via
+  `state:XX` tags + `src/lib/zipState.ts` (ZIP→state), so a TX veteran sees the
+  10 TX SSVF providers, not out-of-state ones. Verified in-app: legal + housing
+  render correctly, count accurate (housing 17, not the raw 242), 0 console
+  errors.
+
 ## Status: data cycle CLOSED ✅
 
 All shipped to `main` (PRs #9/#11/#12/#13/#14); all 5 secrets set; both cron
