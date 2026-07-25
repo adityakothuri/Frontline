@@ -37,7 +37,7 @@ export const SOURCE_TRUST_COLORS: Record<SourceTrust, string> = {
 };
 
 const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
-  food: [
+  essentials: [
     {
       title: 'SNAP food assistance (food stamps)',
       sourceName: 'USDA · FNS',
@@ -53,15 +53,6 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       trust: 'nonprofit',
     },
     {
-      title: 'Food & everyday essentials help',
-      sourceName: '211 · United Way',
-      description: 'Free, confidential help finding food, meals, and other basics in your area.',
-      url: 'https://www.211.org/',
-      trust: 'nonprofit',
-    },
-  ],
-  clothing: [
-    {
       title: 'Free & low-cost clothing',
       sourceName: 'Goodwill',
       description: 'Locate nearby Goodwill stores and community assistance programs.',
@@ -76,9 +67,9 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       trust: 'nonprofit',
     },
     {
-      title: 'Clothing & basic-needs referrals',
+      title: 'Food, clothing & everyday basics',
       sourceName: '211 · United Way',
-      description: 'Get connected to clothing closets and essential-item programs nearby.',
+      description: 'Free, confidential help finding food, meals, clothing, and other basics nearby.',
       url: 'https://www.211.org/',
       trust: 'nonprofit',
     },

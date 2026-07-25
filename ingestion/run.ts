@@ -32,6 +32,12 @@ import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
 
 const root = resolve(import.meta.dirname, '..');
+// VA Facilities is a PUBLIC dataset, so the sandbox host mirrors real production
+// facility data — it is NOT a truncated demo. Verified 2026-07-24: sandbox returns
+// the full national set (health 1,399, benefits 444, vet_center 417), matching the
+// live table. The free developer.va.gov key is sandbox-scoped (production 401s), so
+// sandbox is the correct, complete source here — do not "upgrade" the default to
+// api.va.gov without first provisioning a production key, or ingestion will break.
 const VA_SANDBOX_BASE = 'https://sandbox-api.va.gov/services/va_facilities/v1';
 const USAJOBS_BASE = 'https://data.usajobs.gov/api';
 const VA_GIBILL_BASE = 'https://api.va.gov/v0/gi/institutions/search';

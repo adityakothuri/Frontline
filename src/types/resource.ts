@@ -15,7 +15,8 @@ import type { Ionicons } from '@expo/vector-icons';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
-/** What a resource offers. Distinct from the 12 user-facing need categories. */
+/** What a resource offers. Distinct from the user-facing need categories (food +
+ * clothing here map up to the single "essentials" need — see needMapping.ts). */
 export type ResourceCategory =
   | 'food'
   | 'clothing'

@@ -8,10 +8,9 @@ import type { Ionicons } from '@expo/vector-icons';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
-/** The 12 user-facing need categories shown on the home grid. */
+/** The 11 user-facing need categories shown on the home grid. */
 export type NeedCategory =
-  | 'food'
-  | 'clothing'
+  | 'essentials'
   | 'housing'
   | 'healthcare'
   | 'disability_benefits'
@@ -68,14 +67,13 @@ export interface NeedCategoryMeta {
 }
 
 /**
- * Display metadata for the 12 need categories — one source of truth for the home grid.
+ * Display metadata for the 11 need categories — one source of truth for the home grid.
  * Category colors stay inside the app's olive/earth family (olives, sages, ochres,
  * warm browns) so category-coded UI reads as one palette; emergency alone leans
  * rust-red. Keep in sync with RESOURCE_CATEGORY_META in `types/resource.ts`.
  */
 export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
-  food: { label: 'Food', icon: 'fast-food-outline', description: 'Meals, pantries, and SNAP help', color: '#A56E24' },
-  clothing: { label: 'Clothing', icon: 'shirt-outline', description: 'Free and low-cost clothing', color: '#8A6A48' },
+  essentials: { label: 'Essentials', icon: 'basket-outline', description: 'Food, clothing, and everyday basics', color: '#A56E24' },
   housing: { label: 'Housing', icon: 'home-outline', description: 'Shelter, rent, and homeless services', color: '#5F7326' },
   healthcare: { label: 'Healthcare', icon: 'medkit-outline', description: 'Clinics, mental health, and VA care', color: '#4E7D5B' },
   disability_benefits: { label: 'Disability benefits', icon: 'ribbon-outline', description: 'Claims, ratings, and compensation', color: '#77804C' },
@@ -90,8 +88,7 @@ export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
 
 /** Stable display order for the home grid. */
 export const NEED_CATEGORIES: NeedCategory[] = [
-  'food',
-  'clothing',
+  'essentials',
   'housing',
   'healthcare',
   'disability_benefits',
