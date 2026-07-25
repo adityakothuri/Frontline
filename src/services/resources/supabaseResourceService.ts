@@ -43,12 +43,14 @@ const toResult = (row: SearchRow, now: Date): ResourceSearchResult => ({
 const SEARCH_PER_CATEGORY_LIMIT = 100;
 const BROWSE_PER_CATEGORY_LIMIT = 30;
 
-// A few categories are dense general (open-to-everyone) data — food pantries —
-// where veterans have no veteran-specific dataset. Cap them to the nearest N so
-// a veteran-focused feed never fills with them; veteran categories are
-// uncapped here and keep the full per-category limit above. Applied AFTER the
-// distance sort, so it keeps the nearest ones.
-const DENSE_GENERAL_CAPS: Partial<Record<ResourceCategory, number>> = { food: 20 };
+// A few categories carry dense general (open-to-everyone) data where veterans
+// have no veteran-specific dataset — food pantries (Feeding America) and general
+// housing counseling (HUD). Cap them to the nearest N so a veteran-focused feed
+// never fills with them; the veteran-specific rows in the same category (e.g. SSVF
+// housing) are labeled `veteran_specific`/`veteran_benefit`, so capDenseGeneral
+// leaves them untouched and they keep the full per-category limit above. Applied
+// AFTER the distance sort, so it keeps the nearest ones.
+const DENSE_GENERAL_CAPS: Partial<Record<ResourceCategory, number>> = { food: 20, housing: 20 };
 
 function capDenseGeneral(results: ResourceSearchResult[]): ResourceSearchResult[] {
   const counts = new Map<string, number>();

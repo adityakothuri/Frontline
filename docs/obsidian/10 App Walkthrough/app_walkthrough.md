@@ -512,6 +512,36 @@ New source → `ingestion/README.md` "Adding a source": adapter + `veteran_relev
 add to `freshnessGate.ts` with a cadence. Providers with addresses but no coords set `geocode`
 parts — never approximate.
 
+## "Essentials" category + tighter general-data caps (2026-07-24)
+
+### Why it exists
+Food and Clothing were two separate home tiles, but Clothing has almost no local data (one national
+referral) while Food is dense — an uneven pair. They were merged into one **Essentials** tile
+("Food, clothing, and everyday basics"). Separately, the audit found HUD housing was the one
+`general` dataset not capped in-app, so it could crowd a metro housing feed.
+
+### Where the code lives
+- **Merge is need-level only.** `src/types/need.ts` — `NeedCategory` is now 11 (`essentials` replaces
+  `food`+`clothing`) with a single `NEED_CATEGORY_META` entry (`basket-outline`, ochre `#A56E24`).
+  `src/services/resources/needMapping.ts` fans `essentials → ['food','clothing']` and maps both
+  resource categories back to `essentials`. The **`ResourceCategory`** values `food`/`clothing` are
+  unchanged in `src/types/resource.ts` and the DB — so resource cards keep their distinct Food/Clothing
+  chips, and no migration was needed.
+- `src/data/officialSources.ts` — one merged `essentials` link block (SNAP, Feeding America, Goodwill,
+  Salvation Army, 211), de-duped. `src/features/discover/CategoryShells.tsx` — one Essentials shell.
+
+### How data flows
+A veteran taps **Essentials** → `needToResourceCategories` returns `['food','clothing']` →
+`search_resources` RPC returns both → client sorts nearest-first with veteran rows first →
+`capDenseGeneral` trims general rows to the nearest N. The general caps now live in
+`supabaseResourceService.ts` as `DENSE_GENERAL_CAPS = { food: 20, housing: 20 }`; the cap only drops
+rows with `veteran_relevance === 'general'`, so veteran SSVF/curated housing and the veteran food
+referral are never dropped.
+
+### What's mock vs production
+Nothing is mocked. Clothing currently resolves to one national referral until a real clothing dataset
+is ingested — which needs **no code change** (it already maps into `essentials`).
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:

@@ -6,15 +6,14 @@ import type { NeedCategory } from '@/types/need';
 
 // The Discover shell row. A curated handful of the most-common needs, plus two
 // sentinels: `all` (browse everything) and `other` (open the full category list).
-export type ShellId = 'all' | 'food' | 'clothes' | 'va' | 'jobs' | 'other';
+export type ShellId = 'all' | 'essentials' | 'va' | 'jobs' | 'other';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 type Shell = { id: ShellId; label: string; icon: IconName; category?: NeedCategory };
 
 const SHELLS: Shell[] = [
   { id: 'all', label: 'All', icon: 'apps-outline' },
-  { id: 'food', label: 'Food', icon: 'fast-food-outline', category: 'food' },
-  { id: 'clothes', label: 'Clothes', icon: 'shirt-outline', category: 'clothing' },
+  { id: 'essentials', label: 'Essentials', icon: 'basket-outline', category: 'essentials' },
   { id: 'va', label: 'VA Help', icon: 'document-text-outline', category: 'general_benefits' },
   { id: 'jobs', label: 'Employment', icon: 'briefcase-outline', category: 'jobs' },
   { id: 'other', label: 'Other', icon: 'ellipsis-horizontal' },
