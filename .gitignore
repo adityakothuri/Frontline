@@ -2,6 +2,11 @@
 # If you want to share MCP setup with a team, commit a key-less template instead.
 .mcp.json
 
+# Skill store — installer-populated (like node_modules). The .claude/skills/
+# symlinks point here; restore with `npx skills add …` (see SKILLS.md). Never
+# vendor it into the repo.
+.agents/
+
 # Env / secrets — only public EXPO_PUBLIC_* keys ever belong in the app bundle.
 # Service-role / backend secrets must live on a backend, never in app source.
 # (.env.example is intentionally NOT ignored — it holds placeholders only.)
