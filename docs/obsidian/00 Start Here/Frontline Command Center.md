@@ -36,7 +36,18 @@ engineering (EAS, Android Maps key, store assets).
 
 ## Current Active Task
 
-**🟢 Latest — Extreme final frontend audit (2026-07-24), branch `feature/frontend-audit-see-in-map`.**
+**🟢 Latest — Final professionalism audit + consolidation to `main` (2026-07-25).** Three expert
+sweeps (frontend/backend/ingestion) confirmed senior-level code; fixed what a judge docks points for.
+**Merged all 3 outstanding branches into `main`** (union-resolved the doc conflicts). **Docs:** rewrote
+the README to the real live-data + real-AI system, scrubbed stale/contradicting docs. **Tests:** added
+a Vitest suite (35 unit tests) + wired CI (Node 22). **Security (deployed):** edge functions now
+rate-limit on the trusted `x-forwarded-for` hop, cap caller payloads (→413), and set `Allow: POST`;
+`SECURITY.md` documents the anon-key model + accepted risks. **Tooling:** package.json metadata,
+`engines`, `.nvmrc`, `.editorconfig`, stricter ESLint. `npm run verify` + `npm test` green; edge
+re-smoke-tested (200/405/413); app re-verified on the sim. See
+[[2026-07-25 Final professionalism audit — consolidate, docs, tests, security]].
+
+**🟢 Extreme final frontend audit (2026-07-24), branch `feature/frontend-audit-see-in-map`.**
 Disciplined design system confirmed; this was targeted hardening + one feature. Shipped: (1) **"See in
 map" on every opportunity** — a reusable `SeeInMapButton`, enabled when a resource has coordinates,
 **struck-through "Not on map" + disabled** otherwise; context-aware (Results focuses the pin in-place,

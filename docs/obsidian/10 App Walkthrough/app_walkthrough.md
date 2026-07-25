@@ -577,6 +577,26 @@ magic numbers). `typography.ts` adds `displayLarge` (onboarding hero titles); `c
 ### What's mock vs production
 Nothing mock. All verified on an iOS simulator (cards, struck off-map state, map focus + preview).
 
+## Tests + security hardening (2026-07-25)
+
+### Why it exists
+A final professionalism pass. The app had no automated tests and the edge functions had a couple of
+security gaps a reviewer would flag.
+
+### Where the code lives
+- **Tests** — `vitest.config.ts` + co-located `*.test.ts` (35 tests) over the pure logic: `src/lib/geo`,
+  `src/lib/hours`, `src/features/resources/resourceStatus`, `src/services/resources/sortResults` +
+  `needMapping`. A shared `src/test/factories.ts` builds `Resource`/result fixtures. `npm test`
+  (Vitest) also runs in CI.
+- **Edge-function hardening** — `supabase/functions/ai` + `sync`: rate-limiting now hashes the
+  **right-most** `x-forwarded-for` hop (the trusted one), caller payloads are size-capped (→ 413), and
+  405s carry `Allow: POST`. The threat model (anon-key gate, Anthropic-console backstop, accepted
+  risks) is written up in `SECURITY.md`. Both functions were redeployed and re-smoke-tested live.
+
+### What's mock vs production
+Nothing mock. Tests exercise real pure functions; the security changes are deployed to the live
+Supabase project.
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:

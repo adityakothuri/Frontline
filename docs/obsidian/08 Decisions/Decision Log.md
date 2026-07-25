@@ -25,6 +25,20 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 
 ---
 
+### 2026-07-25 — Final professionalism audit: consolidate to main, tests, security hardening
+- **Status:** accepted
+- **Context:** Submitting to a professionalism competition. Three expert sweeps found the code
+  senior-level but the *repo* let it down: stale docs, no tests, edge-function security gaps, thin
+  metadata. The app also lived across `main` + 3 unmerged branches.
+- **Decision:** Merged all branches into `main` (union-resolved the append-only Obsidian docs); added
+  a Vitest unit suite (35 tests); rewrote the README + fixed every stale/contradicting doc; hardened
+  the edge functions (trusted-hop IP, payload caps, `Allow` header) and deployed them; added repo
+  metadata/tooling. Documented the anon-key auth model + vote-integrity limit as **accepted risks**
+  in `SECURITY.md` rather than shipping security theater; kept `verify` as typecheck+lint (not a
+  93-file Prettier reformat) with `format:check` available.
+- **Consequences:** `main` is the complete, polished submission; CI runs tests on Node 22. Deferred:
+  EAS/Android-Maps release setup, and a stronger AI auth gate (needs a product decision).
+
 ### 2026-07-24 — Merge Food + Clothing into one "Essentials" need category
 - **Status:** accepted
 - **Context:** Clothing had almost no local dataset (1 national referral) while Food is dense; two
