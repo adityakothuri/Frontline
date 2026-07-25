@@ -304,6 +304,8 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    // A soft ground shadow so pins read as lifted cartography, not flat stickers.
+    ...shadows.sm,
   },
   zoomWrap: {
     borderRadius: radii.md,
