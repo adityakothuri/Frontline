@@ -47,6 +47,17 @@ PASS; ui-reviewer Ship; **verified on an iOS sim** (cards, struck off-map state,
 Ready to PR (independent of the Essentials branch). See
 [[2026-07-24 Frontend audit — See in map, overlap fixes, design tokens]].
 
+**🟢 Repo-setup audit + inference verified live (2026-07-24), branch `chore/repo-setup-audit`.**
+Audited the dev infrastructure (3 sweeps): CI runs typecheck+lint on PRs, the quality hook works,
+`.gitignore` is clean, deps aligned. **Fixed:** restored the broken skill store (`.agents/` was
+un-ignored + unpopulated → 16 dangling symlinks; agent-referenced `react-native-best-practices` +
+`github-actions` now resolve; `.agents/` gitignored) and the stale `.env.example` offline-mode wording.
+**Deferred (recs):** EAS config, Android Maps key, test framework, secret rotation, Node pinning.
+**Small inference smoke test PASSED** — a Haiku `summary` call to the deployed `ai` function returned
+HTTP 200 + a valid BenefitSummary (full client→function→Anthropic chain proven). Pending frontend work
+committed + pushed (`feature/frontend-audit-see-in-map`); infra fixes on `chore/repo-setup-audit`. See
+[[2026-07-24 Repo-setup audit + small inference smoke test]].
+
 **🟢 Data cycle FINAL — shipped to `main` + app verified (2026-07-24).** All work merged
 (PRs #9/#11/#12); `npm run verify` + CI green; live DB **134,336 rows**, 198 MB. Pillars:
 **(1) veteran-centric** — hybrid rule (veteran rows fill the search cap first + win ties;
