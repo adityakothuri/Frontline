@@ -5,8 +5,9 @@
  * -> the exact NextStepPlan / CallScript / BenefitSummary shape from
  *    src/services/ai/AiService.ts (client re-stamps the disclaimer).
  *
- * Errors: 400 malformed, 405 method, 429 rate-limited, 502 upstream/shape
- * failure — the client falls back to its templated AiService on any of them.
+ * Errors: 400 malformed, 401 unauthorized, 405 method, 413 payload too large,
+ * 429 rate-limited/over-budget, 502 upstream/shape failure — the client surfaces
+ * an error/retry state (there is no templated fallback).
  */
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import {
@@ -19,7 +20,27 @@ import {
 
 const RATE_LIMIT_PER_HOUR = 30;
 
+// Upper bound on caller-supplied prompt input (resource + need, serialized).
+// A real resource is ~1 KB and a need ~0.5 KB; 20k chars is generous headroom
+// while stopping a caller from inflating input tokens (hence cost) with a giant
+// blob. Rejected with 413 before the model is ever called.
+const MAX_INPUT_CHARS = 20_000;
+
 const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+
+/**
+ * The caller's IP for rate-limiting. `x-forwarded-for` is `client, proxy1, …`;
+ * the LEFT-most value is client-supplied and trivially spoofable (a fresh value
+ * per request would defeat the limiter), so use the RIGHT-most hop — the one
+ * appended by the trusted platform proxy.
+ */
+function clientIp(request: Request): string {
+  const parts = (request.headers.get('x-forwarded-for') ?? '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.at(-1) ?? 'unknown';
+}
 
 // Per-task model selection to control cost. Summaries auto-load on every
 // resource open, so they run on cheap Haiku; plans and call scripts are richer,
@@ -40,9 +61,8 @@ const TASK_MODELS: Record<AiTask, string> = {
 const supportsEffortControls = (model: string): boolean => !model.includes('haiku');
 
 // Global hourly spend cap (USD, all callers combined). Soft app-level guard:
-// at the limit we 429 and the client degrades to templated AI. The hard
-// backstop is the spend cap in the Anthropic console. Tune via env without a
-// redeploy.
+// at the limit we 429 and the client shows an error/retry. The hard backstop is
+// the spend cap in the Anthropic console. Tune via env without a redeploy.
 const AI_HOURLY_BUDGET_USD = Number(Deno.env.get('AI_HOURLY_BUDGET_USD') ?? '5');
 
 // $/1M tokens, mirrored from the model catalog. Unknown models fall back to
@@ -91,8 +111,7 @@ async function checkRateLimit(request: Request): Promise<boolean> {
   // Fully fail-open: the limiter must never take AI down, including on
   // network errors reaching the database.
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ip));
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientIp(request)));
     const ipHash = Array.from(new Uint8Array(digest))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
@@ -148,7 +167,12 @@ async function recordSpend(model: string, usage: Usage): Promise<void> {
 }
 
 Deno.serve(async (request) => {
-  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'POST only' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', Allow: 'POST' },
+    });
+  }
 
   // verify_jwt is off (the newer sb_publishable_ anon keys aren't JWTs), so the
   // function gates itself: the `apikey` header must be this project's anon key.
@@ -174,11 +198,17 @@ Deno.serve(async (request) => {
     return json({ error: 'need is required for this task' }, 400);
   }
 
+  // Bound caller-supplied input before spending tokens on it.
+  const inputChars = JSON.stringify(resource).length + (need ? JSON.stringify(need).length : 0);
+  if (inputChars > MAX_INPUT_CHARS) {
+    return json({ error: 'Request payload too large' }, 413);
+  }
+
   if (!(await checkRateLimit(request))) {
     return json({ error: 'Rate limit exceeded — try again later' }, 429);
   }
 
-  // Global hourly spend cap — degrade to templated AI rather than overspend.
+  // Global hourly spend cap — return 429 rather than overspend.
   if (await overBudget()) {
     return json({ error: 'AI budget reached — try again later' }, 429);
   }
