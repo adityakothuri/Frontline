@@ -95,7 +95,8 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
         </View>
 
         <View style={styles.subMeta}>
-          <AppText variant="caption" color="textMuted">
+          {/* textSecondary (not muted) so small text keeps AA on the tinted card. */}
+          <AppText variant="caption" color="textSecondary">
             {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
           </AppText>
           {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}

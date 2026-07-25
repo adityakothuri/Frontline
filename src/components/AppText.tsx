@@ -14,12 +14,6 @@ import {
 type AppTextProps = TextProps & {
   variant?: TextVariant;
   color?: ColorToken;
-  /**
-   * A raw color string, for the few cases outside the token set — chiefly a
-   * category hue (e.g. a medallion label). Wins over `color` when set. Prefer
-   * `color` (a token) everywhere else so the palette stays the source of truth.
-   */
-  rawColor?: string;
   style?: StyleProp<TextStyle>;
 };
 
@@ -29,13 +23,12 @@ type AppTextProps = TextProps & {
 export function AppText({
   variant = 'body',
   color = 'textPrimary',
-  rawColor,
   style,
   ...rest
 }: AppTextProps) {
   return (
     <Text
-      style={[textVariants[variant], { color: rawColor ?? colors[color] }, style]}
+      style={[textVariants[variant], { color: colors[color] }, style]}
       {...rest}
     />
   );

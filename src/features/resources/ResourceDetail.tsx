@@ -116,9 +116,11 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
           <View style={styles.headerMeta}>
             {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
           </View>
-          {/* Real community rating (0 until veterans vote), never simulated */}
-          <ResourceRating resourceId={resource.id} />
         </View>
+
+        {/* Rating sits below the tinted hero so its muted caption keeps AA
+            contrast on the plain paper background. Real votes only (0 until then). */}
+        <ResourceRating resourceId={resource.id} />
 
         {/* Emergency: a prominent way to call, right up top */}
         {isEmergency ? (
