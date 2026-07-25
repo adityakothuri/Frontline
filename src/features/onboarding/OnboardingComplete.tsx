@@ -87,7 +87,7 @@ export function OnboardingComplete({ draft, onBack, onCreate, loading }: Onboard
           <Ionicons name="checkmark" size={44} color={colors.success} />
         </Animated.View>
 
-        <AppText variant="display" style={styles.title}>
+        <AppText variant="displayLarge" style={styles.title}>
           You&apos;re ready, {draft.firstName.trim()}.
         </AppText>
         <AppText variant="body" color="textSecondary" style={styles.subtitle}>
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.success, 0.14),
     marginBottom: spacing.xl,
   },
-  title: { textAlign: 'center', fontSize: 32, lineHeight: 38, marginBottom: spacing.sm },
+  title: { textAlign: 'center', marginBottom: spacing.sm },
   subtitle: { textAlign: 'center', maxWidth: 330, marginBottom: spacing.xl },
   recap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
   recapChip: {

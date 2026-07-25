@@ -3,7 +3,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import MapView, { Marker, type Region } from 'react-native-maps';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, EmptyState, PressableScale } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { colors, radii, shadows, spacing } from '@/theme';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import { resourceToNeedCategory, type ResourceSearchResult } from '@/services/resources';
 import { useProfile } from '@/services/profile';
@@ -44,6 +44,9 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
   const { status, locate } = useUserLocation(profile?.zip);
   const [hint, setHint] = useState<string | null>(null);
   const [recentering, setRecentering] = useState(false);
+  // Gate the focus animation: an animateToRegion issued before the native map is
+  // ready can be dropped (notably on Android), so we wait for onMapReady.
+  const [mapReady, setMapReady] = useState(false);
   const located = useMemo(
     () => results.filter((r) => r.resource.latitude !== null && r.resource.longitude !== null),
     [results],
@@ -75,8 +78,32 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
   // buttons scale the *current* view (not a stale initial region).
   const regionRef = useRef<Region>(initialRegion);
 
+  // When a pin is selected from outside (a card's "See in map", or the Map tab's
+  // ?focus= param), glide the camera to it. The preview for `selected` renders
+  // below, so the veteran lands on the pin with its card already open.
+  useEffect(() => {
+    if (!mapReady || !selectedId) return;
+    const target = located.find((r) => r.resource.id === selectedId);
+    if (!target) return;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: target.resource.latitude as number,
+        longitude: target.resource.longitude as number,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      },
+      350,
+    );
+  }, [selectedId, located, mapReady]);
+
   const fitToPins = () => {
+    // A pre-selected pin *that exists in this set* owns the camera (the focus
+    // effect zooms to it); don't fight it by fitting all pins on map-ready. But
+    // if the focus id isn't in this dataset, still fit everything — never leave
+    // the map parked on an arbitrary initial region.
     if (located.length === 0) return;
+    const hasSelectedPin = selectedId !== null && located.some((r) => r.resource.id === selectedId);
+    if (hasSelectedPin) return;
     mapRef.current?.fitToCoordinates(
       located.map((r) => ({
         latitude: r.resource.latitude as number,
@@ -148,7 +175,10 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
-        onMapReady={fitToPins}
+        onMapReady={() => {
+          setMapReady(true);
+          fitToPins();
+        }}
         onRegionChangeComplete={(r) => {
           regionRef.current = r;
         }}
@@ -281,11 +311,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     overflow: 'hidden',
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.md,
   },
   zoomBtn: { width: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
   zoomDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
@@ -334,10 +360,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.md,
   },
 });

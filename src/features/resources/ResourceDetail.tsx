@@ -283,7 +283,13 @@ function ContactRow({
   const content = (
     <View style={styles.contactRow}>
       <Ionicons name={icon} size={18} color={onPress ? colors.accent : colors.textMuted} />
-      <AppText variant="body" color={onPress ? 'textPrimary' : 'textSecondary'} style={styles.contactText}>
+      <AppText
+        variant="body"
+        color={onPress ? 'textPrimary' : 'textSecondary'}
+        style={styles.contactText}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
         {text}
       </AppText>
     </View>
@@ -309,7 +315,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   section: { gap: spacing.sm },
-  summaryLine: { gap: 2 },
+  summaryLine: { gap: spacing.xxs },
   trustWarning: { color: colors.warningText },
   aiRetry: {
     gap: spacing.xs,
@@ -328,7 +334,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepBody: { flex: 1, gap: 2 },
+  stepBody: { flex: 1, gap: spacing.xxs },
   backup: { marginTop: spacing.xs, fontStyle: 'italic' },
   // spacing.md padding keeps tappable phone/website rows at >=44pt.
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },

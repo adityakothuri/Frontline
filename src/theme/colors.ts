@@ -41,6 +41,19 @@ export const colors = {
 
 export type ColorToken = keyof typeof colors;
 
+// Per-step icon accents for onboarding. A small quartet of four DISTINCT earth
+// hues (sage · taupe · ochre · clay) so each step reads differently while staying
+// on-palette — replaces the off-palette blues/teals that were hardcoded in the
+// screen. Deliberately avoids the olive brand `accent` (#5F7326) so a step icon
+// never looks like a primary action. Kept out of `colors` so `ColorToken` stays
+// a flat string map.
+export const onboardingAccents = {
+  location: '#4E7D5B', // sage green
+  role: '#8A6A48', // warm taupe
+  documents: '#A56E24', // amber ochre
+  radius: '#9C5D3B', // clay / terracotta
+} as const;
+
 /** Build a translucent version of a solid hex color (e.g. for soft category tints). */
 export function withAlpha(hex: string, alpha: number): string {
   const h = hex.replace('#', '');

@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import type { VeteranRelevance } from '@/types/resource';
+// paddingVertical uses spacing.xxs (2) — the sub-grid optical step.
 
 // Why a resource belongs in a veterans' app, shown as a compact pill. Veteran
 // rows get the accent pill; general rows ("Open to everyone") render muted so
@@ -22,7 +23,11 @@ export function VeteranBadge({ relevance }: { relevance: VeteranRelevance }) {
         size={12}
         color={general ? colors.textSecondary : colors.accent}
       />
-      <AppText variant="caption" style={general ? styles.labelGeneral : styles.label}>
+      <AppText
+        variant="caption"
+        numberOfLines={1}
+        style={general ? styles.labelGeneral : styles.label}
+      >
         {LABEL[relevance]}
       </AppText>
     </View>
@@ -34,7 +39,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.pill,
     backgroundColor: colors.accentSoft,

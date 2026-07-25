@@ -1,9 +1,11 @@
 import { Share, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PressableScale } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import { useSaved } from '@/services/saved';
 import type { Resource } from '@/types/resource';
+import { SeeInMapButton } from './SeeInMapButton';
 
 type ActionRowProps = {
   resource: Resource;
@@ -20,6 +22,7 @@ type ActionRowProps = {
 // call-script entry point. Save state lives here (not in the route header) so
 // there is exactly one Save control on the page.
 export function ActionRow({ resource, onCall, onDirections, onGetScript }: ActionRowProps) {
+  const router = useRouter();
   const { isSaved, toggleSave } = useSaved();
   const saved = isSaved(resource.id);
 
@@ -38,6 +41,11 @@ export function ActionRow({ resource, onCall, onDirections, onGetScript }: Actio
       {onDirections ? (
         <ActionPill icon="navigate-outline" label="Directions" onPress={onDirections} />
       ) : null}
+      <SeeInMapButton
+        resource={resource}
+        variant="pill"
+        onPress={(id) => router.navigate({ pathname: '/map', params: { focus: id } })}
+      />
       <ActionPill
         icon={saved ? 'bookmark' : 'bookmark-outline'}
         label={saved ? 'Saved' : 'Save'}
