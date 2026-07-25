@@ -14,24 +14,25 @@ updated: 2026-07-24
 
 ## Current Status
 
-🟢 **Frontline MVP loop feature-complete (Phases 0–9).** A veteran opens the app, picks **what
-they need help with**, and sees **nearby simulated resources** (list + map) with working
-Call/Directions, detail pages, AI next-step plans, call scripts, and summaries (templated, labeled),
-saved resources, an optional on-device profile — and, as of Phase 9, a consistent **trust layer**:
+🟢 **Frontline feature-complete on live data + real AI (Phases 0–10).** A veteran opens the app,
+picks **what they need help with**, and sees **nearby, veteran-first real resources** (list + map,
+~130k+ rows ingested from official/nonprofit sources) with working Call/Directions, detail pages,
+**real Claude** next-step plans, call scripts, and benefit summaries (served through the `ai` Edge
+Function proxy), saved resources, an optional on-device profile — and a consistent **trust layer**:
 source badges everywhere, stale/unverified warnings, the persistent "not the VA" disclaimer, and
-crisis routing (988 press 1 / 911) on the Emergency path. Remaining before the MVP is "done": the
-accumulated **on-device QA pass** and splash/app-icon artwork. The dev framework (agents, hooks,
-rules, skills, MCP, Obsidian, workflow) is **preserved**.
+crisis routing (988 press 1 / 911) on the Emergency path. Remaining is release engineering (EAS build
+profiles, an Android Maps key, store assets). The dev framework (agents, hooks, rules, skills, MCP,
+Obsidian, workflow) is **preserved**.
 
 ## Current Phase
 
-**MVP loop complete (Phases 0–9).** Done: [[Phase 0 Setup]] · [[Phase 1 App Shell]] ·
+**Feature-complete (Phases 0–10).** Done: [[Phase 0 Setup]] · [[Phase 1 App Shell]] ·
 [[Phase 2 Resource Data Model and Service]] · [[Phase 3 Guided Need Flow]] ·
 [[Phase 4 Resource List and Detail]] · [[Phase 5 Map and Discovery]] ·
 [[Phase 6 AI Plans and Call Scripts]] · [[Phase 7 AI Summarization]] ·
-[[Phase 8 Saved and Profile]] · **[[Phase 9 Trust and Verification]]** (disclaimer, crisis
-routing, badge convergence — 2026-07-11). Remaining: the accumulated **on-device QA pass**, then
-[[Phase 10 Backend and Data Ingestion]] (post-MVP, needs explicit approval).
+[[Phase 8 Saved and Profile]] · [[Phase 9 Trust and Verification]] ·
+**[[Phase 10 Backend and Data Ingestion]]** (live Supabase data + real AI proxy). Remaining: release
+engineering (EAS, Android Maps key, store assets).
 
 ## Current Active Task
 

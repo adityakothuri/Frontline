@@ -7,10 +7,12 @@ project brain lives in the Obsidian vault at
 [Frontline Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md).
 Tooling inventory: [SKILLS.md](SKILLS.md).
 
-> **Current phase: Reframed to Frontline (Phase 1 shell reused, feature build not started).**
-> The previous product was scrapped. The reusable design system + app shell
-> (tokens, generic components, navigation) carry over; the first Frontline feature milestone is
-> **Phase 2 — Resource Data Model & Mock Service**. New app files/dependencies still need approval.
+> **Current phase: Feature-complete on live data + real AI (Phases 0–10 done).**
+> The full loop runs against a live Supabase backend (~130k+ ingested resources) with real Claude
+> inference through the `ai` Edge Function proxy. Remaining work is release engineering (EAS build
+> profiles, an Android Maps key, store assets) — see the
+> [Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md). New
+> app files/dependencies still need approval (File Creation Policy).
 
 ## Product Summary
 

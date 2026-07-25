@@ -5,7 +5,8 @@
 #
 # Usage:
 #   ingestion/refresh.sh all      # everything (default)
-#   ingestion/refresh.sh places   # slow-changing places: VA, GI Bill, LSC, HUD, curated
+#   ingestion/refresh.sh places   # slow-changing places: VA, GI Bill, curated,
+#                                  #   SSVF, VSO reps, Feed America (food), HUD
 #   ingestion/refresh.sh jobs     # USAJOBS only (postings churn fast) + purge expired
 #
 # Recommended cadence (see docs/obsidian/04 Build Roadmap/Resource Source
@@ -58,9 +59,10 @@ refresh_jobs() {
 }
 
 refresh_places() {
-  # Veteran sources, plus the ONE kept general backfill (HUD housing — real
-  # HUD-VASH tie-in). Food (Feed America) and legal (LSC) were dropped
-  # 2026-07-24 to keep the app veteran-niche — see Decision Log.
+  # Veteran sources, plus the two kept general backfills (HUD housing — real
+  # HUD-VASH tie-in — and Feed America food, both capped in-app). General legal
+  # aid (LSC) was dropped 2026-07-24 and replaced with veteran-specific
+  # VA-accredited VSO representatives — see Decision Log.
   log "VA facilities (national)";              $RUN --source va-facilities --national
   log "GI Bill schools (national)";            $RUN --source gi-bill
   log "Veteran national referrals";            $RUN --source curated-national
