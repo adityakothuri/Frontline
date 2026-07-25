@@ -28,22 +28,16 @@ export function surfaceTint(color: string, amount = 0.06, base: string = colors.
  * map legend 0.14) so everything reads as one system.
  */
 export type CategoryVisual = {
-  /** Full hue — the icon and any category-colored text/pin. */
+  /** Full hue — the icon and any category-colored graphic. */
   color: string;
-  /** Medallion / chip fill (soft). */
+  /** Medallion / chip fill (a soft translucent tint of the hue). */
   tint: string;
-  /** A whisper wash for a whole card/surface — light enough to keep AA text. */
-  wash: string;
-  /** A soft category-tinted hairline where a full border is wanted. */
-  border: string;
 };
 
 export function categoryVisual(color: string): CategoryVisual {
   return {
     color,
     tint: withAlpha(color, 0.16),
-    wash: withAlpha(color, 0.06),
-    border: withAlpha(color, 0.3),
   };
 }
 

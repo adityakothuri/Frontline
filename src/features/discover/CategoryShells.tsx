@@ -1,7 +1,7 @@
 import { ScrollView, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PressableScale } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 import { NEED_CATEGORY_META, type NeedCategory } from '@/types/need';
 
 // The Discover shell row. A curated handful of the most-common needs, plus two
@@ -25,8 +25,10 @@ export function shellCategory(id: ShellId): NeedCategory | undefined {
 }
 
 // A shell chip keeps its category icon even when selected (so the row stays
-// recognizable) and, when active, wears its own category hue as a soft tint +
-// border — `all`/`other` fall back to the olive accent.
+// recognizable and each category shows its own hue on the icon). Selection uses
+// the app's standard olive-tint + border + checkmark — never color alone, and
+// consistent with the base Chip vocabulary — so the category hue stays pure
+// identity and olive stays the one action/selection color.
 function ShellChip({
   shell,
   selected,
@@ -36,7 +38,9 @@ function ShellChip({
   selected: boolean;
   onPress: () => void;
 }) {
-  const hue = shell.category ? NEED_CATEGORY_META[shell.category].color : colors.accent;
+  const iconColor = shell.category
+    ? NEED_CATEGORY_META[shell.category].color
+    : colors.textSecondary;
   return (
     <PressableScale
       accessibilityRole="button"
@@ -45,16 +49,12 @@ function ShellChip({
       onPress={onPress}
       scaleTo={0.96}
     >
-      <View
-        style={[
-          styles.chip,
-          selected ? { backgroundColor: withAlpha(hue, 0.16), borderColor: hue } : styles.chipRest,
-        ]}
-      >
-        <Ionicons name={shell.icon} size={16} color={selected ? hue : colors.textSecondary} />
+      <View style={[styles.chip, selected ? styles.chipSelected : styles.chipRest]}>
+        <Ionicons name={shell.icon} size={16} color={iconColor} />
         <AppText variant="label" color={selected ? 'textPrimary' : 'textSecondary'}>
           {shell.label}
         </AppText>
+        {selected ? <Ionicons name="checkmark" size={16} color={colors.accent} /> : null}
       </View>
     </PressableScale>
   );
@@ -106,4 +106,5 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   chipRest: { backgroundColor: colors.surface, borderColor: colors.border },
+  chipSelected: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
 });

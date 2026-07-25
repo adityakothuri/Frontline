@@ -51,8 +51,9 @@ export default function HomeScreen() {
           </AppText>
           {profile?.zip ? (
             <View style={styles.zipRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-              <AppText variant="caption" color="textMuted">
+              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              {/* textSecondary keeps AA on the olive-washed hero panel. */}
+              <AppText variant="caption" color="textSecondary">
                 Showing help near {profile.zip}
               </AppText>
             </View>
