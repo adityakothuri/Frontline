@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 40,
+    minHeight: 44, // >= the 44pt minimum touch target
     paddingHorizontal: spacing.lg,
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,

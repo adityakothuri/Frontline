@@ -14,24 +14,11 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { loadEnvFile } from '../ingestion/lib/env.ts';
 
 const root = resolve(import.meta.dirname, '..');
 
-function loadSeedEnv(): void {
-  try {
-    const raw = readFileSync(resolve(root, '.env.seed'), 'utf8');
-    for (const line of raw.split('\n')) {
-      const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.+?)\s*$/);
-      if (match && !process.env[match[1]]) {
-        process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
-      }
-    }
-  } catch {
-    // No .env.seed — fine, the shell env may carry the values.
-  }
-}
-
-loadSeedEnv();
+loadEnvFile(resolve(root, '.env.seed'));
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !serviceKey) {

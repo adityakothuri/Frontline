@@ -17,8 +17,8 @@
  * VA_FACILITIES_BASE_URL (defaults to sandbox), and for a live write
  * SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY. See ingestion/README.md.
  */
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { loadEnvFile } from './lib/env.ts';
 import { createVaFacilitiesSource } from './sources/vaFacilities.ts';
 import { createUsaJobsSource } from './sources/usaJobs.ts';
 import { createVaGiBillSchoolsSource } from './sources/vaGiBillSchools.ts';
@@ -135,21 +135,6 @@ function requireEnv(value: string | undefined, name: string, hint: string): stri
   return value;
 }
 
-/** Load KEY=value lines from a git-ignored env file, without clobbering the shell. */
-function loadEnvFile(file: string): void {
-  try {
-    const raw = readFileSync(resolve(root, file), 'utf8');
-    for (const line of raw.split('\n')) {
-      const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.+?)\s*$/);
-      if (match && !process.env[match[1]]) {
-        process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
-      }
-    }
-  } catch {
-    // No .env.seed — fine, the shell env may carry the values.
-  }
-}
-
 function parseArgs(argv: string[]): Record<string, string | boolean> {
   const args: Record<string, string | boolean> = {};
   for (let i = 0; i < argv.length; i++) {
@@ -167,8 +152,15 @@ function parseArgs(argv: string[]): Record<string, string | boolean> {
   return args;
 }
 
-const numberArg = (value: string | boolean | undefined): number | undefined =>
-  typeof value === 'string' && value.trim() !== '' ? Number(value) : undefined;
+const numberArg = (value: string | boolean | undefined): number | undefined => {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  const n = Number(value);
+  if (Number.isNaN(n)) {
+    console.error(`Invalid numeric flag value: "${value}"`);
+    process.exit(1);
+  }
+  return n;
+};
 
 /** Defense-in-depth over what the adapter already guarantees. */
 function validate(items: NormalizedResource[]): { valid: NormalizedResource[]; rejected: number } {
@@ -195,7 +187,7 @@ function validate(items: NormalizedResource[]): { valid: NormalizedResource[]; r
 }
 
 async function main(): Promise<void> {
-  loadEnvFile('.env.seed');
+  loadEnvFile(resolve(root, '.env.seed'));
   const args = parseArgs(process.argv.slice(2));
 
   const sourceKey = typeof args.source === 'string' ? args.source : 'va-facilities';

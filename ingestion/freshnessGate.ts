@@ -10,8 +10,8 @@
  * 40, quarterly hand-reviewed lists (curated referrals, SSVF) get 120 — when
  * those trip, the fix is a human re-review, which is exactly the point.
  */
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { loadEnvFile } from './lib/env.ts';
 
 const CADENCE_DAYS: Record<string, number> = {
   usajobs: 10, // weekly refresh
@@ -24,20 +24,6 @@ const CADENCE_DAYS: Record<string, number> = {
   'vso-representatives': 120, // quarterly manual re-export from the VA accreditation search
 };
 
-function loadEnvFile(file: string): void {
-  try {
-    const raw = readFileSync(resolve(import.meta.dirname, '..', file), 'utf8');
-    for (const line of raw.split('\n')) {
-      const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.+?)\s*$/);
-      if (match && !process.env[match[1]]) {
-        process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
-      }
-    }
-  } catch {
-    // no .env.seed — env may come from CI secrets
-  }
-}
-
 async function newestCheck(url: string, key: string, provider: string): Promise<string | null> {
   const response = await fetch(
     `${url}/rest/v1/resources?source_provider=eq.${provider}&select=last_checked&order=last_checked.desc&limit=1`,
@@ -48,7 +34,7 @@ async function newestCheck(url: string, key: string, provider: string): Promise<
   return rows[0]?.last_checked ?? null;
 }
 
-loadEnvFile('.env.seed');
+loadEnvFile(resolve(import.meta.dirname, '..', '.env.seed'));
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) {
