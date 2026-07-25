@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { OptionGroup, TextField } from '@/components';
 import { onboardingAccents } from '@/theme';
@@ -44,14 +45,21 @@ export default function OnboardingScreen() {
   const create = async () => {
     if (saving) return;
     setSaving(true);
-    await saveDetails({
-      firstName: draft.firstName,
-      zip: draft.zip,
-      role: draft.role,
-      documentsOnHand: draft.documentsOnHand.length ? draft.documentsOnHand : undefined,
-      preferredRadiusMiles: draft.preferredRadiusMiles,
-    });
-    router.replace('/home');
+    try {
+      await saveDetails({
+        firstName: draft.firstName,
+        zip: draft.zip,
+        role: draft.role,
+        documentsOnHand: draft.documentsOnHand.length ? draft.documentsOnHand : undefined,
+        preferredRadiusMiles: draft.preferredRadiusMiles,
+      });
+      router.replace('/home');
+    } catch {
+      // Saving is on-device, so this is rare — but the veteran must never be
+      // stranded on a spinning button. Surface it and let them retry.
+      Alert.alert('Couldn’t finish setup', 'Something went wrong saving your details. Please try again.');
+      setSaving(false);
+    }
   };
 
   switch (step) {

@@ -92,7 +92,9 @@ export function BottomSheet({
         <Animated.View style={[styles.backdrop, { opacity: progress }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            // Distinct from the header "Close" button so a screen reader doesn't
+            // announce two identical "Close" controls for the same sheet.
+            accessibilityLabel="Dismiss"
             style={styles.fill}
             onPress={onClose}
           />
