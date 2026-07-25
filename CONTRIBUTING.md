@@ -65,8 +65,9 @@ refactor: simplify resource sort logic
 Run before every PR:
 
 ```bash
-npm run verify        # typecheck + lint + format-check
+npm run verify        # typecheck + lint
 npm test              # Vitest unit tests
+npm run format:check  # Prettier (optional; `npm run format` to fix)
 ```
 
 Also run the app and exercise the flow for anything with runtime behavior. CI

@@ -1,6 +1,28 @@
 {
   "name": "frontline",
   "version": "0.0.1",
+  "description": "React Native + Expo app that helps veterans find benefits, local resources, and AI-generated next steps.",
+  "keywords": [
+    "veterans",
+    "react-native",
+    "expo",
+    "benefits",
+    "supabase",
+    "typescript"
+  ],
+  "author": "adiKothuri <adityakothuri3@gmail.com>",
+  "license": "UNLICENSED",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adikothuri3/watchdog.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adikothuri3/watchdog/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
@@ -32,7 +54,8 @@
     "eslint-config-expo": "~10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.4",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.10"
   },
   "scripts": {
     "start": "expo start",
@@ -42,11 +65,13 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "verify": "npm run typecheck && npm run lint"
   },
   "prettier": {
-    "singleQuote": true
-  },
-  "private": true
+    "singleQuote": true,
+    "printWidth": 100
+  }
 }
