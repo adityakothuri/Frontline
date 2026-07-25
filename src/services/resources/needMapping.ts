@@ -2,14 +2,13 @@ import type { NeedCategory } from '@/types/need';
 import type { ResourceCategory } from '@/types/resource';
 
 /**
- * The 12 user-facing need categories don't map 1:1 to the 11 resource
- * categories. A veteran choosing "Disability benefits" should see benefits-help
- * resources; "Family / caregiver" should see community support, etc. This is the
- * single place that translation lives.
+ * The 11 user-facing need categories don't map 1:1 to the 11 resource
+ * categories. "Essentials" fans out to food + clothing; "Disability benefits"
+ * should see benefits-help resources; "Family / caregiver" should see community
+ * support, etc. This is the single place that translation lives.
  */
 const NEED_TO_RESOURCE_CATEGORIES: Record<NeedCategory, ResourceCategory[]> = {
-  food: ['food'],
-  clothing: ['clothing'],
+  essentials: ['food', 'clothing'],
   housing: ['housing'],
   healthcare: ['healthcare'],
   disability_benefits: ['benefits_help'],
@@ -32,8 +31,8 @@ export function needToResourceCategories(need: NeedCategory): ResourceCategory[]
  * no originating need, so its detail page still opens with sensible AI context.
  */
 const RESOURCE_TO_NEED_CATEGORY: Record<ResourceCategory, NeedCategory> = {
-  food: 'food',
-  clothing: 'clothing',
+  food: 'essentials',
+  clothing: 'essentials',
   housing: 'housing',
   healthcare: 'healthcare',
   benefits_help: 'general_benefits',

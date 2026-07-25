@@ -23,20 +23,22 @@ unlabeled. This supersedes the 2026-07-22 strict veteran-only rule (see
 | `va-facilities` | VA Lighthouse Facilities API | `healthcare`, `benefits_help`, Vet Centers also cross-listed → `community_support` | veteran_specific | `VA_API_KEY` | monthly |
 | `gi-bill` | VA GI Bill Comparison Tool API | `education` | veteran_benefit | keyless | monthly |
 | `usajobs` | USAJOBS API | `jobs` | veteran_benefit | `USAJOBS_API_KEY` + `USAJOBS_USER_AGENT` | **weekly** + 21-day purge |
-| `hud-housing` | HUD housing counseling locator | `housing` | general | keyless | monthly (21-point national sweep) |
+| `hud-housing` | HUD housing counseling locator | `housing` | general | keyless | monthly (21-point national sweep); **capped to nearest ~20 in-app** |
 | `ssvf-providers` | VA SSVF grantee list (converted XLSX → `data/ssvf-providers.json`) | `housing` | veteran_specific | none (local file) | **quarterly, manual** |
 | `curated-national` | Hand-verified veteran hotlines (`data/curated-national.json`) | thin categories | veteran_specific | none (local file) | **quarterly, manual review** |
 | `vso-representatives` | VA-accredited VSO reps (`data/vso-representatives.json`) | `legal` | veteran_specific | none (local file) | **quarterly, manual re-export** |
 | `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | monthly — 8 veteran-dense states; **capped to nearest ~20 in-app** |
 
-**Two general (non-veteran) sources, each kept for a reason:**
+**Two general (non-veteran) sources, each kept for a reason.** Both are badged
+"Open to everyone", rank below veteran rows, and are **capped to the nearest ~20
+per search** in the client (`DENSE_GENERAL_CAPS = { food: 20, housing: 20 }` in
+`supabaseResourceService.ts`, which only caps `general` rows — veteran SSVF/curated
+rows in the same category are never dropped):
 - `hud-housing` — HUD-VASH is a veteran voucher program and homelessness is a
   signature veteran issue; veteran SSVF providers rank above it.
 - `feed-america` — veterans face food insecurity and **no veteran-specific food
-  dataset exists**. Kept scoped: 8 states only, badged "Open to everyone", and
-  **capped to the nearest ~20 general pantries per search** in the client
-  (`DENSE_GENERAL_CAPS` in `supabaseResourceService.ts`), with the veteran food
-  referral always shown. So it's useful without dominating the veteran feed.
+  dataset exists**. Kept scoped: 8 states only, with the veteran food referral
+  always shown. So it's useful without dominating the veteran feed.
 
 **Legal (LSC) was dropped 2026-07-24** — general civil aid; veterans' legal
 needs are covered by the veteran-specific referrals (Stateside Legal,
@@ -132,9 +134,15 @@ their state. Non-veteran / general no-coord rows never appear.
 
   ```
   VA_API_KEY=your-key
-  # optional — omit to use the sandbox; set for production data:
-  VA_FACILITIES_BASE_URL=https://api.va.gov/services/va_facilities/v1
   ```
+
+  **Use the sandbox host (the default) — it is the correct, complete source.**
+  VA facility locations are public, so the sandbox mirrors real production data:
+  verified 2026-07-24 it returns the full national set (health 1,399, benefits
+  444, vet_center 417), matching the live table. The free key is sandbox-scoped
+  (`api.va.gov` returns 401). Only set `VA_FACILITIES_BASE_URL=https://api.va.gov/services/va_facilities/v1`
+  if you have separately provisioned a **production** VA key — otherwise ingestion
+  will break.
 
 - For **USAJOBS**: a **free, instant** key at <https://developer.usajobs.gov>.
   The `User-Agent` header MUST be the email you registered the key with:
