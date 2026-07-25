@@ -1,7 +1,7 @@
 ---
 tags: [decisions, source-of-truth]
 status: active
-updated: 2026-07-11
+updated: 2026-07-24
 ---
 
 # Decision Log
@@ -24,6 +24,31 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 ```
 
 ---
+
+### 2026-07-24 — Skill store is installer-populated (gitignore `.agents/`); defer release items
+- **Status:** accepted
+- **Context:** A repo-setup audit found 16 committed `.claude/skills/` symlinks dangling into a missing
+  `.agents/skills/` store, which was **not** git-ignored (git would try to track the whole vendored
+  store). Three subagents referenced skills that wouldn't load.
+- **Decision:** Treat `.agents/` as an **installer-populated store** (like `node_modules`) — add it to
+  `.gitignore`, restore locally with `npx skills add …` (documented in `SKILLS.md`), and keep the
+  committed `.claude/skills/` symlinks as the curated set. Removed installer-added symlinks for skills
+  `SKILLS.md` had pruned for React Native. Deferred (with recommendations) the non-blocking items: EAS
+  config, Android Maps key, a test framework, secret rotation, Node pinning.
+- **Alternatives:** vendor `.agents/skills/` into the repo (rejected — large external store, some via
+  SSH); remove the dangling symlinks + agent skill refs (rejected — the skills are wanted and restore
+  cleanly).
+- **Consequences:** Fresh clones must run the `npx skills add` restore (documented) before the extra
+  skills resolve — the agent-referenced ones work once restored. Repo stays free of vendored skills.
+
+### 2026-07-24 — AI inference verified live end-to-end (small smoke test)
+- **Status:** accepted
+- **Context:** Before scaling AI usage, confirm the deployed proxy actually serves inference.
+- **Decision:** Ran a single Haiku `summary` call to the deployed `ai` edge function with a real
+  resource row (`POST /functions/v1/ai`, anon key on `apikey`). Got **HTTP 200** + a valid, well-hedged
+  `BenefitSummary`. The client→function→Anthropic→structured-JSON chain is proven.
+- **Consequences:** Safe to build on the AI path (plan/script on Opus next). Model IDs
+  (`claude-opus-4-8`, `claude-haiku-4-5`) confirmed valid and serving.
 
 ### 2026-07-21 — All AI tasks on Haiku (speed over the Opus cost-split)
 - **Status:** accepted (secrets set + `ai` redeployed; env-reversible)
