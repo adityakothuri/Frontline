@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, Skeleton } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { colors, radii, shadows, spacing, withAlpha } from '@/theme';
 
 type AiContentBlockProps = {
   /** Optional heading; omit when a surrounding section already titles the block. */
@@ -53,10 +53,13 @@ const styles = StyleSheet.create({
   block: {
     backgroundColor: colors.accentSoft,
     borderRadius: radii.lg,
+    // An accent-tinted border + soft lift set AI guidance apart as a distinct,
+    // "intelligent" surface — not just another neutral card.
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.accent, 0.25),
     padding: spacing.lg,
     gap: spacing.xs,
+    ...shadows.sm,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   title: { flexShrink: 1 },

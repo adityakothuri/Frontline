@@ -1,6 +1,7 @@
 export { AppText } from './AppText';
 export { BottomSheet } from './BottomSheet';
 export { Card } from './Card';
+export { CategoryMedallion } from './CategoryMedallion';
 export { ScreenContainer } from './ScreenContainer';
 export { ScreenHeader } from './ScreenHeader';
 export { PrimaryButton } from './PrimaryButton';

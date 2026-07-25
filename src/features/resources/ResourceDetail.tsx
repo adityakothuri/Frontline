@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { View, ScrollView, Pressable, Linking, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, NavigatorDisclaimer } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { AppText, CategoryMedallion, NavigatorDisclaimer } from '@/components';
+import { colors, radii, spacing, surfaceTint } from '@/theme';
 import { isOpenNow } from '@/lib/hours';
 import { useProfile } from '@/services/profile';
 import { useActivity } from '@/services/activity';
@@ -104,14 +104,14 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
   return (
     <SafeAreaView style={styles.root} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.categoryChip}>
-            <Ionicons name={meta.icon} size={14} color={meta.color} />
-            <AppText variant="caption" color="textSecondary">
-              {meta.label}
-            </AppText>
-          </View>
+        {/* Category hero — a soft header zone in the category's own hue behind a
+            large medallion, so every resource type opens with a distinct,
+            premium identity. Full-bleed under the nav header. */}
+        <View style={[styles.hero, { backgroundColor: surfaceTint(meta.color, 0.14) }]}>
+          <CategoryMedallion icon={meta.icon} color={meta.color} size={60} />
+          <AppText variant="label" color="textSecondary" style={styles.heroCategory}>
+            {meta.label}
+          </AppText>
           <AppText variant="title">{resource.name}</AppText>
           <View style={styles.headerMeta}>
             {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
@@ -305,8 +305,20 @@ function ContactRow({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.xl },
-  header: { gap: spacing.sm },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  // Full-bleed hero: cancel the content padding (top + sides), re-inset its own
+  // content, and clip the gradient. `gap` on `content` keeps the next section spaced.
+  hero: {
+    marginTop: -spacing.xl,
+    marginHorizontal: -spacing.xl,
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+    borderBottomLeftRadius: radii.xl,
+    borderBottomRightRadius: radii.xl,
+    overflow: 'hidden',
+  },
+  heroCategory: { marginTop: spacing.xs },
   headerMeta: {
     flexDirection: 'row',
     alignItems: 'center',
