@@ -35,6 +35,18 @@ routing, badge convergence — 2026-07-11). Remaining: the accumulated **on-devi
 
 ## Current Active Task
 
+**🟢 Latest — Extreme final frontend audit (2026-07-24), branch `feature/frontend-audit-see-in-map`.**
+Disciplined design system confirmed; this was targeted hardening + one feature. Shipped: (1) **"See in
+map" on every opportunity** — a reusable `SeeInMapButton`, enabled when a resource has coordinates,
+**struck-through "Not on map" + disabled** otherwise; context-aware (Results focuses the pin in-place,
+detail/Discover/Saved open the Map tab via `?focus=`); `ResourceMap` animates to the pin after
+`onMapReady`. (2) **No text overlap** — truncation/`flexShrink`/`flexWrap` across ResourceCard,
+badges, contact rows, map legend/footer, profile. (3) **Unified tokens** — `shadows` (sm/md/lg),
+`xxs` optical step, `displayLarge`, earth-tone `onboardingAccents`. `npm run verify` green; qa-tester
+PASS; ui-reviewer Ship; **verified on an iOS sim** (cards, struck off-map state, map focus + preview).
+Ready to PR (independent of the Essentials branch). See
+[[2026-07-24 Frontend audit — See in map, overlap fixes, design tokens]].
+
 **🟢 Data cycle FINAL — shipped to `main` + app verified (2026-07-24).** All work merged
 (PRs #9/#11/#12); `npm run verify` + CI green; live DB **134,336 rows**, 198 MB. Pillars:
 **(1) veteran-centric** — hybrid rule (veteran rows fill the search cap first + win ties;

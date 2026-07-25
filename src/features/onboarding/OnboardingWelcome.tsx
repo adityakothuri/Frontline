@@ -54,7 +54,7 @@ export function OnboardingWelcome({ onStart }: { onStart: () => void }) {
         </View>
 
         <Animated.View style={slice(0.15, 0.6)}>
-          <AppText variant="display" style={styles.title}>
+          <AppText variant="displayLarge" style={styles.title}>
             Welcome to Frontline
           </AppText>
         </Animated.View>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.accent,
   },
-  title: { textAlign: 'center', fontSize: 36, lineHeight: 42, marginBottom: spacing.md },
+  title: { textAlign: 'center', marginBottom: spacing.md },
   subtitle: { textAlign: 'center', maxWidth: 320 },
   footer: { paddingHorizontal: spacing.xl, gap: spacing.md },
   reassure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },

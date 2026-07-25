@@ -272,5 +272,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.accentSoft,
   },
-  miscText: { flex: 1, gap: 2 },
+  miscText: { flex: 1, gap: spacing.xxs },
 });

@@ -50,5 +50,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardText: { flex: 1, gap: 2 },
+  cardText: { flex: 1, gap: spacing.xxs },
 });
