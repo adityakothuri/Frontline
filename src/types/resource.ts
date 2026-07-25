@@ -134,7 +134,7 @@ export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMe
   legal: {
     label: 'Legal',
     icon: 'shield-outline',
-    blurb: 'Legal aid, discharge upgrades, and advocacy.',
+    blurb: 'VA-accredited VSO reps who help with claims and appeals.',
     color: '#587045',
   },
   jobs: {

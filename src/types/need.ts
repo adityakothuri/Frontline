@@ -81,7 +81,7 @@ export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
   disability_benefits: { label: 'Disability benefits', icon: 'ribbon-outline', description: 'Claims, ratings, and compensation', color: '#77804C' },
   education_benefits: { label: 'Education benefits', icon: 'school-outline', description: 'GI Bill, tuition, and training', color: '#87702A' },
   jobs: { label: 'Job / employment', icon: 'briefcase-outline', description: 'Hiring, resumes, and job training', color: '#A98E2E' },
-  legal: { label: 'Legal help', icon: 'shield-outline', description: 'Free legal aid and advice', color: '#587045' },
+  legal: { label: 'Legal help', icon: 'shield-outline', description: 'VA-accredited reps for your claims', color: '#587045' },
   transportation: { label: 'Transportation', icon: 'bus-outline', description: 'Rides to appointments and errands', color: '#6F8F5A' },
   family_caregiver: { label: 'Family / caregiver', icon: 'people-outline', description: 'Support for families and caregivers', color: '#7E9146' },
   emergency: { label: 'Emergency help', icon: 'alert-circle-outline', description: 'Crisis lines and urgent support', color: '#B04A38' },

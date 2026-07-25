@@ -26,6 +26,7 @@ import { createCuratedNationalSource } from './sources/curatedNational.ts';
 import { createHudCounselingSource } from './sources/hudCounseling.ts';
 import { createSsvfProvidersSource } from './sources/ssvfProviders.ts';
 import { createFeedAmericaFoodSource } from './sources/feedAmericaFood.ts';
+import { createVsoRepresentativesSource } from './sources/vsoRepresentatives.ts';
 import { geocodeResources } from './censusGeocode.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
@@ -89,6 +90,15 @@ const SOURCES: Record<string, SourceDef> = {
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: resolve(root, 'ingestion/data/ssvf-providers.json'),
+    }),
+  },
+  'vso-representatives': {
+    factory: createVsoRepresentativesSource,
+    // VA-accredited VSO reps (real veteran legal help). Exported list, no API —
+    // quarterly manual refresh, ZIP-centroid placement.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: resolve(root, 'ingestion/data/vso-representatives.json'),
     }),
   },
   'feed-america': {

@@ -65,6 +65,7 @@ refresh_places() {
   log "GI Bill schools (national)";            $RUN --source gi-bill
   log "Veteran national referrals";            $RUN --source curated-national
   log "SSVF providers (from committed JSON)";  $RUN --source ssvf-providers
+  log "VSO representatives (committed JSON)";   $RUN --source vso-representatives
   # Food pantries (open to everyone, labeled) — veteran-dense states only; the
   # app caps them to the nearest ~20 so they stay scoped. Decision 2026-07-24.
   log "Feed America food (8 states)";          $RUN --source feed-america --state "TX,FL,CA,VA,NC,GA,AZ,PA"
