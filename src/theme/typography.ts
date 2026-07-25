@@ -15,6 +15,9 @@ export const fonts = {
 } as const;
 
 export const textVariants = {
+  // The largest statement header — reserved for onboarding welcome/complete hero
+  // titles. Line height stays proportional (~1.17×) so descenders never clip.
+  displayLarge: { fontFamily: fonts.serifBold, fontSize: 36, lineHeight: 42 },
   display: { fontFamily: fonts.serifBold, fontSize: 32, lineHeight: 40 },
   title: { fontFamily: fonts.serifBold, fontSize: 24, lineHeight: 32 },
   heading: { fontFamily: fonts.semibold, fontSize: 20, lineHeight: 26 },

@@ -10,7 +10,7 @@ export function StatusPill({ label, tone }: { label: string; tone: StatusTone })
   return (
     <View style={styles.pill}>
       <View style={[styles.dot, { backgroundColor: color }]} />
-      <AppText variant="caption" style={{ color }}>
+      <AppText variant="caption" style={{ color }} numberOfLines={1}>
         {label}
       </AppText>
     </View>

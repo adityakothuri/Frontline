@@ -1,13 +1,13 @@
 import { colors } from './colors';
-import { spacing, radii } from './spacing';
+import { spacing, radii, shadows } from './spacing';
 import { fonts, textVariants } from './typography';
 
-export { colors, spacing, radii, fonts, textVariants };
-export { withAlpha } from './colors';
+export { colors, spacing, radii, shadows, fonts, textVariants };
+export { withAlpha, onboardingAccents } from './colors';
 export type { ColorToken } from './colors';
-export type { SpacingToken } from './spacing';
+export type { SpacingToken, ShadowToken } from './spacing';
 export type { TextVariant } from './typography';
 
 // Aggregate token object for when a screen wants the whole theme in one import.
-export const theme = { colors, spacing, radii, fonts, textVariants } as const;
+export const theme = { colors, spacing, radii, shadows, fonts, textVariants } as const;
 export type Theme = typeof theme;

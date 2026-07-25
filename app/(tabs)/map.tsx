@@ -7,11 +7,11 @@ import {
   AccessibilityInfo,
   StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, ErrorState, Loading, LocationButton, Skeleton } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { colors, radii, shadows, spacing, withAlpha } from '@/theme';
 import { resourceService, type ResourceSearchResult } from '@/services/resources';
 import { useProfile } from '@/services/profile';
 import { ResourceMap } from '@/features/resources/ResourceMap';
@@ -30,8 +30,15 @@ type MapState =
 export default function MapScreen() {
   const router = useRouter();
   const { profile } = useProfile();
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
   const [state, setState] = useState<MapState>({ status: 'loading' });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Arriving from a "See in map" tap elsewhere: focus that pin. ResourceMap
+  // glides to it once results are loaded (its own effect keys off selectedId).
+  useEffect(() => {
+    if (typeof focus === 'string' && focus.length > 0) setSelectedId(focus);
+  }, [focus]);
 
   const load = useCallback(async () => {
     setState({ status: 'loading' });
@@ -196,7 +203,12 @@ export default function MapScreen() {
         {state.status === 'ready' ? (
           <Animated.View style={[styles.footerPill, revealStyle]}>
             <Ionicons name="location" size={14} color={colors.accent} />
-            <AppText variant="label" color="accentPressed">
+            <AppText
+              variant="label"
+              color="accentPressed"
+              numberOfLines={1}
+              style={styles.footerPillText}
+            >
               {pinned} {pinned === 1 ? 'place' : 'places'} nearby — tap a pin to preview
             </AppText>
           </Animated.View>
@@ -215,8 +227,10 @@ const styles = StyleSheet.create({
   topBar: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md },
   header: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
   subtitle: { marginTop: spacing.sm },
-  // Fixed-height slot so the legend never reflows the map when it loads in.
-  legendArea: { height: 44, justifyContent: 'center', marginBottom: spacing.sm },
+  // Reserve the legend's height so it never reflows the map when it loads in;
+  // minHeight (not a fixed height) lets the pills grow instead of clipping under
+  // large Dynamic Type.
+  legendArea: { minHeight: 44, justifyContent: 'center', marginBottom: spacing.sm },
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,7 +242,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.xs + 2,
+    paddingVertical: spacing.xs + spacing.xxs,
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
   },
@@ -242,11 +256,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surfaceMuted,
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    ...shadows.md,
   },
   mapFill: { flex: 1 },
   footerArea: {
@@ -260,9 +270,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    maxWidth: '100%',
     backgroundColor: colors.accentSoft,
     borderRadius: radii.pill,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: spacing.sm + spacing.xxs,
     paddingHorizontal: spacing.lg,
   },
+  // flexShrink lets the label truncate inside the pill instead of overflowing
+  // the screen when the place count / copy is long.
+  footerPillText: { flexShrink: 1 },
 });
