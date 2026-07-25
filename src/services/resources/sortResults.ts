@@ -22,18 +22,35 @@ const RELEVANCE_RANK: Record<VeteranRelevance, number> = {
 };
 
 /**
- * A national veteran referral (hotline/program with no physical location).
- * These render in their own "National help lines" strip instead of competing
- * on distance — a crisis line sorted last by its null distance would be the
- * worst possible slot for it. Requires a null address too: a row with a street
+ * A statewide/national veteran referral — a veteran resource with no pinpoint
+ * location (a hotline, or an SSVF provider that serves whole counties). These
+ * render in their own "Statewide & national veteran help" section instead of
+ * competing on distance. Requires a null address too: a row with a street
  * address but no coordinates (e.g. an un-geocoded job posting) is a place, not
- * a help line, and stays in the normal list.
+ * a referral, and stays in the normal list.
  */
 export const isNationalReferral = (resource: Resource): boolean =>
   resource.latitude === null &&
   resource.longitude === null &&
   resource.address === null &&
   resource.veteran_relevance !== 'general';
+
+/**
+ * Keep referrals relevant to where the veteran is: a referral tagged with one
+ * or more `state:XX` (e.g. SSVF providers) shows only when it serves the
+ * veteran's state; untagged referrals (national hotlines) always show. When the
+ * veteran's state is unknown, drop state-scoped referrals rather than show
+ * out-of-state ones.
+ */
+export const filterReferralsByState = (
+  referrals: ResourceSearchResult[],
+  veteranState: string | null,
+): ResourceSearchResult[] =>
+  referrals.filter((r) => {
+    const stateTags = r.resource.tags.filter((t) => t.startsWith('state:'));
+    if (stateTags.length === 0) return true;
+    return veteranState !== null && stateTags.includes(`state:${veteranState}`);
+  });
 
 /** null distances (location-independent resources, e.g. a crisis line) sort last. */
 const distanceKey = (distance: number | null): number =>

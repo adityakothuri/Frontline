@@ -12,7 +12,8 @@ import {
 } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import { useProfile } from '@/services/profile';
-import { isNationalReferral } from '@/services/resources';
+import { isNationalReferral, filterReferralsByState } from '@/services/resources';
+import { stateFromZip } from '@/lib/zipState';
 import { CrisisBanner } from '@/features/resources/CrisisBanner';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { ResourceMap } from '@/features/resources/ResourceMap';
@@ -43,15 +44,20 @@ export default function ResultsScreen() {
   // Selection is shared so the map preview and the list stay in sync across toggles.
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // National veteran help lines get their own strip at the top — a crisis line
-  // has no distance, and letting it sort last (null distance) buries it.
+  // Located results are strictly within radius. Veteran resources with no
+  // pinpoint (SSVF, hotlines) go in a separate "statewide" section, filtered to
+  // the veteran's state so it isn't out-of-state noise.
+  const veteranState = stateFromZip(profile?.zip);
   const { referrals, locals } = useMemo(() => {
     const results = state.status === 'ready' ? state.results : [];
     return {
-      referrals: results.filter((r) => isNationalReferral(r.resource)),
+      referrals: filterReferralsByState(
+        results.filter((r) => isNationalReferral(r.resource)),
+        veteranState,
+      ),
       locals: results.filter((r) => !isNationalReferral(r.resource)),
     };
-  }, [state]);
+  }, [state, veteranState]);
 
   // One-shot cross-layout ease so list⇄map doesn't snap. (No-op on web.)
   const changeView = (next: ResultsView) => {
@@ -80,7 +86,7 @@ export default function ResultsScreen() {
             map would be noise; the list, empty, and detail views all carry it. */}
         <View style={styles.mapWrap}>
           <ResourceMap
-            results={state.results}
+            results={locals}
             needCategory={need.category}
             selectedId={selectedId}
             onSelect={setSelectedId}
@@ -103,7 +109,7 @@ export default function ResultsScreen() {
         <ResultsSkeleton />
       ) : state.status === 'error' ? (
         <ErrorState onRetry={reload} />
-      ) : state.results.length === 0 ? (
+      ) : referrals.length + locals.length === 0 ? (
         <ScrollView contentContainerStyle={styles.emptyScroll} showsVerticalScrollIndicator={false}>
           <View style={styles.emptyMsg}>
             <View style={styles.emptyIcon}>
@@ -131,7 +137,8 @@ export default function ResultsScreen() {
         <View style={styles.ready}>
           <View style={styles.headerRow}>
             <AppText variant="body" color="textSecondary">
-              {state.results.length} {state.results.length === 1 ? 'resource' : 'resources'}
+              {referrals.length + locals.length}{' '}
+              {referrals.length + locals.length === 1 ? 'resource' : 'resources'}
             </AppText>
             {/* No toggle when nothing is mappable — a map of zero pins is a dead end. */}
             {locals.length > 0 ? <ViewToggle value={view} onChange={changeView} /> : null}
@@ -147,7 +154,7 @@ export default function ResultsScreen() {
               referrals.length > 0 ? (
                 <View style={styles.referralSection}>
                   <AppText variant="label" color="textSecondary" accessibilityRole="header">
-                    National help lines
+                    Statewide &amp; national veteran help
                   </AppText>
                   {referrals.map((item) => (
                     <ResourceCard key={item.resource.id} result={item} needCategory={need.category} />

@@ -26,6 +26,7 @@ unlabeled. This supersedes the 2026-07-22 strict veteran-only rule (see
 | `hud-housing` | HUD housing counseling locator | `housing` | general | keyless | monthly (21-point national sweep) |
 | `ssvf-providers` | VA SSVF grantee list (converted XLSX → `data/ssvf-providers.json`) | `housing` | veteran_specific | none (local file) | **quarterly, manual** |
 | `curated-national` | Hand-verified veteran hotlines (`data/curated-national.json`) | thin categories | veteran_specific | none (local file) | **quarterly, manual review** |
+| `vso-representatives` | VA-accredited VSO reps (`data/vso-representatives.json`) | `legal` | veteran_specific | none (local file) | **quarterly, manual re-export** |
 | `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | monthly — 8 veteran-dense states; **capped to nearest ~20 in-app** |
 
 **Two general (non-veteran) sources, each kept for a reason:**
@@ -104,6 +105,24 @@ For the cron to actually run: the workflow must be on the **default branch**
 - **Curated referrals**: re-check each entry in `data/curated-national.json`
   against its official site, bump its `verified_on`, re-run
   `--source curated-national`.
+- **VSO representatives**: from the VA accreditation search
+  (<https://www.va.gov/ogc/apps/accreditation/>) use "Download Complete Lists
+  in Excel" for **Representatives**; it saves an HTML table
+  (`data/repexcellist.asp`, git-ignored). Parse its `<TR>` rows (columns: Last
+  Name, First Name, Registration Num, City, State, Zip, Phone) into
+  `data/vso-representatives.json` (keep rows with a 5-digit zip; set
+  `retrieved_on`), then re-run `--source vso-representatives`. Reps are placed
+  at their ZIP centroid (the list has no street address).
+
+## Radius behavior (2026-07-24)
+
+Every **located** result is strictly within the search radius — the RPC drops
+anything beyond it, and rows that have an address but failed geocoding (no
+coords) too. Veteran resources with **no pinpoint** location (SSVF providers,
+national hotlines — null coords AND null address) are kept and surface in the
+app's separate "Statewide & national veteran help" section, state-filtered
+(`state:XX` tags + `src/lib/zipState.ts`) so a veteran sees only what serves
+their state. Non-veteran / general no-coord rows never appear.
 
 ## Prerequisites
 

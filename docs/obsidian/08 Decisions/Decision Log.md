@@ -677,6 +677,27 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 - **Principle:** real veteran data where it exists + a clear next step everywhere. See
   [[2026-07-24 Data cycle final audit and hybrid rebuild]].
 
+### 2026-07-24 — VSO reps for legal + strict radius + statewide veteran section
+- **Status:** accepted (user decision)
+- **VSO representatives (legal):** ingested the VA-accredited VSO representatives (7,759 with a
+  placeable ZIP, of ~8.7k) as `legal` / `veteran_specific` — real veteran legal help (free VA
+  claims assistance), replacing the dropped general LSC source. Manual export → committed JSON →
+  adapter (SSVF pattern), placed at ZIP centroid (the list has city/state/zip, no street). Legal
+  now shows VSO reps within radius; legal category copy updated accordingly.
+- **Strict radius (all located results):** every located result must be geographically WITHIN the
+  search radius — the `search_resources` RPC drops anything beyond it, and rows with an address but
+  no coordinates (un-geocoded schools/jobs) too. (Migrations 0019→0021; final form splits
+  located-vs-referral so each half uses its index and stays fast on the 7.7k legal rows.)
+- **Statewide & national veteran section:** veteran resources with NO pinpoint (SSVF providers,
+  crisis/benefit hotlines — null coords AND null address) would vanish under strict radius, so they
+  are kept and rendered in a separate clearly-labeled section BELOW the local results, honestly
+  marked statewide/national — never mixed into "within radius." SSVF is **state-filtered**
+  (`state:XX` tags + `src/lib/zipState.ts` derives the veteran's state from their ZIP) so it isn't
+  out-of-state noise. General no-coord rows never appear.
+- **Rationale:** honors "nothing shown extends past the radius" while keeping genuinely veteran
+  help (SSVF housing, crisis line) reachable and relevant. See
+  [[2026-07-24 Data cycle final audit and hybrid rebuild]].
+
 ## Related
 
 [[Technical Architecture]] · [[AI Feature Design]] · [[Non-MVP Ideas]] · [[Frontline Command Center]]
