@@ -14,11 +14,13 @@ import {
 } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import {
+  filterReferralsByState,
   isNationalReferral,
   resourceService,
   resourceToNeedCategory,
   type ResourceSearchResult,
 } from '@/services/resources';
+import { stateFromZip } from '@/lib/zipState';
 import { useProfile } from '@/services/profile';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { NeedCategoryCard } from '@/features/needs/NeedCategoryCard';
@@ -85,19 +87,23 @@ export default function DiscoverScreen() {
   }, [selected, load]);
 
   // The multi-category "all" browse alternates categories; a single category
-  // keeps its natural nearest-first order, with national veteran help lines
-  // (no location, no distance) pulled into their own strip on top instead of
-  // sorting last on a null distance.
+  // keeps its natural nearest-first order, with statewide/national veteran help
+  // (no location) pulled into its own strip on top, filtered to the veteran's
+  // state so SSVF and the like aren't out-of-state noise.
+  const veteranState = stateFromZip(profile?.zip);
   const { referrals, displayResults } = useMemo(() => {
     if (state.status !== 'ready') return { referrals: [], displayResults: [] };
     if (shellCategory(selected) === undefined) {
       return { referrals: [], displayResults: interleaveByCategory(state.results) };
     }
     return {
-      referrals: state.results.filter((r) => isNationalReferral(r.resource)),
+      referrals: filterReferralsByState(
+        state.results.filter((r) => isNationalReferral(r.resource)),
+        veteranState,
+      ),
       displayResults: state.results.filter((r) => !isNationalReferral(r.resource)),
     };
-  }, [state, selected]);
+  }, [state, selected, veteranState]);
 
   const handleSelect = (id: ShellId) => {
     setSelected(id);
@@ -179,7 +185,7 @@ export default function DiscoverScreen() {
               referrals.length > 0 ? (
                 <View style={styles.referralSection}>
                   <AppText variant="label" color="textSecondary" accessibilityRole="header">
-                    National help lines
+                    Statewide &amp; national veteran help
                   </AppText>
                   {referrals.map((item) => (
                     <ResourceCard

@@ -58,6 +58,16 @@ function describeAreas(raw: string): string | null {
   return rest > 0 ? `${shown.join(', ')}, and ${rest} more area${rest === 1 ? '' : 's'}` : shown.join(', ');
 }
 
+/** Distinct 2-letter state codes an SSVF provider serves — from `states` and
+ *  the "County (ST)" entries in `areas_served`. Drives `state:XX` tags. */
+function statesTags(entry: SsvfProvider): string[] {
+  const codes = new Set<string>();
+  for (const m of `${entry.states} ${entry.areas_served}`.matchAll(/\b([A-Z]{2})\b/g)) {
+    codes.add(m[1]);
+  }
+  return [...codes].map((c) => `state:${c}`);
+}
+
 function normalize(entry: SsvfProvider, file: SsvfFile): NormalizedResource {
   const areas = describeAreas(entry.areas_served);
   return {
@@ -80,7 +90,9 @@ function normalize(entry: SsvfProvider, file: SsvfFile): NormalizedResource {
     verification_status: 'verified',
     last_checked: file.retrieved_on,
     last_updated: file.retrieved_on,
-    tags: ['ssvf', 'veteran-housing', 'homelessness-prevention'],
+    // `state:XX` tags let the app show a veteran the SSVF providers serving THEIR
+    // state (these rows have no coordinates, so they can't be radius-filtered).
+    tags: ['ssvf', 'veteran-housing', 'homelessness-prevention', ...statesTags(entry)],
     created_at: file.retrieved_on,
     updated_at: file.retrieved_on,
     external_id: entry.fain,

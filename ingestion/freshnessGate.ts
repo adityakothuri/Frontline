@@ -21,6 +21,7 @@ const CADENCE_DAYS: Record<string, number> = {
   'feed-america': 40, // monthly (8 veteran-dense states, scoped food pantries)
   'curated-national': 120, // quarterly manual review (last_checked = verified_on)
   'ssvf-providers': 120, // quarterly manual refresh from the VA FY list
+  'vso-representatives': 120, // quarterly manual re-export from the VA accreditation search
 };
 
 function loadEnvFile(file: string): void {

@@ -51,3 +51,6 @@ docs/obsidian/.obsidian/
 
 # OS
 .DS_Store
+
+# VA accreditation raw export (converted to vso-representatives.json)
+ingestion/data/repexcellist.asp
