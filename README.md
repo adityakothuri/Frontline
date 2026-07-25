@@ -3,12 +3,10 @@
 > **Find your next step.** Frontline helps veterans find benefits, local resources, and a clear
 > plan for what to do next.
 
-## Overview
-
 Frontline is a **React Native + Expo** app that helps **veterans** navigate the fragmented world of
-benefits and local help. A veteran opens the app, chooses **what they need help with** (food,
+benefits and local help. A veteran opens the app, chooses **what they need help with** (essentials,
 housing, healthcare, VA benefits, jobs, legal, transportation, and more), shares a **location or
-ZIP**, and gets **nearby relevant resources**, **plain-English benefit explanations**, and
+ZIP**, and gets **nearby, veteran-first resources**, **plain-English benefit explanations**, and
 **AI-generated next steps** — what to bring, who to call, and what to say.
 
 The AI is **embedded into real workflows** (guided need flows, next-step plans, call scripts,
@@ -16,136 +14,138 @@ benefit summaries), **not a chatbot**. Frontline is a **resource navigator, not 
 government agency**, and its AI output is **simplified guidance, never legal, medical, financial, or
 government-certified advice**.
 
-The MVP is a polished, trustworthy **demo** of that loop with **simulated** data and **templated**
-AI behind a typed `AiService` seam. Real backend persistence, verified data ingestion, and real LLM
-calls are **later phases** — the code and docs label simulation honestly (`mock` / `demo` /
-`simulated` / `templated`).
-
 **Principles:** veteran-first clarity · AI in workflows (not a chatbot) · trust by verification ·
-not advice · privacy by default (no SSN/VA-login/bank/diagnosis) · accessibility always.
+not advice · privacy by default (no SSN / VA-login / bank / diagnosis) · accessibility always.
 
-## Core MVP Flow
+## Status
+
+**Feature-complete and running on real data + real AI.** The full loop below works end-to-end
+against a live Supabase backend: **~130k+ real resources** ingested from official/nonprofit sources,
+and **real Claude inference** served through a server-side proxy (keys never ship in the client).
+Trust signals (source type, last-checked date, veteran-relevance) are surfaced throughout, and every
+data source refreshes on a schedule with a freshness gate. Remaining work is release engineering
+(EAS build profiles, an Android Maps key, store assets) — tracked in
+[docs/obsidian/](docs/obsidian/) — not the core product.
+
+## Core flow
 
 1. Open the app → **"What do you need help with?"**
 2. Pick a **need category**.
-3. Answer a short **guided flow** (what · urgency · in-person/online · documents on hand · help type).
-4. Provide **location or ZIP**.
-5. See **nearby resources** as a **list and map**.
-6. Tap a resource for its **detail**.
-7. Read a **plain-English summary**, eligibility, documents, and **next steps**.
-8. Tap **"Generate call script"** for a short, specific script (+ a nervous-user variant).
-9. **Save**, **call**, or get **directions**.
+3. Provide a **location or ZIP**.
+4. See **nearby resources** as a **list and map**, ranked **veteran-first**.
+5. Tap a resource → **detail**: a plain-English AI **summary**, eligibility, documents to bring, and
+   **next steps**; jump straight to the pin with **"See in map."**
+6. Generate a **call script** (plus a nervous-user variant).
+7. **Save**, **call**, or get **directions**.
 
-## Feature Priorities
+## Architecture
 
-Foundation → app shell/design system → **resource data model + `AiService` seam** → **guided need
-flow** → **resource list/cards/detail** → **map discovery** → **AI plans + call scripts** → **AI
-summarization** → **saved + profile** → **trust/verification** → *(post-MVP)* backend + verified
-data ingestion.
-Full list + reasoning: [docs/obsidian/01 Product/Feature Priority Order.md](docs/obsidian/01%20Product/Feature%20Priority%20Order.md).
+Frontline is a typed React Native client over a Supabase backend, with data supplied by a standalone
+ingestion pipeline. The client talks to the backend through small, interface-first services
+(`ResourceService`, `AiService`) so the data and AI layers are swappable and testable.
 
-## Tech Stack
+```text
+ React Native app (Expo, expo-router)
+   │  EXPO_PUBLIC_SUPABASE_URL / _ANON_KEY   (publishable, RLS read-only)
+   ▼
+ Supabase
+   ├─ Postgres: resources (RLS read-only) + search_resources() RPC (radius, veteran-first)
+   └─ Edge Functions (Deno):
+        ├─ ai   → Anthropic proxy (holds ANTHROPIC_API_KEY; rate-limit + hourly budget cap)
+        └─ sync → anonymous device backup (saved items + profile)
+   ▲
+   │  service-role key (server-side only, never in the app)
+ Ingestion pipeline (ingestion/, run like scripts/seed.ts — not app-bundle code)
+   └─ VA Facilities · GI Bill · USAJOBS · HUD · SSVF · VSO reps · Feeding America · curated
+      → normalize → Census geocode (cache-first) → validate → idempotent upsert
+      → GitHub Actions cron (jobs weekly / places monthly) + freshness gate
+```
 
-- **React Native + Expo**, **TypeScript-first**
-- **expo-router** (file-based routing)
-- **react-native-maps** for local resource discovery on iOS/Android (web shows a placeholder)
-- Local state + typed **mock services** behind interfaces (`ResourceService`, `AiService`); real
-  backend + **AI proxy** later (post-MVP — keys never ship in the client)
-- **Context7 MCP** for up-to-date library docs
-- Simulation-first: no real backend/model calls in the MVP
+- **Data model** — every resource carries `source_type`, `verification_status`, `last_checked`, and
+  `veteran_relevance` (`veteran_specific | veteran_benefit | general`, NOT NULL). Search fills each
+  category's result cap with veteran rows first; general rows are badged "Open to everyone" and
+  capped client-side.
+- **AI** — `summary` runs on Haiku (auto-loads on a resource, cheap); `plan` / `script` run on Opus.
+  The proxy uses structured outputs, gates model-specific params, and enforces a per-IP rate limit +
+  a global hourly spend budget, with the Anthropic console cap as the hard backstop.
+- **Security** — Postgres RLS is deny-by-default on every table; RPCs are parameterized with pinned
+  `search_path`; the Anthropic key lives only in Edge Function secrets; `.env*` is git-ignored. See
+  [SECURITY.md](SECURITY.md).
 
-## Project Structure
+## Tech stack
+
+- **React Native + Expo (SDK 54)**, **TypeScript-first**, **expo-router** (file-based routing)
+- **react-native-maps** for local discovery on iOS/Android (web shows a placeholder)
+- **Supabase** — Postgres + RLS, Edge Functions (Deno), PostgREST (hand-rolled fetch transport)
+- **Anthropic Claude** (Opus 4.8 / Haiku 4.5) behind the `ai` Edge Function proxy
+- **Vitest** for unit tests; **ESLint + Prettier + tsc** for the quality gate
+- **GitHub Actions** — CI (typecheck/lint/test) + a scheduled data-refresh workflow
+
+## Project structure
 
 ```text
 Frontline/
-├── CLAUDE.md            # Claude Code behavior + product/workflow brief
-├── SKILLS.md            # installed AI skills/tooling inventory
-├── README.md
-├── docs/
-│   ├── obsidian/        # the project "brain" (product, design, technical, roadmap, logs)
-│   └── github/          # git/GitHub workflow guides
-├── .github/             # CI, issue/PR templates, dependabot
-├── app/                 # expo-router routes (shell reused; feature screens being built)
-└── src/                 # components, theme tokens, services (resources, ai)
+├── app/                 # expo-router routes (tabs, onboarding, results, resource detail)
+├── src/
+│   ├── components/      # shared UI primitives (AppText, Card, PrimaryButton, states…)
+│   ├── features/        # feature UI (resources, discover, onboarding, home, needs)
+│   ├── services/        # ResourceService + AiService (client) and Supabase transport
+│   ├── theme/           # design tokens: colors, spacing, radii, shadows, typography
+│   ├── lib/             # pure helpers (geo, hours, zipState)
+│   └── types/           # domain types (resource, need, profile, activity)
+├── supabase/            # migrations, Edge Functions (ai, sync), config
+├── ingestion/           # standalone data pipeline (sources, geocode, freshness gate)
+├── scripts/             # seed.ts (ZIP centroids reference data)
+├── docs/                # the project "brain" (Obsidian vault) + GitHub workflow guides
+└── assets/              # icons, splash
 ```
 
-App code follows a **feature-based** layout — see
-[Folder Structure](docs/obsidian/03%20Technical/Folder%20Structure.md).
+## Getting started
 
-## Getting Started
-
-**Prerequisites:** Node.js ≥ 20.19.4 (this machine uses Node in `~/.local`), and a way to preview —
-an iOS Simulator (development build), Android emulator, or a web browser.
+**Prerequisites:** **Node.js ≥ 22** (the ingestion tooling uses native TS type-stripping), and a way
+to preview — an iOS Simulator (development build), Android emulator, or a web browser.
 
 ```bash
 npm install
-npm start        # start the Expo dev server, then press i / a / w
+cp .env.example .env     # fill in the two EXPO_PUBLIC_SUPABASE_* values
+npm start                # start the Expo dev server, then press i / a / w
 ```
 
-📖 **Full run instructions:** [docs/RUNNING.md](docs/RUNNING.md) — prerequisites, each platform,
-what you'll see, and troubleshooting.
+The app reads live resources and AI from Supabase, so it needs the two `EXPO_PUBLIC_SUPABASE_*`
+values in `.env`. Full run instructions, per-platform notes, and troubleshooting live in
+[docs/RUNNING.md](docs/RUNNING.md); backend/AI setup (Edge Function secrets, deploys) is in
+[BACKEND_SETUP.md](BACKEND_SETUP.md).
 
-## Available Scripts
+## Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `start` | Launch the Expo dev server |
-| `ios` / `android` / `web` | Start directly on a platform |
+| `start` · `ios` · `android` · `web` | Launch the Expo dev server (optionally on a platform) |
 | `typecheck` | `tsc --noEmit` |
-| `lint` | ESLint |
-| `format` | Prettier (app source only) |
-| `test` | Placeholder (real tests added when meaningful) |
-| `verify` | typecheck + lint — run before every PR (also what CI runs) |
+| `lint` / `format` / `format:check` | ESLint · Prettier write · Prettier check |
+| `test` / `test:watch` | Vitest unit tests |
+| `verify` | typecheck + lint + format-check — run before every PR (also what CI runs) |
 
-## Development Workflow
+## Development workflow
 
-Use the Claude Code workflow: `/start-task` → implement → quality checks → review →
-`/finish-task`. **One task per branch.** Full detail:
-[Production Workflow](docs/obsidian/03%20Technical/Production%20Workflow.md).
-
-## Quality Checks
-
-A checks-only post-edit hook (`.claude/hooks/quality-check.sh`) runs `typecheck`/`lint`/`test`
-when they exist. Before opening a PR, run `verify`. See
-[Quality Gates](docs/obsidian/03%20Technical/Quality%20Gates.md).
-
-## Environment Variables
-
-The MVP needs **no secrets** (data is simulated, AI is templated). When real integrations arrive,
-**only public `EXPO_PUBLIC_*` keys** belong in the app; the **AI/Anthropic key never ships in the
-client** — real LLM calls go through a server-side proxy. `.env*` is git-ignored. See
-[Environment Variables](docs/obsidian/03%20Technical/Environment%20Variables.md).
-
-## Git Workflow
-
-- Don't work directly on `main` for feature work — **one task per branch**
-  (`feature/…`, `fix/…`, `docs/…`, `chore/…`, `refactor/…`).
-- Run `verify` before a PR; PRs use [.github/pull_request_template.md](.github/pull_request_template.md).
-- Never force-push, rewrite history, or commit secrets.
-- Guides: [docs/github/](docs/github/) — Branching Strategy, PR Checklist, Release Process, GitHub Setup.
+Feature work happens on a branch (**one task per branch** — `feature/…`, `fix/…`, `docs/…`,
+`chore/…`), guarded by a checks-only post-edit hook (`.claude/hooks/quality-check.sh`) and CI. Run
+`verify` and `test` before opening a PR; PRs use
+[.github/pull_request_template.md](.github/pull_request_template.md). See
+[CONTRIBUTING.md](CONTRIBUTING.md) and [docs/github/](docs/github/).
 
 ## Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** — controls Claude Code behavior; product + workflow brief.
-- **[docs/obsidian/](docs/obsidian/)** — the project brain. Start at
-  [Frontline Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md).
-- **[docs/github/](docs/github/)** — git/GitHub workflow.
-- **[SKILLS.md](SKILLS.md)** — installed AI skills/tooling.
-
-## Current Status
-
-🟡 **Reframed to Frontline.** The previous neighborhood-safety product was scrapped;
-this repo is now Frontline (a veteran benefits/resource navigator). The reusable **design system +
-app shell** carry over; documentation, `CLAUDE.md`, and app config are reframed. **Feature screens
-are built next**, starting with the resource data model + service seams
-([Phase 2](docs/obsidian/04%20Build%20Roadmap/Phase%202%20Resource%20Data%20Model%20and%20Service.md)).
-Until then the running app still shows the legacy shell/screens. See
-[docs/RUNNING.md](docs/RUNNING.md).
+- **[BACKEND_SETUP.md](BACKEND_SETUP.md)** — Supabase project, migrations, Edge Function secrets, deploys.
+- **[SECURITY.md](SECURITY.md)** — threat model, the anon-key/console-cap AI model, RLS posture.
+- **[docs/obsidian/](docs/obsidian/)** — the project brain (product, design, technical, roadmap, logs).
+  Start at [Frontline Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md).
+- **[CHANGELOG.md](CHANGELOG.md)** · **[SKILLS.md](SKILLS.md)**
 
 ## Notes
 
 - **License:** proprietary — all rights reserved (see [LICENSE](LICENSE)). Not licensed for reuse.
-- Simulation is labeled honestly; the MVP does **not** contain real backend or live LLM calls.
 - **Not the VA:** Frontline is a navigator; AI output is guidance, not legal/medical/financial/
   government-certified advice.
-- No real secrets are ever committed.
+- **Privacy:** the app collects the minimum (an optional first name + ZIP, on-device); no SSN, VA
+  login, bank info, or diagnosis. No real secrets are ever committed.

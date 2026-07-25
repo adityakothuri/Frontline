@@ -3,8 +3,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts } from '@/theme';
 
 // Bottom-tab shell. Icons come from one set (Ionicons) and labels use Inter, so
-// the bar reads as designed rather than platform-default. Frontline centers on the
-// "what do you need help with?" flow (Home); the Map arrives in Phase 5.
+// the bar reads as designed rather than platform-default. Five tabs: Home (the
+// "what do you need help with?" entry point), Discover, Map, Saved, and Profile.
 export default function TabsLayout() {
   return (
     <Tabs

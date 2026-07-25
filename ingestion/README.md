@@ -52,7 +52,9 @@ schools) set `geocode` address parts; the runner resolves them through the
 **US Census batch geocoder** (`ingestion/censusGeocode.ts`, keyless), cached in
 the `geocode_cache` table so re-runs don't re-submit. Addresses that don't
 match keep **null coordinates — listed, never pinned** at an approximate spot.
-ZIP-centroid placement was removed on 2026-07-24.
+The ZIP-centroid *fallback for street-addressed sources* was removed on
+2026-07-24 (VSO reps, which have only a ZIP and no street address, still place at
+their ZIP centroid on purpose — see below).
 
 ### Trust labels (what the app shows)
 

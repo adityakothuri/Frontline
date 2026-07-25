@@ -6,10 +6,12 @@ Obsidian vault ([docs/obsidian/](docs/obsidian/)); this file is the git-facing s
 
 ## Development Principles
 
-- **User control & privacy first** — nothing from a private camera becomes public without
-  explicit user approval.
-- **Human verification** — AI detects; people decide.
-- **No AI slop** — intentional, typed, readable code and designed (not templated) UI.
+- **Veteran-first clarity & privacy** — plain language, an obvious next action, and the minimum data
+  collected (an optional first name + ZIP, on-device; never SSN, VA login, bank, or diagnosis).
+- **AI in workflows, not a chatbot** — AI powers plans, scripts, and summaries; its output is
+  simplified guidance, never legal/medical/financial/government-certified advice.
+- **Trust by verification** — every resource shows source type, last-checked date, and status.
+- **No AI slop** — intentional, typed, readable code and designed UI.
 - **Structured development** — plan → scope → implement → review → test → log.
 - Full text: [Product Principles](docs/obsidian/01%20Product/Product%20Principles.md).
 
@@ -27,12 +29,12 @@ Obsidian vault ([docs/obsidian/](docs/obsidian/)); this file is the git-facing s
 One task per branch. Examples:
 
 ```text
-feature/phase-1-navigation
-feature/camera-simulation
-fix/map-alert-empty-state
+feature/guided-need-flow
+feature/see-in-map
+fix/resource-card-empty-state
 chore/github-ci
 docs/update-readme
-refactor/alert-types
+refactor/resource-types
 ```
 
 ## Commit Style
@@ -40,11 +42,11 @@ refactor/alert-types
 Small, focused, present-tense. Examples:
 
 ```text
-feat: add placeholder navigation shell
-fix: handle empty alert state
+feat: add the guided need flow
+fix: handle empty resource results state
 docs: update app walkthrough
 chore: add GitHub CI workflow
-refactor: simplify alert mock data
+refactor: simplify resource sort logic
 ```
 
 (No enforced commitlint tooling unless explicitly added later.)
@@ -63,7 +65,8 @@ refactor: simplify alert mock data
 Run before every PR:
 
 ```bash
-npm run verify        # typecheck + lint (+ test) — once package.json exists
+npm run verify        # typecheck + lint + format-check
+npm test              # Vitest unit tests
 ```
 
 Also run the app and exercise the flow for anything with runtime behavior. CI

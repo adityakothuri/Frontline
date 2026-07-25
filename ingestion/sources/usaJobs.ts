@@ -10,9 +10,9 @@
  *
  * Jobs are official → `source_type: 'official'` / `verification_status:
  * 'verified'`. Unlike facilities, postings **expire** (`ApplicationCloseDate`),
- * so this is a snapshot: re-run periodically and purge closed postings (a
- * freshness job is future work). Ingest is location-scoped (near a place), not
- * a blind nationwide dump, since postings churn.
+ * so this is a snapshot: the weekly `refresh.sh jobs` sweep re-ingests and purges
+ * postings not seen in 21 days. Ingest is location-scoped (near a place), not a
+ * blind nationwide dump, since postings churn.
  */
 import type {
   IngestionQuery,
