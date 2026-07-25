@@ -65,6 +65,14 @@ export default function ResultsScreen() {
     setView(next);
   };
 
+  // "See in map" on a card: flip to this screen's own map and focus the pin
+  // (ResourceMap glides to selectedId). Keeps the veteran in the results context
+  // rather than jumping to the global Map tab.
+  const seeInMap = (id: string) => {
+    setSelectedId(id);
+    changeView('map');
+  };
+
   const categoryLabel = NEED_CATEGORY_META[need.category]?.label ?? 'Resources';
   // The Emergency path routes to real crisis lines before anything else — the
   // banner must survive every branch (list, map, empty), so it's decided once.
@@ -148,7 +156,7 @@ export default function ResultsScreen() {
             data={locals}
             keyExtractor={(item) => item.resource.id}
             renderItem={({ item }) => (
-              <ResourceCard result={item} needCategory={need.category} />
+              <ResourceCard result={item} needCategory={need.category} onSeeInMap={seeInMap} />
             )}
             ListHeaderComponent={
               referrals.length > 0 ? (

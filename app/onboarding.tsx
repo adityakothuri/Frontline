@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { OptionGroup, TextField } from '@/components';
+import { onboardingAccents } from '@/theme';
 import { useProfile } from '@/services/profile';
 import { OnboardingWelcome } from '@/features/onboarding/OnboardingWelcome';
 import { OnboardingStep } from '@/features/onboarding/OnboardingStep';
@@ -92,7 +93,7 @@ export default function OnboardingScreen() {
           previousStepIndex={prevIndex}
           stepCount={PROMPTS}
           icon="location-outline"
-          iconColor="#3D8BC7"
+          iconColor={onboardingAccents.location}
           title="Where are you looking for help?"
           subtitle="Your ZIP code finds resources near you — used only for that."
           onBack={back}
@@ -120,7 +121,7 @@ export default function OnboardingScreen() {
           previousStepIndex={prevIndex}
           stepCount={PROMPTS}
           icon="ribbon-outline"
-          iconColor="#5567C7"
+          iconColor={onboardingAccents.role}
           title="Which best describes you?"
           subtitle="Optional — helps us keep the tone right."
           onBack={back}
@@ -144,7 +145,7 @@ export default function OnboardingScreen() {
           previousStepIndex={prevIndex}
           stepCount={PROMPTS}
           icon="documents-outline"
-          iconColor="#C99A33"
+          iconColor={onboardingAccents.documents}
           title="Which of these do you have?"
           subtitle="Optional — check any you already have, so we can tell you what to bring."
           onBack={back}
@@ -169,7 +170,7 @@ export default function OnboardingScreen() {
           previousStepIndex={prevIndex}
           stepCount={PROMPTS}
           icon="navigate-outline"
-          iconColor="#3AA0B5"
+          iconColor={onboardingAccents.radius}
           title="How far should we look?"
           subtitle="Optional — your preferred search distance. You can change it anytime."
           onBack={back}

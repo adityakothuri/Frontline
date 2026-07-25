@@ -542,6 +542,41 @@ referral are never dropped.
 Nothing is mocked. Clothing currently resolves to one national referral until a real clothing dataset
 is ingested — which needs **no code change** (it already maps into `essentials`).
 
+## "See in map" + frontend polish (2026-07-24)
+
+### Why it exists
+An "extreme, final" frontend audit. Two outcomes: (1) no overlapping text / spacing issues anywhere,
+and (2) every opportunity can be found on the map — with an honest signal when it can't.
+
+### Where the code lives
+- **`src/features/resources/SeeInMapButton.tsx` (new)** — the one reusable control. `isOnMap(resource)`
+  = `latitude && longitude`. Enabled → accent map icon + "See in map". Off-map → the map icon with a
+  diagonal **strike** + "Not on map", `disabled`, screen-reader label "Not on the map". Two style
+  variants — `card` (bordered rect, matches `ResourceCard`) and `pill` (matches `ActionRow`).
+- **Focus wiring** — `ResourceMap.tsx` gained a `useEffect` that `animateToRegion`s to `selectedId`
+  once `onMapReady` has fired (`mapReady` gate so the camera move isn't dropped). `fitToPins` skips
+  fitting only when the selected pin actually exists in the current set.
+- **Context-aware destinations** — `ResourceCard` takes an optional `onSeeInMap`. `app/results.tsx`
+  passes one that flips to its in-place map view + sets `selectedId`. Elsewhere (Discover/Saved) and
+  the detail page (`ActionRow`) navigate to the Map tab with `router.navigate({ pathname: '/map',
+  params: { focus: id } })`; `app/(tabs)/map.tsx` reads `useLocalSearchParams().focus` → `selectedId`.
+
+### How data flows
+Tap "See in map" → (Results) `setSelectedId` + switch to map view, or (elsewhere) navigate to
+`/map?focus=<id>` → the Map tab seeds `selectedId` → `ResourceMap`'s focus effect glides to the pin
+and the `ResourcePreview` for `selected` renders. Off-map resources never call the handler.
+
+### Design-system tokens (same pass)
+`src/theme/spacing.ts` now exports `shadows` (sm/md/lg — replacing three hand-rolled recipes in
+`Card`, `map`, `ResourceMap`) and an `xxs: 2` optical step (replacing scattered `gap:2`/`+2`/`padding:3`
+magic numbers). `typography.ts` adds `displayLarge` (onboarding hero titles); `colors.ts` adds
+`onboardingAccents` (an earth-tone quartet replacing off-palette blues/teals). Overlap fixes:
+`numberOfLines`/`flexShrink`/`flexWrap`/`ellipsizeMode` across `ResourceCard`, `VeteranBadge`,
+`StatusPill`, `ContactRow`, the map legend/footer, and the profile `InfoRow`.
+
+### What's mock vs production
+Nothing mock. All verified on an iOS simulator (cards, struck off-map state, map focus + preview).
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:

@@ -10,6 +10,7 @@ import type { ResourceSearchResult } from '@/services/resources';
 import { useSaved } from '@/services/saved';
 import { callPhone, openDirections } from './resourceActions';
 import { openNowStatus } from './resourceStatus';
+import { SeeInMapButton } from './SeeInMapButton';
 import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
 import { VeteranBadge } from './VeteranBadge';
@@ -21,12 +22,15 @@ type ResourceCardProps = {
   /** The need category the veteran searched — carried to the detail page so its
    *  AI guidance keeps the same context. */
   needCategory: NeedCategory;
+  /** When set (Results screen), "See in map" focuses the pin in-place instead of
+   *  navigating to the Map tab. Omitted in Discover/Saved, which have no map view. */
+  onSeeInMap?: (id: string) => void;
 };
 
 // The scannable unit of the results list: what it is, how close, whether it's
 // open, how trustworthy the info is, the two actions that matter most, and a tap
 // anywhere else to open the full detail page.
-export function ResourceCard({ result, needCategory }: ResourceCardProps) {
+export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardProps) {
   const router = useRouter();
   const { isSaved, toggleSave } = useSaved();
   const { resource, distanceMiles, isOpenNow } = result;
@@ -45,6 +49,16 @@ export function ResourceCard({ result, needCategory }: ResourceCardProps) {
       params: { id: resource.id, category: needCategory },
     });
 
+  // Results passes onSeeInMap to focus the pin in its own map view; elsewhere
+  // (Discover/Saved) we switch to the Map tab and focus it there via ?focus=.
+  const seeInMap = (id: string) => {
+    if (onSeeInMap) {
+      onSeeInMap(id);
+      return;
+    }
+    router.navigate({ pathname: '/map', params: { focus: id } });
+  };
+
   return (
     <PressableScale
       accessibilityRole="button"
@@ -56,7 +70,7 @@ export function ResourceCard({ result, needCategory }: ResourceCardProps) {
           <View style={styles.leftCluster}>
             <View style={styles.categoryChip}>
               <Ionicons name={meta.icon} size={14} color={meta.color} />
-              <AppText variant="caption" color="textSecondary">
+              <AppText variant="caption" color="textSecondary" numberOfLines={1}>
                 {meta.label}
               </AppText>
             </View>
@@ -80,7 +94,7 @@ export function ResourceCard({ result, needCategory }: ResourceCardProps) {
           </View>
         </View>
 
-        <AppText variant="subtitle" style={styles.name}>
+        <AppText variant="subtitle" style={styles.name} numberOfLines={2}>
           {resource.name}
         </AppText>
 
@@ -109,6 +123,7 @@ export function ResourceCard({ result, needCategory }: ResourceCardProps) {
               onPress={() => openDirections(resource)}
             />
           ) : null}
+          <SeeInMapButton resource={resource} variant="card" onPress={seeInMap} />
           <View style={styles.detailHint}>
             <AppText variant="label" color="textSecondary">
               View details
@@ -150,13 +165,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   leftCluster: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  rightCluster: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // flexShrink so the (longest, variable) category label truncates before the
+  // fixed veteran badge, keeping the header on one line without overlap.
+  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
+  rightCluster: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 0 },
   bookmarkPressed: { opacity: 0.5 },
   name: { marginTop: spacing.xs },
   desc: { marginTop: spacing.xs },
   sourceRow: { marginTop: spacing.xs },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   action: {
     flexDirection: 'row',
     alignItems: 'center',

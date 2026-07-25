@@ -67,6 +67,34 @@ Running log of notable product, design, and technical decisions (lightweight ADR
   cron).
 - **Consequences:** VA ingestion is healthy and complete on sandbox; no production key needed for MVP.
 
+### 2026-07-24 — "See in map" on every opportunity, context-aware, with a struck off-map state
+- **Status:** accepted
+- **Context:** Resources could only be reached via external "Directions"; there was no way to see a
+  specific opportunity on the in-app map, and no signal for resources that have no map location.
+- **Decision:** Add a reusable `SeeInMapButton` to every card + the detail page. Enabled when
+  `latitude && longitude`; otherwise **disabled with a struck-through map icon + "Not on map"**
+  (never hidden — the veteran learns *why* it isn't pinnable). Destination is **context-aware**:
+  Results flips to its own map view and zooms the pin in-place; detail/Discover/Saved open the Map
+  tab via `?focus=<id>`. The map animates to the pin once `onMapReady` fires (gated so the camera
+  move isn't dropped).
+- **Alternatives:** always open the global Map tab (simpler, but loses in-place focus on the Results
+  map); hide the button when off-map (rejected — the user explicitly wanted it on every opportunity).
+- **Consequences:** One consistent affordance ties lists to the map. The Map tab's browse dataset can
+  differ from a resource's origin, so a rare out-of-set focus won't zoom (still fits all pins).
+
+### 2026-07-24 — Design tokens: shadows, an `xxs` optical step, `displayLarge`, onboarding accents
+- **Status:** accepted (adds tokens per [[UI Design System]])
+- **Context:** A frontend audit found three hand-rolled shadow recipes, four off-scale font sizes,
+  scattered sub-`xs` magic numbers (`gap:2`, `padding:3`, `+2` arithmetic), and off-palette blue/teal
+  onboarding icon colors.
+- **Decision:** Add a `shadows` (sm/md/lg) token set, a single `xxs: 2` optical spacing step, a
+  `displayLarge` type variant for onboarding hero titles, and an `onboardingAccents` earth-tone
+  quartet (sage/taupe/ochre/clay) — deliberately avoiding the olive brand `accent` so a step icon
+  never looks like a primary action. Replace the hand-rolled recipes/magic numbers/hexes with these.
+- **Alternatives:** leave elevation/colors inline (rejected — reads as many systems, not one).
+- **Consequences:** Elevation and optical spacing are now consistent and named; onboarding stays
+  on-palette. `xxs` is documented as optical-only — layout rhythm stays on the 4/8 scale.
+
 ### 2026-07-21 — All AI tasks on Haiku (speed over the Opus cost-split)
 - **Status:** accepted (secrets set + `ai` redeployed; env-reversible)
 - **Context:** Opening a resource auto-loads an AI summary **and** plan; the plan ran on Opus with

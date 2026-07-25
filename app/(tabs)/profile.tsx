@@ -281,7 +281,7 @@ function InfoRow({
       <AppText variant="body" color="textSecondary">
         {label}
       </AppText>
-      <AppText variant="bodyStrong" style={styles.infoValue}>
+      <AppText variant="bodyStrong" style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
         {value}
       </AppText>
     </View>
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   avatarRing: {
-    padding: 3,
+    padding: spacing.xxs,
     borderRadius: radii.pill,
     borderWidth: 2,
     borderColor: colors.accent,
