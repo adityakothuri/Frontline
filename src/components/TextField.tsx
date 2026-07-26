@@ -15,7 +15,16 @@ export function TextField({ label, hint, style, ...inputProps }: TextFieldProps)
       <AppText variant="label" color="textSecondary">
         {label}
       </AppText>
-      <TextInput placeholderTextColor={colors.textMuted} style={[styles.input, style]} {...inputProps} />
+      {/* The visible label is a sibling, so screen readers would otherwise
+          announce this input as unlabeled. Naming it explicitly (and appending
+          the hint) is what makes onboarding and profile usable with VoiceOver.
+          A caller can still override via accessibilityLabel in inputProps. */}
+      <TextInput
+        accessibilityLabel={hint ? `${label}. ${hint}` : label}
+        placeholderTextColor={colors.textMuted}
+        style={[styles.input, style]}
+        {...inputProps}
+      />
       {hint ? (
         <AppText variant="caption" color="textMuted">
           {hint}

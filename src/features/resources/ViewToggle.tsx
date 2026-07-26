@@ -27,6 +27,9 @@ export function ViewToggle({
           <Pressable
             key={opt.value}
             accessibilityRole="button"
+            // "List" / "Map" alone doesn't say what the control does; naming the
+            // action makes the segment self-explanatory out of context.
+            accessibilityLabel={`Show results as ${opt.label.toLowerCase()}`}
             accessibilityState={{ selected }}
             onPress={() => onChange(opt.value)}
             style={[styles.segment, selected && styles.segmentSelected]}
