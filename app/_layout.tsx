@@ -10,6 +10,7 @@ import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
 import { Fraunces_700Bold } from '@expo-google-fonts/fraunces/700Bold';
 import { colors, fonts } from '@/theme';
+import { AppErrorBoundary } from '@/components';
 import { ProfileProvider } from '@/services/profile';
 import { ActivityProvider } from '@/services/activity';
 import { SavedProvider } from '@/services/saved';
@@ -54,10 +55,11 @@ export default function RootLayout() {
   } as const;
 
   return (
-    <ProfileProvider>
-      <ActivityProvider>
-        <SavedProvider>
-          <StatusBar style="dark" />
+    <AppErrorBoundary>
+      <ProfileProvider>
+        <ActivityProvider>
+          <SavedProvider>
+            <StatusBar style="dark" />
           <Stack
             screenOptions={{
               headerShown: false,
@@ -72,8 +74,9 @@ export default function RootLayout() {
             <Stack.Screen name="results" options={themedHeader} />
             <Stack.Screen name="resource/[id]" options={themedHeader} />
           </Stack>
-        </SavedProvider>
-      </ActivityProvider>
-    </ProfileProvider>
+          </SavedProvider>
+        </ActivityProvider>
+      </ProfileProvider>
+    </AppErrorBoundary>
   );
 }

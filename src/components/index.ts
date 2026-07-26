@@ -1,4 +1,5 @@
 export { AppText } from './AppText';
+export { AppErrorBoundary } from './AppErrorBoundary';
 export { BottomSheet } from './BottomSheet';
 export { Card } from './Card';
 export { CategoryMedallion } from './CategoryMedallion';

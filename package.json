@@ -1,6 +1,6 @@
 {
   "name": "frontline",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "React Native + Expo app that helps veterans find benefits, local resources, and AI-generated next steps.",
   "keywords": [
     "veterans",
@@ -29,7 +29,7 @@
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "expo": "~54.0.0",
+    "expo": "~54.0.36",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.21",
