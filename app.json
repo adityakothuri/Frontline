@@ -2,14 +2,17 @@
   "expo": {
     "name": "Frontline",
     "slug": "frontline",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "scheme": "frontline",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.frontline.app"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.frontline.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.frontline.app",
