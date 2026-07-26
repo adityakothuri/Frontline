@@ -1,8 +1,8 @@
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Chip } from '@/components';
-import { spacing } from '@/theme';
-import type { NeedCategory } from '@/types/need';
+import { AppText, PressableScale } from '@/components';
+import { colors, radii, spacing } from '@/theme';
+import { NEED_CATEGORY_META, type NeedCategory } from '@/types/need';
 
 // The Discover shell row. A curated handful of the most-common needs, plus two
 // sentinels: `all` (browse everything) and `other` (open the full category list).
@@ -24,6 +24,42 @@ export function shellCategory(id: ShellId): NeedCategory | undefined {
   return SHELLS.find((s) => s.id === id)?.category;
 }
 
+// A shell chip keeps its category icon even when selected (so the row stays
+// recognizable and each category shows its own hue on the icon). Selection uses
+// the app's standard olive-tint + border + checkmark — never color alone, and
+// consistent with the base Chip vocabulary — so the category hue stays pure
+// identity and olive stays the one action/selection color.
+function ShellChip({
+  shell,
+  selected,
+  onPress,
+}: {
+  shell: Shell;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const iconColor = shell.category
+    ? NEED_CATEGORY_META[shell.category].color
+    : colors.textSecondary;
+  return (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={shell.label}
+      onPress={onPress}
+      scaleTo={0.96}
+    >
+      <View style={[styles.chip, selected ? styles.chipSelected : styles.chipRest]}>
+        <Ionicons name={shell.icon} size={16} color={iconColor} />
+        <AppText variant="label" color={selected ? 'textPrimary' : 'textSecondary'}>
+          {shell.label}
+        </AppText>
+        {selected ? <Ionicons name="checkmark" size={16} color={colors.accent} /> : null}
+      </View>
+    </PressableScale>
+  );
+}
+
 export function CategoryShells({
   selected,
   onSelect,
@@ -39,10 +75,9 @@ export function CategoryShells({
       contentContainerStyle={styles.row}
     >
       {SHELLS.map((shell) => (
-        <Chip
+        <ShellChip
           key={shell.id}
-          label={shell.label}
-          icon={shell.icon}
+          shell={shell}
           selected={shell.id === selected}
           onPress={() => onSelect(shell.id)}
         />
@@ -61,4 +96,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm,
   },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  chipRest: { backgroundColor: colors.surface, borderColor: colors.border },
+  chipSelected: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
 });

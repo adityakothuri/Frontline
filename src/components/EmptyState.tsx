@@ -24,7 +24,7 @@ export function EmptyState({
   return (
     <View style={styles.root}>
       <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={26} color={colors.textSecondary} />
+        <Ionicons name={icon} size={30} color={colors.accent} />
       </View>
       <AppText variant="heading" style={styles.center}>
         {title}
@@ -51,15 +51,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
   },
+  // A warm olive medallion, not a cold gray circle — the empty state should
+  // reassure, not read as an error.
   iconWrap: {
-    width: 56,
-    height: 56,
+    width: 64,
+    height: 64,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    backgroundColor: colors.accentSoft,
     marginBottom: spacing.sm,
   },
   center: { textAlign: 'center' },
