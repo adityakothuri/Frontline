@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, View, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -32,7 +32,7 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
   // Spring up + fade in when a pin is tapped, so the card doesn't just snap in.
   // Respects reduce-motion (snaps in instead).
   const reduced = useReducedMotion();
-  const anim = useRef(new Animated.Value(0)).current;
+  const [anim] = useState(() => new Animated.Value(0));
   useEffect(() => {
     if (reduced) {
       anim.setValue(1);

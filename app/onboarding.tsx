@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { OptionGroup, TextField } from '@/components';
@@ -32,15 +32,17 @@ export default function OnboardingScreen() {
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
   // Remembered so each step's progress bar animates from where it actually was
-  // (screen step N maps to prompt index N-1; the welcome maps to -1).
-  const prevStepRef = useRef(0);
+  // (screen step N maps to prompt index N-1; the welcome maps to -1). Held as
+  // state, not a ref: it is read during render to position the bar, and both
+  // updates are batched in the same handler so they stay in step.
+  const [prevStep, setPrevStep] = useState(0);
   const go = (to: number) => {
-    prevStepRef.current = step;
+    setPrevStep(step);
     setStep(Math.max(0, to));
   };
   const next = () => go(step + 1);
   const back = () => go(step - 1);
-  const prevIndex = prevStepRef.current - 1;
+  const prevIndex = prevStep - 1;
 
   const create = async () => {
     if (saving) return;

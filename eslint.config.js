@@ -31,6 +31,15 @@ module.exports = defineConfig([
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       'no-empty': ['error', { allowEmptyCatch: false }],
+      // React Compiler's `set-state-in-effect` targets derived-state cascades
+      // (`useEffect(() => setX(f(y)), [y])`), which should be computed during
+      // render instead. In this codebase it fires only on the other shape: an
+      // async fetch flipping to `{ status: 'loading' }` before awaiting the
+      // service. There is no way to show a skeleton when the query inputs
+      // change without that transition, short of adopting a query library —
+      // so the rule is off rather than suppressed at ~10 call sites.
+      // Revisit if a real data-fetching layer (e.g. TanStack Query) lands.
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ]);

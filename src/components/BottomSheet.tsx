@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -40,7 +40,7 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   // Stays mounted through the exit animation, so closing never snaps.
   const [mounted, setMounted] = useState(false);
 
@@ -139,7 +139,7 @@ export function BottomSheet({
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   fill: { flex: 1 },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.overlay },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.overlay },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radii.xl,

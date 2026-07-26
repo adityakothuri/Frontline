@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Animated, Easing, AccessibilityInfo, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,7 +8,7 @@ import { colors, radii, spacing, withAlpha } from '@/theme';
 // The first thing a new veteran sees: a warm, confident welcome that sets the
 // tone before the setup questions. One driver animates a staggered entrance.
 export function OnboardingWelcome({ onStart }: { onStart: () => void }) {
-  const t = useRef(new Animated.Value(0)).current;
+  const [t] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     let active = true;
