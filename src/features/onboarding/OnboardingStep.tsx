@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   View,
   ScrollView,
@@ -56,14 +56,17 @@ export function OnboardingStep({
   canContinue,
   loading = false,
 }: OnboardingStepProps) {
-  const anim = useRef(new Animated.Value(0)).current;
+  const [anim] = useState(() => new Animated.Value(0));
   // Starts at the previously shown step's fill so the bar eases into place on
   // each remount — forward or back. Width % needs the JS driver; it's a 4px bar.
-  const fill = useRef(
-    new Animated.Value(
-      previousStepIndex === undefined ? stepIndex / stepCount : (previousStepIndex + 1) / stepCount,
-    ),
-  ).current;
+  const [fill] = useState(
+    () =>
+      new Animated.Value(
+        previousStepIndex === undefined
+          ? stepIndex / stepCount
+          : (previousStepIndex + 1) / stepCount,
+      ),
+  );
 
   useEffect(() => {
     let active = true;

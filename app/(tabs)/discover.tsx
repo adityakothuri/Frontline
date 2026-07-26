@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Pressable, FlatList, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -67,24 +67,31 @@ export default function DiscoverScreen() {
   const [miscOpen, setMiscOpen] = useState(false);
   const [state, setState] = useState<BrowseState>({ status: 'loading' });
 
-  const load = useCallback(async () => {
-    setState({ status: 'loading' });
-    try {
-      const results = await resourceService.listResources(
-        shellCategory(selected),
-        profile?.zip,
-        profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES,
-      );
-      setState({ status: 'ready', results });
-    } catch {
-      setState({ status: 'error' });
-    }
-  }, [selected, profile?.zip, profile?.preferredRadiusMiles]);
+  // Bumped by the error state's Retry so the fetch effect re-runs on demand.
+  const [reloadToken, setReloadToken] = useState(0);
+  const reload = () => setReloadToken((n) => n + 1);
+
+  const zip = profile?.zip;
+  const radiusMiles = profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES;
 
   useEffect(() => {
     if (selected === 'other') return;
-    load();
-  }, [selected, load]);
+    // `active` guards against out-of-order resolution: flipping between shells
+    // faster than the network must not let an older response land last.
+    let active = true;
+    setState({ status: 'loading' });
+    resourceService
+      .listResources(shellCategory(selected), zip, radiusMiles)
+      .then((results) => {
+        if (active) setState({ status: 'ready', results });
+      })
+      .catch(() => {
+        if (active) setState({ status: 'error' });
+      });
+    return () => {
+      active = false;
+    };
+  }, [selected, zip, radiusMiles, reloadToken]);
 
   // The multi-category "all" browse alternates categories; a single category
   // keeps its natural nearest-first order, with statewide/national veteran help
@@ -164,7 +171,7 @@ export default function DiscoverScreen() {
         ) : state.status === 'loading' ? (
           <Loading label="Loading opportunities…" />
         ) : state.status === 'error' ? (
-          <ErrorState onRetry={load} />
+          <ErrorState onRetry={reload} />
         ) : displayResults.length === 0 && referrals.length === 0 ? (
           <EmptyState
             icon="search-outline"
