@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react';
 import { Animated, View, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Card, PrimaryButton } from '@/components';
+import { AppText, Card, CategoryMedallion, PrimaryButton } from '@/components';
 import { formatDistance } from '@/lib/geo';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, surfaceTint } from '@/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
@@ -29,10 +30,16 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
   const showStatus = resource.category !== 'jobs';
 
   // Spring up + fade in when a pin is tapped, so the card doesn't just snap in.
+  // Respects reduce-motion (snaps in instead).
+  const reduced = useReducedMotion();
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (reduced) {
+      anim.setValue(1);
+      return;
+    }
     Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 18, bounciness: 8 }).start();
-  }, [anim]);
+  }, [anim, reduced]);
 
   return (
     <Animated.View
@@ -41,14 +48,12 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
         transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
       }}
     >
-      <Card style={styles.card}>
+      <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
       <View style={styles.topRow}>
-        <View style={styles.categoryChip}>
-          <Ionicons name={meta.icon} size={14} color={meta.color} />
-          <AppText variant="caption" color="textSecondary">
-            {meta.label}
-          </AppText>
-        </View>
+        <CategoryMedallion icon={meta.icon} color={meta.color} size={38} />
+        <AppText variant="caption" color="textSecondary" style={styles.category} numberOfLines={1}>
+          {meta.label}
+        </AppText>
         <Pressable accessibilityRole="button" accessibilityLabel="Close preview" onPress={onClose} hitSlop={8}>
           <Ionicons name="close" size={20} color={colors.textMuted} />
         </Pressable>
@@ -80,8 +85,8 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  category: { flex: 1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cta: { minHeight: 44, marginTop: spacing.xs },
 });

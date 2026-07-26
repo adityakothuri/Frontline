@@ -1,9 +1,9 @@
 import { View, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Card, PressableScale } from '@/components';
+import { AppText, Card, CategoryMedallion, PressableScale } from '@/components';
 import { formatDistance } from '@/lib/geo';
-import { colors, radii, spacing } from '@/theme';
+import { colors, radii, spacing, surfaceTint } from '@/theme';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
@@ -65,48 +65,49 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
       accessibilityLabel={`View details for ${resource.name}`}
       onPress={openDetail}
     >
-      <Card style={styles.card}>
-        <View style={styles.topRow}>
-          <View style={styles.leftCluster}>
-            <View style={styles.categoryChip}>
-              <Ionicons name={meta.icon} size={14} color={meta.color} />
-              <AppText variant="caption" color="textSecondary" numberOfLines={1}>
-                {meta.label}
-              </AppText>
-            </View>
+      <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
+        <View style={styles.header}>
+          <CategoryMedallion icon={meta.icon} color={meta.color} size={44} />
+          <View style={styles.headerMeta}>
+            <AppText variant="caption" color="textSecondary" numberOfLines={1} style={styles.category}>
+              {meta.label}
+            </AppText>
             <VeteranBadge relevance={resource.veteran_relevance} />
           </View>
-          <View style={styles.rightCluster}>
-            {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
-              onPress={() => toggleSave(resource.id)}
-              hitSlop={8}
-              style={({ pressed }) => pressed && styles.bookmarkPressed}
-            >
-              <Ionicons
-                name={saved ? 'bookmark' : 'bookmark-outline'}
-                size={18}
-                color={saved ? colors.accent : colors.textMuted}
-              />
-            </Pressable>
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
+            onPress={() => toggleSave(resource.id)}
+            hitSlop={8}
+            style={({ pressed }) => pressed && styles.bookmarkPressed}
+          >
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={18}
+              color={saved ? colors.accent : colors.textMuted}
+            />
+          </Pressable>
         </View>
 
-        <AppText variant="subtitle" style={styles.name} numberOfLines={2}>
+        <AppText variant="subtitle" numberOfLines={2} style={styles.name}>
           {resource.name}
         </AppText>
 
-        <AppText variant="caption" color="textMuted">
-          {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
-        </AppText>
+        <View style={styles.subMeta}>
+          {/* textSecondary (not muted) so small text keeps AA on the tinted card. */}
+          <AppText variant="caption" color="textSecondary">
+            {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
+          </AppText>
+          {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
+        </View>
 
         <AppText variant="body" color="textSecondary" numberOfLines={2} style={styles.desc}>
           {resource.description}
         </AppText>
 
         <SourceRow resource={resource} style={styles.sourceRow} />
+
+        <View style={styles.divider} />
 
         <View style={styles.actions}>
           {resource.phone ? (
@@ -159,20 +160,21 @@ function ActionButton({
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  leftCluster: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
+  // A single header row: medallion · (category label + veteran badge) · bookmark.
+  // The name and everything below stay flush to the card's left edge, so the
+  // medallion + whisper tint carry the category identity without indenting the
+  // content (not a colored rail).
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headerMeta: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   // flexShrink so the (longest, variable) category label truncates before the
-  // fixed veteran badge, keeping the header on one line without overlap.
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
-  rightCluster: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 0 },
-  bookmarkPressed: { opacity: 0.5 },
+  // fixed veteran badge, keeping the row on one line without overlap.
+  category: { flexShrink: 1 },
   name: { marginTop: spacing.xs },
-  desc: { marginTop: spacing.xs },
-  sourceRow: { marginTop: spacing.xs },
+  subMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  bookmarkPressed: { opacity: 0.5 },
+  desc: { marginTop: spacing.xxs },
+  sourceRow: { marginTop: spacing.xxs },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginTop: spacing.xs },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

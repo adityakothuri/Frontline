@@ -25,6 +25,31 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 
 ---
 
+### 2026-07-25 — Per-category visual identity as a semantic layer (not actions); dep-free tints
+- **Status:** accepted
+- **Context:** The app looked clean but flat — every category has a color, used only on tiny glyphs.
+  Goal: make different opportunity types "look different" while staying calm/premium.
+- **Decision:** Introduce a **category visual identity** (medallion + a soft `surfaceTint` card/hero
+  wash) driven by a shared `categoryVisual` helper + `CategoryMedallion`. Category color is a
+  **semantic identity** layer (like green=verified); **olive stays the single action color**. Per the
+  design-rule ban, **no colored side-rails** — identity is medallions + tints. The detail page is the
+  one "committed" category surface (a colored hero zone). Contrast kept AA (tints ≤ ~14%; text on ink).
+- **Alternatives:** colored left-rail on cards (rejected — banned cliché + AA risk); category color on
+  buttons (rejected — breaks the one-accent rule); a bolder multi-color leap (rejected — betrays the
+  calm/trust identity).
+- **Consequences:** Lists read as color-coded sets; each detail page has a distinct premium identity;
+  the action language stays a single olive. New categories inherit the system for free.
+
+### 2026-07-25 — Drop expo-linear-gradient; use dependency-free solid tints
+- **Status:** accepted
+- **Context:** The "richer & warmer" plan reached for gradient washes, but `expo-linear-gradient` is a
+  **native** module — the running dev client predated it, so it rendered as an "Unimplemented
+  component" (needs a full native dev-client rebuild).
+- **Decision:** Achieve the warm, per-category look with **`surfaceTint`** (a solid alpha-composite of
+  the hue over the paper surface) instead of gradients. Uninstalled `expo-linear-gradient`.
+- **Consequences:** No native rebuild needed; keeps the minimal-deps discipline; the look is ~95% of a
+  gradient's at zero dependency cost. A gradient vocabulary can return later if a native rebuild happens.
+
 ### 2026-07-25 — Final professionalism audit: consolidate to main, tests, security hardening
 - **Status:** accepted
 - **Context:** Submitting to a professionalism competition. Three expert sweeps found the code

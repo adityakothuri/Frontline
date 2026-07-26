@@ -597,6 +597,32 @@ security gaps a reviewer would flag.
 Nothing mock. Tests exercise real pure functions; the security changes are deployed to the live
 Supabase project.
 
+## Per-category visual identity (2026-07-25)
+
+### Why it exists
+Every category had a color that was used only on tiny icons, so cards/screens read as uniform cream.
+This turns category color into a real identity so different opportunity types *look* different — while
+staying calm and premium.
+
+### Where the code lives
+- **`src/theme/categoryVisual.ts`** — the derivation layer: `categoryVisual(hue)` → `{ tint, wash,
+  border }`, `surfaceTint(hue, amount)` (alpha-composites a hue over the paper surface into a solid,
+  AA-safe wash), and `medallionStyle()`. Consumers pass `meta.color` (from `NEED_/RESOURCE_CATEGORY_META`)
+  so there are no duplicated hex values.
+- **`src/components/CategoryMedallion.tsx`** — the shared glyph (category icon in its hue on a soft
+  tint) used by cards, the detail hero, the map preview, and category rows.
+- **`src/hooks/useReducedMotion.ts`** — one reduce-motion source for all animated surfaces.
+
+### How it renders
+`ResourceCard` leads with a `CategoryMedallion` and tints its whole surface with `surfaceTint(meta.color)`;
+`ResourceDetail` opens with a full-bleed hero zone in the category hue + a large medallion + the
+Fraunces name. `CategoryShells` chips keep their icon and wear their category hue when active. The
+guardrail: category color is **identity only** — the single olive `accent` still owns every action
+(buttons, links), and there are no colored side-rails (medallions + soft tints instead).
+
+### What's mock vs production
+Nothing mock. All tints derive from the two real category-metadata maps; verified on the iOS sim.
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:

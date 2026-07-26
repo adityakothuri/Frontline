@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Card, PressableScale } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { AppText, Card, CategoryMedallion, PressableScale } from '@/components';
+import { colors, spacing, surfaceTint } from '@/theme';
 import { NEED_CATEGORY_META, type NeedCategory } from '@/types/need';
 
 // A single need-category row: color-coded icon chip + label + one-line
@@ -21,10 +21,8 @@ export function NeedCategoryCard({
       accessibilityHint={meta.description}
       onPress={onPress}
     >
-      <Card style={styles.card}>
-        <View style={[styles.iconWrap, { backgroundColor: withAlpha(meta.color, 0.16) }]}>
-          <Ionicons name={meta.icon} size={24} color={meta.color} />
-        </View>
+      <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
+        <CategoryMedallion icon={meta.icon} color={meta.color} size={48} />
         <View style={styles.cardText}>
           <AppText variant="subtitle">{meta.label}</AppText>
           <AppText variant="caption" color="textSecondary">
@@ -42,13 +40,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   cardText: { flex: 1, gap: spacing.xxs },
 });
