@@ -63,9 +63,9 @@ reflected in the app's store listing.
 
 ## Contact
 
-Questions about privacy: **<add a support email before publishing>**.
+Questions about privacy: **adityakothuri3@gmail.com**.
 
 ---
 
-> **To publish:** host this page at a stable URL (e.g. GitHub Pages or your domain), fill in the
-> support email, and paste the URL into App Store Connect (App Privacy → Privacy Policy URL).
+> **To publish:** host this page at a stable URL (e.g. GitHub Pages or your domain) and paste the
+> URL into App Store Connect (App Privacy → Privacy Policy URL).
