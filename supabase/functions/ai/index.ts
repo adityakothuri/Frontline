@@ -26,7 +26,17 @@ const RATE_LIMIT_PER_HOUR = 30;
 // blob. Rejected with 413 before the model is ever called.
 const MAX_INPUT_CHARS = 20_000;
 
-const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+// Bound the upstream call at the function too, not just in the client. The app
+// aborts at 30s (AI_TIMEOUT_MS in src/services/ai/claudeAiService.ts), so a
+// single 25s attempt returns a clean 502 just under that instead of tying up an
+// isolate until the platform kills it. Retries are off on purpose: Opus with
+// adaptive thinking legitimately runs long, so a second attempt would blow past
+// the client's abort — and the UI already offers the veteran a retry.
+const anthropic = new Anthropic({
+  apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
+  timeout: 25_000,
+  maxRetries: 0,
+});
 
 /**
  * The caller's IP for rate-limiting. `x-forwarded-for` is `client, proxy1, …`;

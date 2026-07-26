@@ -107,8 +107,11 @@ Deno.serve(async (request) => {
   }
 
   // verify_jwt is off (publishable anon keys aren't JWTs); gate on the anon key.
+  // Fails CLOSED if SUPABASE_ANON_KEY is ever missing — a truthiness check on
+  // the expected key would skip the comparison entirely and open the endpoint.
+  // Matches the guard in the `ai` function.
   const expectedKey = Deno.env.get('SUPABASE_ANON_KEY');
-  if (expectedKey && request.headers.get('apikey') !== expectedKey) {
+  if (!expectedKey || request.headers.get('apikey') !== expectedKey) {
     return json({ error: 'Unauthorized' }, 401);
   }
 
