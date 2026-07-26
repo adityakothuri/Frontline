@@ -25,6 +25,10 @@ account, and we never ask for your SSN, VA login, bank information, or medical d
   plan, and a call script. To do this, information **about that resource** (and, if you provide it, your
   first name for a personalized call script) is sent to our AI provider (Anthropic) through a secure
   server. We do not send your ZIP, location history, or any sensitive personal data for this.
+- **Crash reports.** If the app crashes, a report is sent to our error-monitoring provider (Sentry)
+  so we can fix it. These reports contain the technical error, your device model and OS version, and
+  the screen you were on — **not** your name, ZIP, location, or anything you typed. We do not use
+  them to identify or track you.
 - Network requests use encrypted connections (HTTPS).
 
 ## What we do NOT do
