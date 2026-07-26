@@ -16,6 +16,9 @@ export function Chip({ label, selected, onPress, icon }: ChipProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      // Explicit, so the checkmark icon can never be announced ahead of (or
+      // instead of) the option text.
+      accessibilityLabel={label}
       accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => [

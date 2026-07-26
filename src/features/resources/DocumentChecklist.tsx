@@ -42,6 +42,7 @@ export function DocumentChecklist({ documents }: DocumentChecklistProps) {
           <Pressable
             key={doc}
             accessibilityRole="checkbox"
+            accessibilityLabel={doc}
             accessibilityState={{ checked: isChecked }}
             onPress={() => toggle(doc)}
             style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}

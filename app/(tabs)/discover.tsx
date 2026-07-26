@@ -141,6 +141,7 @@ export default function DiscoverScreen() {
             <View style={styles.misc}>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Back to all categories"
                 onPress={() => setMiscOpen(false)}
                 hitSlop={6}
                 style={styles.backRow}
