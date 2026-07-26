@@ -68,16 +68,11 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
       <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
         <View style={styles.header}>
           <CategoryMedallion icon={meta.icon} color={meta.color} size={44} />
-          <View style={styles.headerText}>
-            <View style={styles.metaRow}>
-              <AppText variant="caption" color="textSecondary" numberOfLines={1} style={styles.category}>
-                {meta.label}
-              </AppText>
-              <VeteranBadge relevance={resource.veteran_relevance} />
-            </View>
-            <AppText variant="subtitle" numberOfLines={2}>
-              {resource.name}
+          <View style={styles.headerMeta}>
+            <AppText variant="caption" color="textSecondary" numberOfLines={1} style={styles.category}>
+              {meta.label}
             </AppText>
+            <VeteranBadge relevance={resource.veteran_relevance} />
           </View>
           <Pressable
             accessibilityRole="button"
@@ -93,6 +88,10 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
             />
           </Pressable>
         </View>
+
+        <AppText variant="subtitle" numberOfLines={2} style={styles.name}>
+          {resource.name}
+        </AppText>
 
         <View style={styles.subMeta}>
           {/* textSecondary (not muted) so small text keeps AA on the tinted card. */}
@@ -161,15 +160,16 @@ function ActionButton({
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  // Medallion + a text column (category label · veteran badge, then the name),
-  // with the bookmark pinned top-right. The medallion + the whisper card tint
-  // are what make each category read as its own — not a colored rail.
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  headerText: { flex: 1, gap: spacing.xxs },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // A single header row: medallion · (category label + veteran badge) · bookmark.
+  // The name and everything below stay flush to the card's left edge, so the
+  // medallion + whisper tint carry the category identity without indenting the
+  // content (not a colored rail).
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headerMeta: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   // flexShrink so the (longest, variable) category label truncates before the
   // fixed veteran badge, keeping the row on one line without overlap.
   category: { flexShrink: 1 },
+  name: { marginTop: spacing.xs },
   subMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   bookmarkPressed: { opacity: 0.5 },
   desc: { marginTop: spacing.xxs },
