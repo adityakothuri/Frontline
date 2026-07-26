@@ -1,8 +1,8 @@
 ---
 tags: [command-center, start-here]
 status: active
-phase: "Data cycle FINAL (2026-07-24): hybrid relevance (veteran-first + labeled general), live rows across every category refreshed 2026-07-24, Census-geocoded pins, honest trust labels, scheduled refresh with a freshness gate (all 5 secrets set, dispatch run green, VA sandbox healthy). Latest: Food+Clothing merged into 'Essentials', HUD general capped like food, data-model docs de-staled. Remaining: merge this branch to main; Feed America pilot sign-off."
-updated: 2026-07-24
+phase: "Production-readiness pass DONE (2026-07-26): full three-front audit (app / backend / release), Expo SDK 54->57, Sentry crash reporting, iOS privacy manifest + permission hygiene, backend grant hardening applied to production, AI response cache, a11y + race fixes. iOS-only for 1.0. Remaining is out-of-repo only: host the privacy policy, confirm the Anthropic console spend cap, ASC listing + screenshots, Sentry project."
+updated: 2026-07-26
 ---
 
 # Frontline Command Center
@@ -20,9 +20,16 @@ picks **what they need help with**, and sees **nearby, veteran-first real resour
 **real Claude** next-step plans, call scripts, and benefit summaries (served through the `ai` Edge
 Function proxy), saved resources, an optional on-device profile — and a consistent **trust layer**:
 source badges everywhere, stale/unverified warnings, the persistent "not the VA" disclaimer, and
-crisis routing (988 press 1 / 911) on the Emergency path. Remaining is release engineering (EAS build
-profiles, an Android Maps key, store assets). The dev framework (agents, hooks, rules, skills, MCP,
-Obsidian, workflow) is **preserved**.
+crisis routing (988 press 1 / 911) on the Emergency path. The dev framework (agents, hooks, rules,
+skills, MCP, Obsidian, workflow) is **preserved**.
+
+**Release engineering is now DONE too** (2026-07-26 production-readiness pass): EAS project linked
+with build profiles, Expo SDK 57, Sentry crash reporting, iOS privacy manifest, privacy policy and
+Terms drafted, backend grants hardened in production. **1.0 ships iOS-only**, so the Android Maps
+key is explicitly out of scope — the Android map would render blank until one is provisioned.
+**Everything that remains is out-of-repo**: host `docs/PRIVACY.md` at a public URL, confirm the
+Anthropic console spend cap, create the Sentry project + EAS secrets, and fill in the App Store
+Connect listing. See "Pre-submission checklist" below.
 
 ## Current Phase
 
@@ -31,8 +38,24 @@ Obsidian, workflow) is **preserved**.
 [[Phase 4 Resource List and Detail]] · [[Phase 5 Map and Discovery]] ·
 [[Phase 6 AI Plans and Call Scripts]] · [[Phase 7 AI Summarization]] ·
 [[Phase 8 Saved and Profile]] · [[Phase 9 Trust and Verification]] ·
-**[[Phase 10 Backend and Data Ingestion]]** (live Supabase data + real AI proxy). Remaining: release
-engineering (EAS, Android Maps key, store assets).
+**[[Phase 10 Backend and Data Ingestion]]** (live Supabase data + real AI proxy) · **release
+engineering** (2026-07-26). Remaining: out-of-repo store/ops steps only.
+
+## Pre-submission checklist (out-of-repo — cannot be done from the codebase)
+
+- [ ] **Confirm the Anthropic console spend cap is set.** Both in-app guards (per-IP 30/hr, $5/hr
+      budget) are fail-open by design, so this is the only hard cost backstop — and nothing in the
+      repo can verify it.
+- [ ] **Host `docs/PRIVACY.md`** at a stable URL; paste into App Store Connect → App Privacy.
+      Apple requires a live Privacy Policy URL. Host `docs/TERMS.md` alongside it.
+- [ ] **Confirm `com.frontline.app`** is registered to the Apple Developer account (it can never be
+      changed after the first submission).
+- [ ] **Create the Sentry org/project**; set `EXPO_PUBLIC_SENTRY_DSN`, and `SENTRY_ORG` /
+      `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` as EAS secrets so release builds upload source maps.
+- [ ] **ASC listing:** screenshots (6.7"/6.5"), description, keywords, support URL.
+- [ ] **Age rating questionnaire** — note the app surfaces 988 crisis-line content.
+- [ ] **Branch protection** on `main` is unavailable on GitHub's free tier for a private repo, so CI
+      does not currently gate merges.
 
 ## Current Active Task
 
@@ -114,10 +137,11 @@ Resource Data Model doc + ingestion README. `npm run verify` green; qa-tester PA
 Branch `feature/essentials-merge-data-hardening` — ready to merge. See
 [[2026-07-24 Data audit, Essentials merge, veteran-first hardening]].
 
-**Publishability (release-manager audit):** engineering is strong (clean RLS, env hygiene, green
-CI, honest data). Store-blockers are the usual pre-launch non-code work: no EAS project/`eas.json`,
-no Android Google Maps API key (Android map blank in release), no privacy policy, placeholder
-bundle id `com.frontline.app`, no crash reporting/error boundary. None are data-cycle issues.
+**Publishability — SUPERSEDED (2026-07-26).** The older release-manager audit listed "no EAS
+project/`eas.json`, no privacy policy, no crash reporting/error boundary" as open blockers. **All
+three have since landed** (EAS linked in `f8669b7`, `docs/PRIVACY.md`, and Sentry + `AppErrorBoundary`
+in the production-readiness pass). The Android Maps key is **out of scope** for an iOS-only 1.0. The
+live list is the "Pre-submission checklist" above.
 
 **Next (user):** (a) merge `feature/phase-10-backend` → `main`, set secrets (`SUPABASE_URL`,
 `SUPABASE_SERVICE_ROLE_KEY`, `VA_API_KEY`, `USAJOBS_API_KEY`, `USAJOBS_USER_AGENT`), run a manual
