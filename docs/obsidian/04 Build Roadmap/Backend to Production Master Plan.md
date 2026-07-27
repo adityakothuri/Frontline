@@ -368,7 +368,7 @@ and freshness are the core of the product's trust promise — do not shortcut th
 **Steps:**
 1. **EAS Build** profiles (`eas.json`): dev / preview / production; inject `EXPO_PUBLIC_*` via **EAS
    env/secrets** (baked at build). Bump `app.json` version/build numbers.
-2. **iOS:** Apple Developer account, bundle id `com.frontline.app`, icons/splash, `PrivacyInfo.xcprivacy`
+2. **iOS:** Apple Developer account, bundle id `com.kothuri.frontline`, icons/splash, `PrivacyInfo.xcprivacy`
    (present), TestFlight → App Store. Handle **Sign in with Apple** requirement if WS-6 ships.
 3. **Android (later):** keystore, adaptive icon, Play Console. Note: no reinstall-restore on Android
    until WS-6 (keystore wipe) — document as known limitation.

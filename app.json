@@ -10,7 +10,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.frontline.app",
+      "bundleIdentifier": "com.kothuri.frontline",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -96,7 +96,7 @@
       }
     },
     "android": {
-      "package": "com.frontline.app",
+      "package": "com.kothuri.frontline",
       "adaptiveIcon": {
         "backgroundColor": "#F5F1E8",
         "foregroundImage": "./assets/android-icon-foreground.png",
