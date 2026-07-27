@@ -50,8 +50,10 @@ engineering** (2026-07-26). Remaining: out-of-repo store/ops steps only.
       <https://adikothuri3.github.io/frontline-legal/privacy.html> and `/terms.html`, served by GitHub
       Pages from the **public `frontline-legal` repo** (the app repo is private, so free-tier Pages
       could not host from it). The `docs/*.md` files stay canonical — edit there, mirror into the HTML.
-- [ ] **Confirm `com.frontline.app`** is registered to the Apple Developer account (it can never be
-      changed after the first submission).
+- [x] **Bundle id is `com.kothuri.frontline`** (changed 2026-07-26). The original `com.frontline.app`
+      was **already registered to another Apple developer** — bundle ids are globally unique across all
+      of Apple, and this only surfaced at the first real build. Registered to team "Ananth Kothuri
+      (Individual)" (MT5QJPXQS7). It can never be changed after the first submission.
 - [ ] **Create the Sentry org/project**; set `EXPO_PUBLIC_SENTRY_DSN`, and `SENTRY_ORG` /
       `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` as EAS secrets so release builds upload source maps.
 - [ ] **ASC listing:** screenshots (6.7"/6.5"), description, keywords, support URL.

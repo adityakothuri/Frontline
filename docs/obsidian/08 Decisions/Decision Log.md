@@ -25,6 +25,26 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 
 ---
 
+### 2026-07-26 — Bundle identifier is `com.kothuri.frontline`, not `com.frontline.app`
+- **Status:** accepted
+- **Context:** The first real EAS build failed at credential setup: Apple rejected the App ID with
+  *"`com.frontline.app` is not available"*. Bundle identifiers are unique across **all of Apple**, not
+  just within a team — `com.frontline.app` was already registered to someone else. Nothing in the repo
+  could have detected this; it is only knowable by asking Apple, which first happens at build time.
+- **Decision:** Change `ios.bundleIdentifier` **and** `android.package` to `com.kothuri.frontline` —
+  a personal reverse-DNS namespace matching the enrolled team, "Ananth Kothuri (Individual)"
+  (MT5QJPXQS7). Both platforms kept in sync even though 1.0 ships iOS-only.
+- **Alternatives:** `com.ananthkothuri.frontline` (exactly matches the team name, but longer);
+  `io.github.adikothuri.frontline` (guaranteed unique, but an open-source convention that reads oddly
+  for a consumer App Store app). A domain-backed id was not an option — we don't own `frontline.app`.
+- **Consequences:** **Permanent once published** — it cannot be changed after the first submission.
+  Leaves `com.kothuri.<name>` free for future apps. Historical build logs still say `com.frontline.app`
+  and were deliberately left alone as dated records; forward-looking docs were updated. Anyone with a
+  stale local `ios/` directory must re-run `npx expo prebuild --clean` before building locally — EAS
+  builds are unaffected because `/ios` is gitignored and the cloud prebuild is always clean.
+
+---
+
 ### 2026-07-25 — Per-category visual identity as a semantic layer (not actions); dep-free tints
 - **Status:** accepted
 - **Context:** The app looked clean but flat — every category has a color, used only on tiny glyphs.

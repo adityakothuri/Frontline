@@ -49,7 +49,7 @@ component pattern · important refactor · a bug fix that changes a flow. Not fo
   the **tab set and screens** become Frontline as feature phases land.
 
 ### App config
-- `app.json` / `package.json` now identify the app as **Frontline** (`com.frontline.app`, slug/scheme
+- `app.json` / `package.json` now identify the app as **Frontline** (`com.kothuri.frontline`, slug/scheme
   `frontline`). The native `ios/` project is regenerated from this config.
 
 ## Data & AI service layer — `src/types`, `src/services`, `src/lib` (Phase 2, real)
