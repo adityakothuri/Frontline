@@ -134,7 +134,13 @@
         }
       ],
       "expo-secure-store",
-      "@sentry/react-native"
+      [
+        "@sentry/react-native",
+        {
+          "organization": "frontline-uy",
+          "project": "react-native"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -22,23 +22,31 @@ so no Google Maps key is needed.
   you just host it and paste the URL.
 - `package.json` version bumped to `1.0.0`.
 
+- **Crash reporting** is installed and wired (`@sentry/react-native` + `src/services/monitoring/crashReporting.ts`,
+  PII-scrubbed). It stays a **no-op until `EXPO_PUBLIC_SENTRY_DSN` is set** in the `eas.json` build
+  profile — see step 2.
+- **Privacy policy + Terms are LIVE** at
+  <https://adikothuri3.github.io/frontline-legal/privacy.html> and
+  <https://adikothuri3.github.io/frontline-legal/terms.html> (public `frontline-legal` repo, GitHub Pages).
+
 ## Your remaining steps (need YOUR accounts — I can't do these)
 
-### 1. Accounts (start now; Apple takes ~1–2 days to activate)
-- [ ] **Apple Developer Program** — developer.apple.com, $99/yr.
-- [ ] **Expo account** — expo.dev (free); this owns the EAS builds.
-- [ ] Install the CLI + log in:
-  ```bash
-  npm i -g eas-cli
-  eas login
-  ```
+### 1. Accounts — ✅ DONE
+- [x] **Apple Developer Program** — active.
+- [x] **Expo account** — logged in as `kothuria`; the EAS project is linked (`projectId` is in `app.json`).
+> The bundle id `com.frontline.app` is **permanent once published**. Change `ios.bundleIdentifier` in
+> `app.json` before the first build if you want a different one.
 
-### 2. Link the EAS project (writes `projectId` into app.json — the one config step that needs your login)
+### 2. Turn on crash reporting (do this BEFORE the first build)
+Create the org + project at sentry.io (platform: React Native), then:
 ```bash
-eas init
+eas secret:create --scope project --name SENTRY_ORG        --value <org-slug>
+eas secret:create --scope project --name SENTRY_PROJECT    --value <project-slug>
+eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value <token>
 ```
-> If you want a bundle id other than `com.frontline.app` (it must be unique + one you'll own long-term),
-> change `ios.bundleIdentifier` in `app.json` **before** the first build — it's permanent once published.
+Then add `"EXPO_PUBLIC_SENTRY_DSN": "<dsn>"` to the `preview` **and** `production` `env` blocks in
+`eas.json`. The three secrets upload source maps at build time (so stack traces are readable); the
+DSN is what actually enables reporting at runtime.
 
 ### 3. First internal build → test on a real iPhone
 ```bash
@@ -48,9 +56,14 @@ EAS will offer to **create the Apple app record and manage signing certificates*
 build from the link on your iPhone and **walk the full loop over cellular**: onboarding → Discover →
 results → map → open a resource (AI summary/plan/call script load) → save. Fix anything, rebuild.
 
-### 4. Host the privacy policy
-Publish [`docs/PRIVACY.md`](PRIVACY.md) at a stable URL (GitHub Pages or your domain), add a support
-email in it, and keep the URL for step 6.
+### 4. Host the privacy policy — ✅ DONE
+Live at <https://adikothuri3.github.io/frontline-legal/privacy.html> (Terms at `/terms.html`), served
+by GitHub Pages from the public `frontline-legal` repo. [`docs/PRIVACY.md`](PRIVACY.md) stays the
+canonical source — edit it there, then mirror into the HTML.
+
+### 4b. Set the Anthropic spend cap
+In console.anthropic.com, set a hard monthly limit. The in-app guards (30 req/IP/hr, $5/hr budget)
+are **fail-open by design**, so this is the only real backstop against a runaway bill once public.
 
 ### 5. Production build
 ```bash
@@ -59,7 +72,8 @@ eas build --platform ios --profile production
 
 ### 6. App Store Connect + TestFlight
 - In **appstoreconnect.apple.com**, the app record exists (from step 3) — fill: name/subtitle/description/
-  keywords, **privacy policy URL** (step 4), the **App Privacy** questionnaire (declare: optional coarse
+  keywords, **privacy policy URL** (`https://adikothuri3.github.io/frontline-legal/privacy.html`), a
+  **support URL** (`https://adikothuri3.github.io/frontline-legal/`), the **App Privacy** questionnaire (declare: optional coarse
   location, **no tracking**, no account), age rating, and one **review note**:
   > *"Frontline is an independent resource navigator, not affiliated with the U.S. Department of Veterans
   > Affairs. AI output is general guidance, clearly labeled, never medical/legal/financial advice."*
@@ -78,10 +92,10 @@ git tag -a v1.0.0 -m "v1.0.0 — first public release" && git push --tags
 ```
 
 ## Optional but recommended (post-TestFlight)
-- **Crash reporting:** `npx expo install @sentry/react-native`, add your DSN, and report from
-  `AppErrorBoundary.componentDidCatch` — so you see field crashes, not just local ones.
 - **OTA updates:** `npx expo install expo-updates`, then `eas update --branch production -m "fix"` pushes
   JS-only fixes without a new store review. (Native/dependency changes still need a rebuild.)
+- **Android:** 1.0 ships iOS-only. Android needs a Google Maps API key before shipping — the map
+  renders blank without one. iOS uses Apple Maps, so it needs no key.
 
 ## Command cheat-sheet
 ```bash
