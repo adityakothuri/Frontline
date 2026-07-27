@@ -130,10 +130,15 @@
           "locationWhenInUsePermission": "Frontline uses your location only to center the map on you. It is never stored or shared.",
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
-          "motionUsagePermission": false
+          "motionUsagePermission": "Frontline does not collect motion data. This notice is required because the app's location library can access motion activity, which Frontline never requests or stores."
         }
       ],
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Frontline does not use Face ID. This notice is required because the app's secure-storage library supports biometrics, which Frontline never enables."
+        }
+      ],
       [
         "@sentry/react-native",
         {
