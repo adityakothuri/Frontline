@@ -67,5 +67,7 @@ Questions about these terms: **adityakothuri3@gmail.com**.
 
 ---
 
-> **To publish:** host this page at a stable URL alongside the privacy policy and link it from the
-> App Store Connect listing.
+> **Published at:** <https://adikothuri3.github.io/frontline-legal/terms.html>, alongside the privacy
+> policy. This Markdown file is the canonical source; the public page is HTML in the
+> [frontline-legal](https://github.com/adikothuri3/frontline-legal) repo. **Edit here first, then
+> mirror the change there** so the two never drift.
