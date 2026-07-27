@@ -15,14 +15,16 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://mucheczkivtlmwlskltq.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_3bEY6Rzc-CMVW296q7s2RA_JDS1Q1Ic"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_3bEY6Rzc-CMVW296q7s2RA_JDS1Q1Ic",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://99d9c6b28ef55c91e750b14f3d3f47a5@o4511804965715968.ingest.us.sentry.io/4511804984131584"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://mucheczkivtlmwlskltq.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_3bEY6Rzc-CMVW296q7s2RA_JDS1Q1Ic"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_3bEY6Rzc-CMVW296q7s2RA_JDS1Q1Ic",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://99d9c6b28ef55c91e750b14f3d3f47a5@o4511804965715968.ingest.us.sentry.io/4511804984131584"
       }
     }
   },

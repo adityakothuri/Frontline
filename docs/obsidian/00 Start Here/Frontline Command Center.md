@@ -46,8 +46,10 @@ engineering** (2026-07-26). Remaining: out-of-repo store/ops steps only.
 - [ ] **Confirm the Anthropic console spend cap is set.** Both in-app guards (per-IP 30/hr, $5/hr
       budget) are fail-open by design, so this is the only hard cost backstop — and nothing in the
       repo can verify it.
-- [ ] **Host `docs/PRIVACY.md`** at a stable URL; paste into App Store Connect → App Privacy.
-      Apple requires a live Privacy Policy URL. Host `docs/TERMS.md` alongside it.
+- [x] **Privacy policy + Terms are LIVE (2026-07-26).**
+      <https://adikothuri3.github.io/frontline-legal/privacy.html> and `/terms.html`, served by GitHub
+      Pages from the **public `frontline-legal` repo** (the app repo is private, so free-tier Pages
+      could not host from it). The `docs/*.md` files stay canonical — edit there, mirror into the HTML.
 - [ ] **Confirm `com.frontline.app`** is registered to the Apple Developer account (it can never be
       changed after the first submission).
 - [ ] **Create the Sentry org/project**; set `EXPO_PUBLIC_SENTRY_DSN`, and `SENTRY_ORG` /

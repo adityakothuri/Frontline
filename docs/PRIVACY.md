@@ -67,5 +67,7 @@ Questions about privacy: **adityakothuri3@gmail.com**.
 
 ---
 
-> **To publish:** host this page at a stable URL (e.g. GitHub Pages or your domain) and paste the
-> URL into App Store Connect (App Privacy → Privacy Policy URL).
+> **Published at:** <https://adikothuri3.github.io/frontline-legal/privacy.html> — this is the URL
+> given to App Store Connect (App Privacy → Privacy Policy URL). This Markdown file is the canonical
+> source; the public page is HTML in the [frontline-legal](https://github.com/adikothuri3/frontline-legal)
+> repo. **Edit here first, then mirror the change there** so the two never drift.
