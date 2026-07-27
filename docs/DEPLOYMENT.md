@@ -10,7 +10,7 @@ so no Google Maps key is needed.
 
 - **App code** merged to `main` — features, per-category UI, tests (`npm test`) and `npm run verify` green.
 - **`app.json`** set for release: `version` `1.0.0`, iOS-only (`supportsTablet: false`), bundle id
-  `com.frontline.app`, and `ITSAppUsesNonExemptEncryption: false` (skips the export-compliance prompt on
+  `com.kothuri.frontline`, and `ITSAppUsesNonExemptEncryption: false` (skips the export-compliance prompt on
   every TestFlight upload). Location permission string is honest and present.
 - **`eas.json`** created: `development` (simulator), `preview` (internal device build), and `production`
   (auto-incrementing build number, `appVersionSource: remote`). The **public** Supabase values
@@ -34,8 +34,10 @@ so no Google Maps key is needed.
 ### 1. Accounts — ✅ DONE
 - [x] **Apple Developer Program** — active.
 - [x] **Expo account** — logged in as `kothuria`; the EAS project is linked (`projectId` is in `app.json`).
-> The bundle id `com.frontline.app` is **permanent once published**. Change `ios.bundleIdentifier` in
-> `app.json` before the first build if you want a different one.
+> The bundle id is `com.kothuri.frontline` and is **permanent once published**. It is not the
+> original `com.frontline.app` — that identifier was already registered to a different Apple
+> developer, which only surfaced when the first build tried to create the App ID. Bundle ids are
+> globally unique across all of Apple, not just your team.
 
 ### 2. Turn on crash reporting (do this BEFORE the first build)
 Create the org + project at sentry.io (platform: React Native), then:
