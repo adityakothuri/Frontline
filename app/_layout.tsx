@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -14,13 +14,27 @@ import { AppErrorBoundary } from '@/components';
 import { ProfileProvider } from '@/services/profile';
 import { ActivityProvider } from '@/services/activity';
 import { SavedProvider } from '@/services/saved';
+import {
+  initCrashReporting,
+  navigationIntegration,
+  withCrashReporting,
+} from '@/services/monitoring';
+
+// Before the first render, so a crash during startup is still reported.
+initCrashReporting();
 
 // Keep the native splash up until Inter + Fraunces are ready, so the first frame
 // the user sees is already in the app's typefaces (no font swap / flash of
 // system font).
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayout() {
+  // Gives crash reports the screen the veteran was on. No-op without a DSN.
+  const navigationRef = useNavigationContainerRef();
+  useEffect(() => {
+    if (navigationRef) navigationIntegration.registerNavigationContainer(navigationRef);
+  }, [navigationRef]);
+
   const [loaded, error] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -80,3 +94,5 @@ export default function RootLayout() {
     </AppErrorBoundary>
   );
 }
+
+export default withCrashReporting(RootLayout);

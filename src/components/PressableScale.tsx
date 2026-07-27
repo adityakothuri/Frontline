@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Animated,
   Pressable,
@@ -25,7 +25,7 @@ export function PressableScale({
   children,
   ...rest
 }: PressableScaleProps) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
 
   const spring = (toValue: number) =>
     Animated.spring(scale, { toValue, useNativeDriver: true, speed: 40, bounciness: 6 }).start();

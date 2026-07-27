@@ -8,11 +8,8 @@ AI-generated guidance. Security, privacy, and trust are core product concerns, n
 Please report security issues **privately** — do not open a public issue.
 
 ```text
-Security contact: TBD
+Security contact: adityakothuri3@gmail.com
 ```
-
-(Replace with a real private contact/email before the repo is shared or made public. Until
-then, report privately to the repository owner.)
 
 Include: what you found, steps to reproduce, affected area, and potential impact. We'll
 acknowledge and work on a fix before any public disclosure.
