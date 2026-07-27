@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Pressable, Animated, Easing, AccessibilityInfo, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -25,7 +25,7 @@ type OnboardingCompleteProps = {
 // The finale of setup: a warm confirmation + a recap, then "Create account" —
 // which saves the profile on-device. The celebratory moment of the flow.
 export function OnboardingComplete({ draft, onBack, onCreate, loading }: OnboardingCompleteProps) {
-  const pop = useRef(new Animated.Value(0)).current;
+  const [pop] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     let active = true;

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -26,7 +26,7 @@ export default function HomeScreen() {
 
   // One quiet fade so the front door settles in rather than snapping (a single
   // element, not an orchestrated sequence). Instant under reduce-motion.
-  const fade = useRef(new Animated.Value(0)).current;
+  const [fade] = useState(() => new Animated.Value(0));
   useEffect(() => {
     if (reduced) {
       fade.setValue(1);

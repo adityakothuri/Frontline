@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -40,29 +40,36 @@ export default function MapScreen() {
     if (typeof focus === 'string' && focus.length > 0) setSelectedId(focus);
   }, [focus]);
 
-  const load = useCallback(async () => {
-    setState({ status: 'loading' });
-    try {
-      const results = await resourceService.listResources(
-        undefined,
-        profile?.zip,
-        profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES,
-      );
-      setState({ status: 'ready', results });
-    } catch {
-      setState({ status: 'error' });
-    }
-  }, [profile?.zip, profile?.preferredRadiusMiles]);
+  // Bumped by the error state's Retry so the fetch effect re-runs on demand.
+  const [reloadToken, setReloadToken] = useState(0);
+  const reload = () => setReloadToken((n) => n + 1);
+
+  const zip = profile?.zip;
+  const radiusMiles = profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES;
 
   useEffect(() => {
-    load();
-  }, [load]);
+    // `active` guards against out-of-order resolution: editing the ZIP twice in
+    // quick succession must not let the older response overwrite the newer one.
+    let active = true;
+    setState({ status: 'loading' });
+    resourceService
+      .listResources(undefined, zip, radiusMiles)
+      .then((results) => {
+        if (active) setState({ status: 'ready', results });
+      })
+      .catch(() => {
+        if (active) setState({ status: 'error' });
+      });
+    return () => {
+      active = false;
+    };
+  }, [zip, radiusMiles, reloadToken]);
 
   // One driver staggers the scaffolding in on mount; a second reveals the
   // loaded content (legend, map, count) when results arrive. Both respect
   // the system reduce-motion setting, matching the onboarding pattern.
-  const enter = useRef(new Animated.Value(0)).current;
-  const reveal = useRef(new Animated.Value(0)).current;
+  const [enter] = useState(() => new Animated.Value(0));
+  const [reveal] = useState(() => new Animated.Value(0));
   const reduceMotion = useRef(false);
 
   useEffect(() => {
@@ -191,7 +198,7 @@ export default function MapScreen() {
         {state.status === 'loading' ? (
           <Loading label="Loading the map…" />
         ) : state.status === 'error' ? (
-          <ErrorState onRetry={load} />
+          <ErrorState onRetry={reload} />
         ) : (
           <Animated.View style={[styles.mapFill, { opacity: reveal }]}>
             <ResourceMap results={state.results} selectedId={selectedId} onSelect={setSelectedId} />

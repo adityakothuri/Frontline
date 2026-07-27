@@ -187,7 +187,7 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
           setHint(null);
         }}
         showsUserLocation={status === 'granted'}
-        showsPointsOfInterest={false}
+        showsPointsOfInterests={false}
       >
         {located.map((r) => {
           const meta = RESOURCE_CATEGORY_META[r.resource.category];

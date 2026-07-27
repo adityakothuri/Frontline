@@ -1,6 +1,7 @@
 import type { Need } from '@/types/need';
 import type { Resource } from '@/types/resource';
 import { supabaseRequest } from '../supabase/client';
+import { aiCacheKey, readAiCache, writeAiCache } from './aiCache';
 import {
   AI_NOT_ADVICE_DISCLAIMER,
   type AiService,
@@ -19,6 +20,10 @@ import {
  *
  * The disclaimer is re-stamped client-side so its exact wording has one source
  * of truth.
+ *
+ * The two calls a resource page fires automatically (summary, plan) read
+ * through an on-device cache keyed by a hash of their inputs — still real model
+ * output, just not re-derived for a resource whose content hasn't changed.
  */
 
 /** Claude with adaptive thinking is slower than a DB read; give it room. */
@@ -33,12 +38,31 @@ class ClaudeAiService implements AiService {
     });
   }
 
+  /**
+   * Run `fetcher`, or return an equivalent cached result. Only used for the two
+   * calls a resource page fires automatically — a call script is generated on an
+   * explicit tap, where the veteran is asking for a fresh one.
+   */
+  private async cached<T>(task: string, inputs: unknown, fetcher: () => Promise<T>): Promise<T> {
+    const key = aiCacheKey(task, inputs);
+    const hit = await readAiCache<T>(key);
+    if (hit) return hit;
+    const value = await fetcher();
+    await writeAiCache(key, value);
+    return value;
+  }
+
   async buildNextStepPlan(input: { need: Need; resource: Resource }): Promise<NextStepPlan> {
-    const plan = await this.callFunction<NextStepPlan>({
-      task: 'plan',
-      need: input.need,
-      resource: input.resource,
-    });
+    const plan = await this.cached(
+      'plan',
+      { need: input.need, resource: input.resource },
+      () =>
+        this.callFunction<NextStepPlan>({
+          task: 'plan',
+          need: input.need,
+          resource: input.resource,
+        }),
+    );
     return { ...plan, disclaimer: AI_NOT_ADVICE_DISCLAIMER };
   }
 
@@ -59,10 +83,12 @@ class ClaudeAiService implements AiService {
   }
 
   async summarizeBenefit(input: { resource: Resource }): Promise<BenefitSummary> {
-    return this.callFunction<BenefitSummary>({
-      task: 'summary',
-      resource: input.resource,
-    });
+    return this.cached('summary', { resource: input.resource }, () =>
+      this.callFunction<BenefitSummary>({
+        task: 'summary',
+        resource: input.resource,
+      }),
+    );
   }
 }
 

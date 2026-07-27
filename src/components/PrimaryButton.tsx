@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -32,7 +32,7 @@ export function PrimaryButton({
 }: PrimaryButtonProps) {
   const isSecondary = variant === 'secondary';
   const inactive = disabled || loading;
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
 
   const spring = (toValue: number) =>
     Animated.spring(scale, { toValue, useNativeDriver: true, speed: 40, bounciness: 5 }).start();

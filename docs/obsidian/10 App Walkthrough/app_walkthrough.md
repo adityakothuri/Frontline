@@ -623,6 +623,51 @@ guardrail: category color is **identity only** — the single olive `accent` sti
 ### What's mock vs production
 Nothing mock. All tints derive from the two real category-metadata maps; verified on the iOS sim.
 
+## Production-readiness pass — monitoring + AI cache (2026-07-26)
+
+### Why it exists
+A three-front audit (app source / backend+data / release) ahead of the App Store submission. The
+code itself came out clean; what was missing was operational. Two things here are new app code, the
+rest were fixes. Full account: [[2026-07-26 Production readiness — SDK 57, Sentry, backend hardening]].
+
+### Crash reporting — `src/services/monitoring/`
+- **`crashReporting.ts`** — wraps `@sentry/react-native` behind four exports (`initCrashReporting`,
+  `captureException`, `navigationIntegration`, `withCrashReporting`). Gated on
+  `EXPO_PUBLIC_SENTRY_DSN` the same way `supabaseConfig` gates the backend: **no DSN → every export
+  is a no-op**, so the app never depends on monitoring being wired up.
+- **Data flow:** `app/_layout.tsx` calls `initCrashReporting()` at module scope (*before* first
+  render, so a startup crash is still caught), registers expo-router's container ref with
+  `navigationIntegration` so reports carry the screen the veteran was on, and exports
+  `withCrashReporting(RootLayout)`. `AppErrorBoundary.componentDidCatch` calls `captureException`.
+- **Privacy is the design constraint**, not an afterthought — this app shows benefit, housing, and
+  crisis screens. `sendDefaultPii: false`; screenshots, view hierarchy, session replay, and
+  failed-request capture are all **off**; a `beforeSend` scrub drops the `user` and `request`
+  objects and every breadcrumb `data` payload (where a ZIP or first name could otherwise ride
+  along). `tracesSampleRate` is 0.1.
+
+### AI response cache — `src/services/ai/aiCache.ts`
+- **Why:** opening a resource auto-fires a benefit summary (Haiku) *and* a next-step plan (Opus).
+  Nothing cached them, so re-opening a resource re-derived identical text and spent against the
+  edge function's $5/hr budget every time.
+- **How:** `aiCacheKey(task, inputs)` hashes the exact prompt inputs with FNV-1a; `ClaudeAiService`
+  reads through the cache in a private `cached()` helper. Correctness comes from the key, not the
+  clock — **any** change to the resource or need misses and regenerates. A 30-day TTL is only a
+  backstop, and the store is capped at 60 entries (AsyncStorage, `frontline.aiCache.v1`).
+- **Call scripts are deliberately not cached:** those come from an explicit tap, where the veteran
+  is asking for a fresh one.
+
+### Fixes worth knowing about
+- **Out-of-order responses** in `discover.tsx`, `map.tsx`, and `useResourceSearch.ts`: the fetch now
+  lives in the effect with the `let active = true` cleanup the context providers already used, plus
+  a `reloadToken` for retry. A fast shell switch could previously let an older response land last.
+- **`TextField`** now passes its label through as `accessibilityLabel` — every form field in
+  onboarding and profile was announced as unlabeled by screen readers.
+- **Animated values**: 12 sites moved off `useRef(new Animated.Value(x)).current` (which allocated a
+  throwaway value on every render) to lazy `useState`, per SDK 57's React Compiler rules.
+
+### What's mock vs production
+Nothing mock. Sentry is real but inert without a DSN; the cache holds real model output.
+
 ## What's coming (planned, not built)
 
 Per [[Feature Priority Order]] and the roadmap:
