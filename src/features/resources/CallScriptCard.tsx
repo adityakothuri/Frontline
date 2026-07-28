@@ -7,7 +7,7 @@ import { colors, radii, spacing } from '@/theme';
 import { aiService } from '@/services/ai';
 import type { CallScript, CallScriptTone } from '@/services/ai';
 import type { Need } from '@/types/need';
-import type { Resource } from '@/types/resource';
+import { RESOURCE_CATEGORY_META, type Resource } from '@/types/resource';
 import { AiContentBlock } from './AiContentBlock';
 
 type CallScriptCardProps = {
@@ -77,7 +77,7 @@ export function CallScriptCard({ need, resource, firstName, tone = 'standard' }:
   }
 
   return (
-    <AiContentBlock loading={loading}>
+    <AiContentBlock color={RESOURCE_CATEGORY_META[resource.category].color} loading={loading}>
       {script ? (
         <>
           <View style={styles.scriptBlock}>

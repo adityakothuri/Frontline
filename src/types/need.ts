@@ -68,22 +68,24 @@ export interface NeedCategoryMeta {
 
 /**
  * Display metadata for the 11 need categories — one source of truth for the home grid.
- * Category colors stay inside the app's olive/earth family (olives, sages, ochres,
- * warm browns) so category-coded UI reads as one palette; emergency alone leans
- * rust-red. Keep in sync with RESOURCE_CATEGORY_META in `types/resource.ts`.
+ * Each category owns its own muted hue, chosen against the measured constraints
+ * documented on RESOURCE_CATEGORY_META (`types/resource.ts`): >=12 CIEDE2000 from
+ * every semantic token, >=11 from every other category, >=3:1 for the icon on its
+ * own medallion wash. Every hue here matches its counterpart in
+ * RESOURCE_CATEGORY_META — keep the two in sync.
  */
 export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
-  essentials: { label: 'Essentials', icon: 'basket-outline', description: 'Food, clothing, and everyday basics', color: '#A56E24' },
-  housing: { label: 'Housing', icon: 'home-outline', description: 'Shelter, rent, and homeless services', color: '#5F7326' },
-  healthcare: { label: 'Healthcare', icon: 'medkit-outline', description: 'Clinics, mental health, and VA care', color: '#4E7D5B' },
-  disability_benefits: { label: 'Disability benefits', icon: 'ribbon-outline', description: 'Claims, ratings, and compensation', color: '#77804C' },
-  education_benefits: { label: 'Education benefits', icon: 'school-outline', description: 'GI Bill, tuition, and training', color: '#87702A' },
-  jobs: { label: 'Job / employment', icon: 'briefcase-outline', description: 'Hiring, resumes, and job training', color: '#A98E2E' },
-  legal: { label: 'Legal help', icon: 'shield-outline', description: 'VA-accredited reps for your claims', color: '#587045' },
-  transportation: { label: 'Transportation', icon: 'bus-outline', description: 'Rides to appointments and errands', color: '#6F8F5A' },
-  family_caregiver: { label: 'Family / caregiver', icon: 'people-outline', description: 'Support for families and caregivers', color: '#7E9146' },
+  essentials: { label: 'Essentials', icon: 'basket-outline', description: 'Food, clothing, and everyday basics', color: '#B85C1E' },
+  housing: { label: 'Housing', icon: 'home-outline', description: 'Shelter, rent, and homeless services', color: '#35521F' },
+  healthcare: { label: 'Healthcare', icon: 'medkit-outline', description: 'Clinics, mental health, and VA care', color: '#1F7A7A' },
+  disability_benefits: { label: 'Disability benefits', icon: 'ribbon-outline', description: 'Claims, ratings, and compensation', color: '#7E6144' },
+  education_benefits: { label: 'Education benefits', icon: 'school-outline', description: 'GI Bill, tuition, and training', color: '#47708A' },
+  jobs: { label: 'Job / employment', icon: 'briefcase-outline', description: 'Hiring, resumes, and job training', color: '#8A6B1C' },
+  legal: { label: 'Legal help', icon: 'shield-outline', description: 'VA-accredited reps for your claims', color: '#2F5550' },
+  transportation: { label: 'Transportation', icon: 'bus-outline', description: 'Rides to appointments and errands', color: '#6A5266' },
+  family_caregiver: { label: 'Family / caregiver', icon: 'people-outline', description: 'Support for families and caregivers', color: '#9C606E' },
   emergency: { label: 'Emergency help', icon: 'alert-circle-outline', description: 'Crisis lines and urgent support', color: '#B04A38' },
-  general_benefits: { label: 'General VA benefits', icon: 'document-text-outline', description: 'Explore other VA benefits', color: '#46602A' },
+  general_benefits: { label: 'General VA benefits', icon: 'document-text-outline', description: 'Explore other VA benefits', color: '#4A5580' },
 };
 
 /** Stable display order for the home grid. */

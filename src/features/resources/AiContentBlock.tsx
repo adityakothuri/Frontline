@@ -2,11 +2,15 @@ import type { ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, Skeleton } from '@/components';
-import { colors, radii, shadows, spacing, withAlpha } from '@/theme';
+import { colors, radii, shadows, spacing, surfaceTint, withAlpha } from '@/theme';
 
 type AiContentBlockProps = {
   /** Optional heading; omit when a surrounding section already titles the block. */
   title?: string;
+  /** The hue of the category this guidance is about (from `*_CATEGORY_META`), so
+   *  the block belongs to the resource it sits under. Falls back to the olive
+   *  accent where there's no category context. */
+  color?: string;
   loading?: boolean;
   children?: ReactNode;
 };
@@ -16,9 +20,29 @@ type AiContentBlockProps = {
 // caller loads content and passes it (or `loading`) in. The "AI-generated" tag
 // is the block's one label; the longer not-advice disclaimer is deliberately
 // not repeated per block.
-export function AiContentBlock({ title, loading = false, children }: AiContentBlockProps) {
+//
+// The surface is washed with the category hue so the guidance belongs to the
+// resource it sits under — but deliberately at HALF the detail hero's strength
+// (0.07 vs 0.14), because at equal strength the block became indistinguishable
+// from the hero and "is this the source or the model?" stopped being visible.
+// The sparkles glyph and the shadow stay constant across categories: they, not
+// the hue, are what says "this is AI".
+export function AiContentBlock({
+  title,
+  color = colors.accent,
+  loading = false,
+  children,
+}: AiContentBlockProps) {
   return (
-    <View style={styles.block}>
+    <View
+      style={[
+        styles.block,
+        {
+          backgroundColor: surfaceTint(color, 0.07, colors.background),
+          borderColor: withAlpha(color, 0.45),
+        },
+      ]}
+    >
       {title ? (
         <View style={styles.header}>
           <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
@@ -51,12 +75,11 @@ export function AiContentBlock({ title, loading = false, children }: AiContentBl
 
 const styles = StyleSheet.create({
   block: {
-    backgroundColor: colors.accentSoft,
     borderRadius: radii.lg,
-    // An accent-tinted border + soft lift set AI guidance apart as a distinct,
-    // "intelligent" surface — not just another neutral card.
+    // A category-tinted fill + border set AI guidance apart as a distinct,
+    // "intelligent" surface — not just another neutral card — and tie it to the
+    // resource above it. Both colors are applied inline from the `color` prop.
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: withAlpha(colors.accent, 0.25),
     padding: spacing.lg,
     gap: spacing.xs,
     ...shadows.sm,

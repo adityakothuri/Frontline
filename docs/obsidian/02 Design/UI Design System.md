@@ -44,6 +44,48 @@ Rule: color carries **meaning**, and **never color alone** — pair with text/ic
 Olive = primary action, **deep emerald** = verified (kept distinct from the olive accent so the two
 greens never blur), amber = unverified/outdated, red = emergency. Don't use these for ordinary chrome.
 
+### Category identity hues
+
+Separate from the semantic tokens above, each of the 11 categories owns **one distinct muted hue**,
+defined once in `RESOURCE_CATEGORY_META` (`src/types/resource.ts`) and mirrored in
+`NEED_CATEGORY_META` (`src/types/need.ts`). This is an **identity** layer — "this is food / housing /
+legal" — not an action or a severity. Olive stays the only action color.
+
+| Category (resource / need) | Hue | |
+|---|---|---|
+| `food` / `essentials` | `#B85C1E` | burnt orange |
+| `clothing` / `disability_benefits` | `#7E6144` | taupe |
+| `housing` | `#35521F` | deep forest |
+| `healthcare` | `#1F7A7A` | teal |
+| `benefits_help` / `general_benefits` | `#4A5580` | slate indigo |
+| `legal` | `#2F5550` | dark pine |
+| `jobs` | `#8A6B1C` | ochre |
+| `education` / `education_benefits` | `#47708A` | dusty blue |
+| `transportation` | `#6A5266` | mauve |
+| `emergency` | `#B04A38` | brick |
+| `community_support` / `family_caregiver` | `#9C606E` | dusty rose |
+
+The set is chosen against **measured constraints**, not by eye — a validator script
+enforces all three (re-run it before changing any value):
+
+1. **>=12 CIEDE2000 from every semantic token** (accent `#5F7326`, success `#2E7D32`,
+   warning `#B7791F`, danger `#C0392B`) so a category never impersonates a state.
+   `emergency` is the one deliberate exception: for that category identity *is* severity.
+2. **>=11 CIEDE2000 from every other category** — the property the palette claims.
+3. **>=3:1 for the icon on its own medallion wash** — the compound tint-on-tint case
+   (medallion `0.16` over hero `0.14`), which is the worst surface each hue lands on.
+
+Two further rules:
+
+- **Never small text.** These hues are used at full strength only for icons, map pins and
+  borders, and otherwise as washes via `withAlpha` / `surfaceTint`. Most sit below the 4.5:1
+  text threshold — text on a category surface stays `textPrimary` / `textSecondary`.
+- **Wash strengths** are one system: card `surfaceTint(color, 0.06)` · medallion `alpha 0.16` ·
+  detail hero `surfaceTint(color, 0.14)` · AI guidance block `surfaceTint(color, 0.07)` fill +
+  `alpha 0.45` border. The AI block is deliberately **half** the hero's strength: at equal
+  strength the two surfaces became indistinguishable and the "guidance vs source" boundary —
+  the highest-stakes distinction on the detail screen — stopped reading.
+
 ## Typography
 
 - **Inter** (400/500/600/700) for body/UI and **Fraunces** (serif, 600/700) for big display/title

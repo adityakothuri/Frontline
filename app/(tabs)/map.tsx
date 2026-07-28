@@ -177,7 +177,10 @@ export default function MapScreen() {
                     <AppText variant="caption" color="textSecondary">
                       {meta.label}
                     </AppText>
-                    <AppText variant="caption" style={{ color: meta.color }}>
+                    {/* The count stays textSecondary, not the category hue: at
+                        12px on a wash of that same hue it only reached ~3:1,
+                        well under AA. The icon already carries the color. */}
+                    <AppText variant="caption" color="textSecondary">
                       {count}
                     </AppText>
                   </View>

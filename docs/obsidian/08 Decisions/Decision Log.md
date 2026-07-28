@@ -25,6 +25,47 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 
 ---
 
+### 2026-07-27 — Category hues are chosen against measured constraints, and distinctness beat brand monochrome
+- **Status:** accepted — extends [[#2026-07-25 — Per-category visual identity as a semantic layer (not actions); dep-free tints]]
+- **Context:** The per-category identity shipped on 2026-07-25 assigned every category a hue from the
+  olive/earth family. In practice most of them were near-identical sages and olives, so the identity
+  layer did almost no work — and `housing` was *literally* the action olive `#5F7326` (ΔE 0). Asked
+  to make each category read as its own color, and to match the warm-paper/olive `exports 3` design
+  set. Those two pull apart: the export set is a deliberate olive monochrome.
+- **Decision:** Keep 11 genuinely distinct hues, including four cooler ones (slate indigo, dusty
+  blue, mauve, dusty rose) that sit outside the warm-paper family — distinctness was the explicit
+  ask. Choose them against three **measured** constraints rather than by eye, enforced by
+  `src/types/categoryMeta.test.ts`: ≥12 CIEDE2000 from every semantic token (so a category never
+  impersonates an action or a state), ≥11 from every other category, and ≥3:1 for the icon on its
+  own compound medallion wash. `emergency` is the one deliberate exception to the first rule.
+- **Alternatives:** a warm-earth-only ramp (rejected — with the olive accent, emerald, amber and red
+  all occupying the warm/green space, a warm-only set of 11 either doubles up families or goes muddy;
+  a search for the maximum-separation warm set returned colors like `#6f4002` and `#674142`).
+  Auto-optimizing for maximum separation (rejected — mathematically valid, visually ugly; the final
+  set is hand-picked and machine-*checked*).
+- **Consequences:** Categories are now tellable apart at a glance. The cost is a knowingly-accepted
+  brand tension on the Home grid, where all 11 tinted cards stack in one column — that screen is
+  where the cooler hues will show first, and is the thing to look at on device. Changing any hue
+  means re-running the invariant test, which fails loudly on a collision.
+
+### 2026-07-27 — AI guidance blocks carry the category hue at half the hero's strength
+- **Status:** accepted
+- **Context:** The AI summary block was a fixed olive `accentSoft` on every resource, so it never
+  belonged to the thing it described. Tinting it with the category hue at the hero's own strength
+  (`0.14`) fixed that but put the two surfaces within **7/255** of each other — the block stopped
+  reading as a distinct AI surface, which is the highest-stakes distinction on the page ("is this
+  the source, or the model?").
+- **Decision:** Wash the block with the category hue at **half** the hero's strength
+  (`surfaceTint(color, 0.07)`, opaque rather than translucent) with a stronger `alpha 0.45` border,
+  and hold the AI markers **constant** across categories: the sparkles glyph stays the olive accent,
+  and the "AI-generated — verify with the source" tag stays. Identity comes from the wash; "this is
+  AI" comes from the glyph, the border and the label.
+- **Alternatives:** dropping the category tint entirely (rejected — the block goes back to belonging
+  to nothing); keeping `0.14` (rejected — measured indistinguishable from the hero).
+- **Consequences:** Guidance visibly belongs to its resource without impersonating the source layer.
+  `surfaceTint` also makes the fill opaque, so the block no longer shifts color with its backdrop
+  (it renders over two different surfaces — the detail page and the call-script sheet).
+
 ### 2026-07-26 — Bundle identifier is `com.kothuri.frontline`, not `com.frontline.app`
 - **Status:** accepted
 - **Context:** The first real EAS build failed at credential setup: Apple rejected the App ID with
@@ -851,6 +892,58 @@ Running log of notable product, design, and technical decisions (lightweight ADR
 - **Rationale:** honors "nothing shown extends past the radius" while keeping genuinely veteran
   help (SSVF housing, crisis line) reachable and relevant. See
   [[2026-07-24 Data cycle final audit and hybrid rebuild]].
+
+### 2026-07-27 — Veteran data quality: purge child nutrition, go national, rank local first
+- **Status:** accepted (user decision)
+- **Context:** live profiling found only **1.5%** of 131,655 rows had phone + hours + coordinates;
+  **44%** of the food category was school/child-nutrition sites; food existed in **8 states only**
+  (New York had zero); and `clothing`, `transportation`, `emergency` had **no geocoded rows at all**.
+- **Drop child-nutrition taxonomies.** `school-meals` / `summer-meals` are served at schools and are
+  useless to an older veteran. Removed from the Feed America allow-list (−51,839 rows).
+- **Exclude upstream-mistagged clinical rows on content.** 5,215 SAMHSA behavioural-health
+  facilities arrived tagged as food. Dropped, not re-filed — healthcare is served by sources we
+  trust, and a methadone clinic returned for "food" is worse than an empty list.
+- **Key rows on identity, not on feed ids.** The aggregator reassigns `loc-N` on every rebuild (71%
+  of ingested ids were already stale), so `external_id` is now derived from normalized
+  name + address. Consequence: every existing id is obsolete, so migration `0023` clears the
+  provider wholesale and the national re-ingest repopulates it.
+- **Go national.** The 8-state gate (2026-07-24, DB-size bound) is removed — dropping child
+  nutrition buys back the headroom, and the gate was leaving 42 states with nothing but a hotline.
+- **Referrals are a fallback again.** The 2026-07-24 decision specified the statewide/national
+  section render **below** local results; the implementation used `ListHeaderComponent` and put it
+  **above**, unconditionally, in both screens. Now shared in `splitLocalsAndReferrals()` and led
+  only when fewer than 3 local results exist. This restores the documented intent.
+- **Widen the radius before giving up.** 25 → 50 → 100 miles on thin *located* results, rather than
+  handing a rural veteran a national number.
+- **Rejected:** geocoding SSVF to county centroids. The VA list has no street addresses; a centroid
+  pin would give a veteran directions to an empty field. SSVF stays honestly referral-only.
+- See [[2026-07-27 Veteran data quality — Phases 1 and 2]].
+
+### 2026-07-27 — Phase 2: veteran-specific sources, and what is genuinely unobtainable
+- **Status:** accepted (user decision)
+- **Mine the VA Facilities API instead of adding sources.** It was discarding most of what it
+  returns: 318 national cemeteries mapped to `null`, and the per-facility `services` field ignored
+  entirely. Cemeteries now `community_support`; facilities cross-list on their services (Homeless
+  Veteran care → `housing`, Social work / CaregiverSupport → `community_support`, Emergency + Urgent
+  care → `emergency`, Travel reimbursement → `transportation`). 2,678 → **4,160 rows, all with a
+  phone**. *Not* mapped: "Nutrition, food, and dietary care" is clinical dietetics — mapping it to
+  `food` would repeat the schools mistake.
+- **Retire the VSO representative list for the organization export.** 7,759 individual people with
+  no street address became **7,158 organizations near the veteran**, including 970 County Veterans
+  Service Officers. Also removes a manual quarterly download that had no parser in the repo.
+  Migration `0024` purges the old provider.
+- **Say what a phone number actually is.** The OGC export has one phone per organization — its
+  national line — and none for CVSOs. Row copy states that explicitly rather than implying a local
+  office, because the alternative is a veteran in Illinois dialling Washington state believing it's
+  local.
+- **Add State Veterans Homes** (`nasvh.org` wp-json): 166 VA-certified long-term care homes across
+  all 50 states. The VA publishes no machine-readable list.
+- **Rejected — scraping the membership-org locators.** VFW/American Legion post finders are
+  Google-Maps-driven with no API; Goodwill, DAV and NACVSO return 403 to automated requests; the
+  Salvation Army corps directory is gone. **nrd.gov is excluded on principle**: its `robots.txt`
+  disallows `/resources`, which is the directory itself.
+- **Accepted gap: `clothing` stays empty.** No accessible national dataset exists, veteran-specific
+  or otherwise. Recorded as an honest gap rather than padded with something misleading.
 
 ## Related
 

@@ -98,7 +98,7 @@
     "android": {
       "package": "com.kothuri.frontline",
       "adaptiveIcon": {
-        "backgroundColor": "#F5F1E8",
+        "backgroundColor": "#3D4A2E",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

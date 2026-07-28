@@ -479,16 +479,51 @@ categories backfilled with clearly-labeled general sources. See [[Decision Log]]
   `src/types/resource.ts` (`VeteranRelevance`), `src/features/resources/VeteranBadge.tsx`
   (muted "Open to everyone" badge), `src/services/resources/sortResults.ts` (relevance breaks
   distance ties; `isNationalReferral()`).
-- **National help-lines strip**: `app/results.tsx` + `app/(tabs)/discover.tsx` partition
-  null-coord veteran referrals into a labeled strip above local results (they no longer sort last
-  on null distance). Discover's "all" browse keeps the category interleave.
+- **National help-lines strip**: `splitLocalsAndReferrals()` in
+  `src/services/resources/sortResults.ts` partitions null-coord veteran referrals from local
+  results; `app/results.tsx` + `app/(tabs)/discover.tsx` both consume it. Discover's "all" browse
+  keeps the category interleave.
+
+  **As of 2026-07-27 the strip is conditional.** Each screen previously carried its own copy of the
+  split and rendered the strip as `ListHeaderComponent` — i.e. *always above* the local list, so a
+  veteran with 100 nearby VSO offices still opened on a national hotline. (That also contradicted
+  the 2026-07-24 decision, which specified "BELOW the local results".) The shared helper now returns
+  `referralsLead`: referrals lead only when there are fewer than 3 local results, and otherwise
+  render below them under "More help by phone".
 - **Exact geocoding**: `ingestion/censusGeocode.ts` (Census batch geocoder + `geocode_cache`
   table, migration `0015`), `ingestion/sources/vaGiBillSchools.ts` (emits `geocode` address parts,
   null coords until matched). Unmatched = listed, never pinned. ZIP-centroid module deleted.
+- **VA service cross-listing (2026-07-27)**: `vaFacilities.ts` no longer ingests only the facility
+  itself. `CATEGORY_BY_FACILITY_TYPE` now maps `va_cemetery` → `community_support` (318 rows that
+  were previously discarded as "not a help resource" — wrong for an audience planning burial and
+  survivor benefits), and `CROSS_LIST_BY_SERVICE` emits a second row per facility for the services
+  it actually publishes: Homeless Veteran care → `housing`, Social work / CaregiverSupport →
+  `community_support`, Emergency + Urgent care → `emergency`, Travel reimbursement →
+  `transportation`. `crossListService()` generalizes the older `crossListVetCenter()`; each row is
+  re-described via `SERVICE_COPY` so it reads as that service, not as a duplicate hospital.
+  This took VA rows 2,678 → **4,160, all with a phone**, and gave `emergency` (107),
+  `transportation` (83) and veteran-specific `housing` (352) their first local rows ever.
+  *Not* mapped: "Nutrition, food, and dietary care" is clinical dietetics — mapping it to `food`
+  would repeat the schools mistake.
+- **State Veterans Homes**: `stateVeteransHomes.ts` — 166 VA-certified state-run long-term care
+  homes across all 50 states, from NASVH's `veterans-homes` wp-json collection (the VA publishes no
+  machine-readable list). Bodies are WPBakery shortcodes wrapping a flat `LABEL:` → value sequence
+  that `parseSections()` walks; the run **fails loudly** if under 80% of records yield an address,
+  so a site redesign surfaces instead of silently emptying the table. Addresses only → Census-geocoded.
+  Cross-listed into `healthcare` as well as `housing`.
+- **VSO organizations**: `vsoOrganizations.ts` — VA OGC's accredited-**organization** export
+  (`orgsexcellist.asp`, an HTML table served as Excel), fetched over HTTP and rolled up by
+  organization × town into ~7,158 offices, cross-listed `benefits_help` + `legal`. Replaced
+  `vsoRepresentatives.ts`, which listed 7,759 individual people with no street address. Only 84
+  organizations exist and they're the recognisable ones; NACVSO's 2,134 reps become 970
+  "County Veterans Service Officer — <town>" rows. Placed at ZIP centroid (city/state/ZIP only).
+  **The export carries one phone per organization — its national line — and none for CVSOs**, so
+  `normalize()` says exactly that in the copy instead of implying a local office number. Getting
+  that wrong would send a veteran to another state's phone number.
 - **Sources**: `lscLegalAid.ts` (854, legal, general), `hudCounseling.ts` (1,315, housing,
   general), `ssvfProviders.ts` + `data/ssvf-providers.json` (235 VA SSVF grantees, housing,
   veteran_specific, quarterly manual), Vet Center cross-listing in `vaFacilities.ts`
-  (→ community_support), `feedAmericaFood.ts` (food, pilot-gated aggregator, needs_review).
+  (→ community_support), `feedAmericaFood.ts` (food, national aggregator, needs_review).
 - **Freshness**: `.github/workflows/refresh-data.yml` (jobs weekly / places monthly, must live on
   `main` with 5 secrets set), `ingestion/refresh.sh`, `ingestion/freshnessGate.ts` (CI fails when
   any provider ages past cadence), failure auto-opens a GitHub issue.
@@ -502,10 +537,34 @@ Census geocoding (cache-first) → validate → service-role upsert. The app rea
 `search_resources` RPC; veteran-first lives in the RPC's window ordering + client tie-breaks, so
 the visible sort stays nearest-first.
 
+### Radius widening (2026-07-27)
+`supabaseResourceService.search()` retries the `search_resources` RPC at **25 → 50 → 100 miles**
+while fewer than 3 *located* results come back, then returns whatever the widest ring found.
+Referrals are excluded from that count deliberately — they ignore the radius, so counting them would
+make an empty rural area look covered and suppress the widening. The retry never searches a smaller
+ring than the veteran asked for. Before this, a rural search was one shot at 15 miles and then the
+empty state.
+
+### Food data: two traps this feed sets (2026-07-27)
+`feedAmericaFood.ts` is defensive for two measured reasons, both worth knowing before touching it:
+- **Its row ids are reassigned on every rebuild.** 71% of ingested ids had gone stale within days.
+  Identity is therefore *derived* — `stableKey()` hashes normalized name + address + state — so
+  refreshes update in place instead of stranding the previous set. The hash is deliberately wide
+  (80 bits of SHA-1): a collision makes the in-run `seen` guard drop a real pantry, and a 32-bit
+  hash would collide roughly 10 times across the ~310k national rows.
+- **Its taxonomies are not always right.** 5,215 SAMHSA behavioural-health facilities arrived tagged
+  as food, so clinical rows are excluded on content (`CLINICAL_TEXT`).
+
+Child-nutrition taxonomies (`school-meals`, `summer-meals`) are **not** ingested — they are served
+at schools and were 44% of the category. Locations join to services via HSDS `service_at_location`,
+not by rewriting `loc-N` to `svc-N` (that alignment holds today, but it is a coincidence of the
+aggregator's id assignment, not a contract).
+
 ### What's mock vs production
-Nothing is mocked. Feed America is **pilot-gated** (TX dry-run + spot-check; national needs the
-CC BY-SA sign-off). Vet Center cross-listing re-ingest waits on `VA_API_KEY`. Cron waits on the
-merge to `main` + secrets.
+Nothing is mocked. Feed America now runs **nationally** (the 8-state gate was removed 2026-07-27
+after dropping child nutrition freed the headroom; it had left 42 states with zero food).
+Vet Center cross-listing re-ingest waits on `VA_API_KEY`. Cron waits on the merge to `main` +
+secrets.
 
 ### How to extend
 New source → `ingestion/README.md` "Adding a source": adapter + `veteran_relevance` + register +
@@ -667,6 +726,52 @@ rest were fixes. Full account: [[2026-07-26 Production readiness — SDK 57, Sen
 
 ### What's mock vs production
 Nothing mock. Sentry is real but inert without a DSN; the cache holds real model output.
+
+## Brand icon + measured category palette (2026-07-27)
+
+### Why it exists
+Two things shipped together. The app was still wearing Expo's placeholder icon and splash art, and
+the per-category identity from 2026-07-25 wasn't doing its job — most categories had been assigned
+near-identical olives and sages, and `housing` was literally the action olive, so a housing chip
+looked like a button. Full account: [[2026-07-27 App icon and category color system]].
+
+### Where the code lives
+- **`assets/`** — the six brand assets, all regenerated from one 1024² source: `icon.png` (alpha
+  stripped, because the App Store rejects an alpha channel), `splash-icon.png`, `favicon.png`, and
+  the three Android adaptive layers (foreground / background / monochrome).
+- **`src/types/resource.ts`** + **`src/types/need.ts`** — the 11 hues. Still the only place hex
+  values for categories live; everything downstream reads `meta.color`.
+- **`src/types/categoryMeta.test.ts`** — the invariants, which used to be a code comment.
+- **`src/features/resources/AiContentBlock.tsx`** — takes an optional `color`.
+
+### How it works
+The palette is **hand-picked and machine-checked**. Three constraints are enforced by the test:
+≥12 CIEDE2000 from each semantic token (accent / success / warning / danger), ≥11 from every other
+category, and ≥3:1 for the icon on its own *compound* wash — the medallion tint sitting on the hero
+tint, which is the worst surface any hue lands on. The test also pins the two metadata maps
+together: for every need category that exactly one resource category maps to (via
+`resourceToNeedCategory`), the hues must match. Editing a hue to something colliding fails the
+suite with a named assertion rather than silently shipping.
+
+Wash strengths are one ladder: card `surfaceTint 0.06` · medallion `alpha 0.16` · detail hero
+`surfaceTint 0.14` · AI block `surfaceTint 0.07`. The AI block is deliberately half the hero — at
+equal strength the two surfaces measured 7/255 apart and the block stopped reading as AI.
+
+### How the user sees it
+The detail hero now leads with a 36pt medallion **beside** the category label rather than a 60pt one
+on its own line, so the resource name sits high on the page. The Summary, next-steps and call-script
+blocks wear their resource's hue, while the sparkles glyph and the "AI-generated — verify with the
+source" tag stay constant so guidance never blurs into the source layer.
+
+### What's mock vs production
+Nothing mock. One caveat worth carrying: this was verified by decoding the PNGs and computing
+contrast/ΔE, **not** by running the app — the Home grid, where all 11 tints stack in one column, is
+the screen most worth looking at on device.
+
+### How to extend it
+A new category needs a `label`/`icon`/`blurb`/`color` in both meta maps and an entry in
+`needMapping.ts`. Run `npx vitest run src/types/categoryMeta.test.ts`; if the hue collides with a
+semantic token or another category, the failure names both sides.
 
 ## What's coming (planned, not built)
 

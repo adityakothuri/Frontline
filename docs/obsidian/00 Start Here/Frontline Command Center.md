@@ -63,7 +63,75 @@ engineering** (2026-07-26). Remaining: out-of-repo store/ops steps only.
 
 ## Current Active Task
 
-**🟢 Latest — Beautiful upgrade: per-category visual identity (2026-07-25), branch
+**🟠 In progress — Veteran data quality overhaul, Phases 1–2 (2026-07-27), branch
+`fix/veteran-data-quality-phase1`.** Live profiling showed the "~130k resources" claim was hollow:
+only **1.5%** of rows had phone + hours + coordinates, **44%** of the food category was
+school/child-nutrition sites, food existed in **8 states only** (New York had zero), and
+`clothing` / `transportation` / `emergency` had **no geocoded rows anywhere**.
+
+**Phase 1 — clean the data.** Dropped child-nutrition taxonomies, excluded 5,215
+upstream-mistagged clinical rows, re-keyed the food feed on identity rather than its volatile row
+ids, removed the 8-state gate, made the national-helpline strip an actual fallback instead of an
+unconditional header, added 25→50→100-mile radius widening.
+
+**Phase 2 — veteran-specific sources.** The VA Facilities API we already call was discarding most of
+what it returns: 318 national cemeteries mapped to `null`, and the per-facility `services` field
+ignored entirely. Cross-listing on it plus a new **State Veterans Homes** adapter (NASVH wp-json,
+166 homes, all 50 states) turns the dead categories into real local results:
+
+A third source, `vso-organizations`, replaces the 7,759 individual accredited *people* with **7,158
+organizations** near the veteran — American Legion, VFW, DAV, state DVAs, and **970 County Veterans
+Service Officers** (the CVSO data NACVSO's own site blocks). Fetched over HTTP, so the old manual
+quarterly download is gone.
+
+Excluding `food` (empty pending re-ingest):
+
+| Category | Before | After |
+|---|---|---|
+| `benefits_help` | 448 | **7,604** |
+| `emergency` | 1 hotline, 0 local | **108** |
+| `transportation` | 2 national, 0 local | **85** |
+| `community_support` | 419 | **1,361** |
+| `housing` | 1,554 (0 veteran+geocoded) | **2,068** |
+| `healthcare` | 1,816 | **1,982** |
+| `legal` | 7,761 people | **7,160 organizations** |
+| **Total (excl. food)** | **15,154** | **23,521** |
+
+VA rows went 2,678 → **4,160, every one with a phone number**. See
+[[2026-07-27 Veteran data quality — Phases 1 and 2]].
+
+> ⚠️ **Migration `0023` clears the whole `feed-america` provider.** Food stays empty until
+> `node --experimental-strip-types ingestion/run.ts --source feed-america` completes. Do not ship a
+> release between those two steps.
+
+> ⚠️ **Migration `0024` clears `vso-representatives`.** `legal` is empty until
+> `--source vso-organizations` runs.
+
+**Still open:** `clothing` has **no accessible national dataset** (Goodwill 403s, Salvation Army
+directory gone). `jobs` is still 358 USAJOBS *postings* rather than places — replacing them with
+American Job Centers needs a CareerOneStop API key. `education` is 2,794 GI Bill schools with no
+phone. VFW/Legion posts, GPD providers and Veterans Treatment Courts remain blocked on access, not
+effort; nrd.gov is off-limits by its own `robots.txt`.
+
+---
+
+**🟢 Done — App icon + measured category palette (2026-07-27), branch
+`fix/veteran-data-quality-phase1`.** Replaced the last Expo placeholder art with the new Frontline
+shield across all six brand assets (iOS icon alpha-stripped for the App Store, splash, favicon, and
+the three Android adaptive layers), and rebuilt the category color system. The 11 hues are now
+hand-picked and **machine-checked** — ≥12 CIEDE2000 from every semantic token, ≥11 from each other,
+≥3:1 as an icon on its own compound wash — enforced by a new `src/types/categoryMeta.test.ts` (the
+old set had `housing` sitting *on* the action olive). The resource detail hero leads with a 36pt
+medallion beside the label instead of a 60pt one on its own line, and the AI guidance blocks wear
+their resource's hue at half the hero's strength. QA caught a **blocker** first: the designer's
+`icon-src.png` had opaque black squares baked into its "transparent" corners, which would have shown
+on every cold start — the splash is now generated from the clean art. typecheck + lint + 54 tests
+green. **Not yet seen running** — the palette is verified by measurement only. See
+[[2026-07-27 App icon and category color system]].
+
+---
+
+**🟢 Prior — Beautiful upgrade: per-category visual identity (2026-07-25), branch
 `feature/beautiful-category-identity`.** Turned the under-used category colors into a real identity
 system: a shared `categoryVisual` helper + `CategoryMedallion`, medallion-led resource cards with a
 whisper category tint, a category-colored **detail hero** so each resource type opens distinctly, a
@@ -112,7 +180,9 @@ committed + pushed (`feature/frontend-audit-see-in-map`); infra fixes on `chore/
 (PRs #9/#11/#12); `npm run verify` + CI green; live DB **134,336 rows**, 198 MB. Pillars:
 **(1) veteran-centric** — hybrid rule (veteran rows fill the search cap first + win ties;
 general rows badged "Open to everyone"; migrations `0013`/`0014`/`0016`); **(2) abundant** —
-food **116,501** (8 veteran-dense states), education 12,849 (Census-geocoded pins), legal 856
+food **116,501** (8 veteran-dense states) *(superseded 2026-07-27: 44% of this was school/child
+nutrition and it covered 8 states; migration `0023` clears it for a clean national re-ingest —
+see the Current Active Task)*, education 12,849 (Census-geocoded pins), legal 856
 (LSC), housing 1,554 (HUD 1,315 + SSVF 235), healthcare 1,816, benefits 448, jobs 306;
 **(3) auto-updating** — cron workflow on `main` (jobs weekly / places monthly) + `freshnessGate.ts`
 fails CI on stale sources + auto-opens an issue. **Ran the actual app** (onboarding → Discover →
@@ -390,8 +460,14 @@ resource detail (not Home — removed on feedback) and stays quiet at large acce
 map pin preview wraps rather than overflows; open a stale resource (transportation) and an
 unverified one (community support) to see the amber warning sentence. Plus the still-pending items:
 Profile view ⇄ edit toggle + discard confirm, ActionRow/Share/call-script sheet, Results list⇄map
-ease, onboarding progress bar both directions. Then: **splash/app-icon artwork** (still
-pre-palette), or [[Phase 10 Backend and Data Ingestion]] planning (post-MVP, needs approval).
+ease, onboarding progress bar both directions.
+
+**Now also on that pass (2026-07-27):** the new category palette and the resource detail hero have
+been verified by measurement but **never seen rendering**. Look at the **Home grid** first — all 11
+category tints stack in one column there, and it's where the four cooler hues (slate indigo, dusty
+blue, mauve, dusty rose) will show against the warm-paper brand if they're going to. Then a resource
+detail: the 36pt medallion beside the label, and whether the AI block still reads as *AI* now that it
+carries the category hue. Splash/app-icon artwork is **done**.
 
 ---
 
