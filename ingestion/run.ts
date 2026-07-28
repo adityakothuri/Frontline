@@ -26,7 +26,8 @@ import { createCuratedNationalSource } from './sources/curatedNational.ts';
 import { createHudCounselingSource } from './sources/hudCounseling.ts';
 import { createSsvfProvidersSource } from './sources/ssvfProviders.ts';
 import { createFeedAmericaFoodSource } from './sources/feedAmericaFood.ts';
-import { createVsoRepresentativesSource } from './sources/vsoRepresentatives.ts';
+import { createStateVeteransHomesSource } from './sources/stateVeteransHomes.ts';
+import { createVsoOrganizationsSource } from './sources/vsoOrganizations.ts';
 import { geocodeResources } from './censusGeocode.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
@@ -34,8 +35,10 @@ import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } 
 const root = resolve(import.meta.dirname, '..');
 // VA Facilities is a PUBLIC dataset, so the sandbox host mirrors real production
 // facility data — it is NOT a truncated demo. Verified 2026-07-24: sandbox returns
-// the full national set (health 1,399, benefits 444, vet_center 417), matching the
-// live table. The free developer.va.gov key is sandbox-scoped (production 401s), so
+// the full national set (health 1,399, benefits 443, vet_center 417, cemetery 318),
+// matching the live table. With the service cross-listing added 2026-07-27 this
+// yields ~3,970 rows, every one of them with a phone number.
+// The free developer.va.gov key is sandbox-scoped (production 401s), so
 // sandbox is the correct, complete source here — do not "upgrade" the default to
 // api.va.gov without first provisioning a production key, or ingestion will break.
 const VA_SANDBOX_BASE = 'https://sandbox-api.va.gov/services/va_facilities/v1';
@@ -82,6 +85,30 @@ const SOURCES: Record<string, SourceDef> = {
       baseUrl: process.env.HUD_HCS_BASE_URL ?? HUD_HCS_BASE,
     }),
   },
+  'vso-organizations': {
+    factory: createVsoOrganizationsSource,
+    // VA OGC's accredited-ORGANIZATION export, rolled up to one office per
+    // organization per town. Replaces `vso-representatives`, which listed 7,759
+    // individual people with no address. Fetched directly over HTTP, so unlike
+    // the rep list there is no manual download step. Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.VA_OGC_ORGS_URL ??
+        'https://www.va.gov/ogc/apps/accreditation/orgsexcellist.asp',
+    }),
+  },
+  'state-veterans-homes': {
+    factory: createStateVeteransHomesSource,
+    // VA-certified long-term care run by the states — the most on-mission
+    // resource there is for an aging veteran. NASVH's WordPress `veterans-homes`
+    // collection is the only machine-readable national list; the VA publishes
+    // none. Keyless. Addresses only, so the runner geocodes them.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.NASVH_BASE_URL ?? 'https://nasvh.org/wp-json/wp/v2/veterans-homes',
+    }),
+  },
   'curated-national': {
     factory: createCuratedNationalSource,
     // Reads a local JSON file of hand-verified national resources (no API).
@@ -98,21 +125,13 @@ const SOURCES: Record<string, SourceDef> = {
       baseUrl: resolve(root, 'ingestion/data/ssvf-providers.json'),
     }),
   },
-  'vso-representatives': {
-    factory: createVsoRepresentativesSource,
-    // VA-accredited VSO reps (real veteran legal help). Exported list, no API —
-    // quarterly manual refresh, ZIP-centroid placement.
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: resolve(root, 'ingestion/data/vso-representatives.json'),
-    }),
-  },
   'feed-america': {
     factory: createFeedAmericaFoodSource,
     // Food pantries (open to everyone, labeled). Veterans face food insecurity
-    // and no veteran-specific food dataset exists; kept scoped (8 states, and
-    // capped to the nearest ~20 in the app) so it never dominates. Keyless;
-    // hard-fails without --state. Decision 2026-07-24.
+    // and no veteran-specific food dataset exists; the in-app cap (nearest ~20)
+    // keeps it from dominating. Keyless. National by default as of 2026-07-27 —
+    // `--state` now only narrows it for spot-checks. The former 8-state gate
+    // left 42 states with no food at all.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.FEEDAM_BASE_URL ?? 'https://feedam.org/hsds/v3',

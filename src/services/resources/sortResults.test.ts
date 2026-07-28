@@ -4,6 +4,7 @@ import {
   compareByDistanceThenVerification,
   filterReferralsByState,
   isNationalReferral,
+  splitLocalsAndReferrals,
   sortSearchResults,
 } from './sortResults';
 
@@ -38,6 +39,37 @@ describe('filterReferralsByState', () => {
 
   it('drops state-scoped referrals when the veteran state is unknown', () => {
     expect(filterReferralsByState([caReferral, national], null).map((r) => r.resource.id)).toEqual(['nat']);
+  });
+});
+
+describe('splitLocalsAndReferrals', () => {
+  const referral = makeResult({ id: 'nat', tags: [], latitude: null, longitude: null, address: null });
+  const local = (id: string) => makeResult({ id, latitude: 40, longitude: -74, address: '1 Main St' });
+
+  it('separates nearby places from statewide/national referrals', () => {
+    const { locals, referrals } = splitLocalsAndReferrals([referral, local('a')], 'NY');
+    expect(locals.map((r) => r.resource.id)).toEqual(['a']);
+    expect(referrals.map((r) => r.resource.id)).toEqual(['nat']);
+  });
+
+  it('leads with referrals when there is almost nothing nearby', () => {
+    expect(splitLocalsAndReferrals([referral, local('a')], 'NY').referralsLead).toBe(true);
+  });
+
+  it('does not lead with referrals once local results are plentiful', () => {
+    const results = [referral, local('a'), local('b'), local('c')];
+    expect(splitLocalsAndReferrals(results, 'NY').referralsLead).toBe(false);
+  });
+
+  it('still applies the state filter to referrals', () => {
+    const caReferral = makeResult({
+      id: 'ca',
+      tags: ['state:CA'],
+      latitude: null,
+      longitude: null,
+      address: null,
+    });
+    expect(splitLocalsAndReferrals([caReferral], 'TX').referrals).toEqual([]);
   });
 });
 

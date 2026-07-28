@@ -7,7 +7,8 @@ export type {
   ResourceSearchResult,
 } from './ResourceService';
 export { needToResourceCategories, resourceToNeedCategory } from './needMapping';
-export { isNationalReferral, filterReferralsByState } from './sortResults';
+export { isNationalReferral, filterReferralsByState, splitLocalsAndReferrals } from './sortResults';
+export type { SplitResults } from './sortResults';
 
 /**
  * The app's resource service — the REAL Supabase backend, always. There is no

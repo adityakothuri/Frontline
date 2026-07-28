@@ -18,10 +18,11 @@ const CADENCE_DAYS: Record<string, number> = {
   'va-facilities': 40, // monthly
   'va-gi-bill': 40, // monthly
   'hud-housing-counseling': 40, // monthly
-  'feed-america': 40, // monthly (8 veteran-dense states, scoped food pantries)
+  'feed-america': 40, // monthly (national, food-distribution taxonomies only)
+  'state-veterans-homes': 40, // monthly (NASVH wp-json; 174 homes, changes rarely)
+  'vso-organizations': 40, // monthly (VA OGC accredited-organization export)
   'curated-national': 120, // quarterly manual review (last_checked = verified_on)
   'ssvf-providers': 120, // quarterly manual refresh from the VA FY list
-  'vso-representatives': 120, // quarterly manual re-export from the VA accreditation search
 };
 
 async function newestCheck(url: string, key: string, provider: string): Promise<string | null> {

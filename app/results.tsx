@@ -12,10 +12,11 @@ import {
 } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import { useProfile } from '@/services/profile';
-import { isNationalReferral, filterReferralsByState } from '@/services/resources';
+import { splitLocalsAndReferrals } from '@/services/resources';
 import { stateFromZip } from '@/lib/zipState';
 import { CrisisBanner } from '@/features/resources/CrisisBanner';
 import { ResourceCard } from '@/features/resources/ResourceCard';
+import { ReferralSection } from '@/features/resources/ReferralSection';
 import { ResourceMap } from '@/features/resources/ResourceMap';
 import { OfficialSourcesWidget } from '@/features/resources/OfficialSourcesWidget';
 import { ViewToggle, type ResultsView } from '@/features/resources/ViewToggle';
@@ -44,20 +45,18 @@ export default function ResultsScreen() {
   // Selection is shared so the map preview and the list stay in sync across toggles.
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Located results are strictly within radius. Veteran resources with no
-  // pinpoint (SSVF, hotlines) go in a separate "statewide" section, filtered to
-  // the veteran's state so it isn't out-of-state noise.
+  // Located results are strictly within whichever radius the search settled on
+  // — the service widens past the veteran's setting when almost nothing is near
+  // (see supabaseResourceService.search), so each card states its own distance.
+  // Veteran resources with no pinpoint (SSVF, hotlines) go in a separate
+  // "statewide" section, filtered to the veteran's state so it isn't
+  // out-of-state noise.
   const veteranState = stateFromZip(profile?.zip);
-  const { referrals, locals } = useMemo(() => {
-    const results = state.status === 'ready' ? state.results : [];
-    return {
-      referrals: filterReferralsByState(
-        results.filter((r) => isNationalReferral(r.resource)),
-        veteranState,
-      ),
-      locals: results.filter((r) => !isNationalReferral(r.resource)),
-    };
-  }, [state, veteranState]);
+  const { referrals, locals, referralsLead } = useMemo(
+    () =>
+      splitLocalsAndReferrals(state.status === 'ready' ? state.results : [], veteranState),
+    [state, veteranState],
+  );
 
   // One-shot cross-layout ease so list⇄map doesn't snap. (No-op on web.)
   const changeView = (next: ResultsView) => {
@@ -72,6 +71,15 @@ export default function ResultsScreen() {
     setSelectedId(id);
     changeView('map');
   };
+
+  const referralSection = (
+    <ReferralSection
+      referrals={referrals}
+      leads={referralsLead}
+      hasLocals={locals.length > 0}
+      needCategoryFor={() => need.category}
+    />
+  );
 
   const categoryLabel = NEED_CATEGORY_META[need.category]?.label ?? 'Resources';
   // The Emergency path routes to real crisis lines before anything else — the
@@ -158,30 +166,10 @@ export default function ResultsScreen() {
             renderItem={({ item }) => (
               <ResourceCard result={item} needCategory={need.category} onSeeInMap={seeInMap} />
             )}
-            ListHeaderComponent={
-              referrals.length > 0 ? (
-                <View style={styles.referralSection}>
-                  <AppText variant="label" color="textSecondary" accessibilityRole="header">
-                    Statewide &amp; national veteran help
-                  </AppText>
-                  {referrals.map((item) => (
-                    <ResourceCard key={item.resource.id} result={item} needCategory={need.category} />
-                  ))}
-                  {locals.length > 0 ? (
-                    <AppText
-                      variant="label"
-                      color="textSecondary"
-                      accessibilityRole="header"
-                      style={styles.nearYouLabel}
-                    >
-                      Near you
-                    </AppText>
-                  ) : null}
-                </View>
-              ) : null
-            }
+            ListHeaderComponent={referralsLead ? referralSection : null}
             ListFooterComponent={
               <>
+                {referralsLead ? null : referralSection}
                 <OfficialSourcesWidget category={need.category} />
                 <NavigatorDisclaimer style={styles.disclaimer} />
               </>
@@ -226,8 +214,6 @@ const styles = StyleSheet.create({
   },
   fill: { flex: 1 },
   list: { gap: spacing.md, paddingBottom: spacing.xl },
-  referralSection: { gap: spacing.md },
-  nearYouLabel: { marginTop: spacing.sm },
   emptyScroll: { paddingBottom: spacing.xl },
   emptyMsg: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xxl },
   emptyIcon: {

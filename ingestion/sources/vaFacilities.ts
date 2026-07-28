@@ -32,17 +32,45 @@ const PROD_THROTTLE_MS = 250;
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * VA `facility_type` → our `ResourceCategory`. Types we don't surface as help
- * resources (cemeteries) map to null and are skipped — honest coverage over
- * padded counts. Unknown types are skipped too (conservative).
+ * VA `facility_type` → our `ResourceCategory`. Unknown types are skipped
+ * (conservative).
+ *
+ * Cemeteries were skipped until 2026-07-27 as "not a help resource". That was
+ * wrong for this audience: burial and survivor benefits are among the things an
+ * older veteran and their family most need to plan, and the 318 national
+ * cemeteries were being discarded while `community_support` held 417 rows.
  */
 const CATEGORY_BY_FACILITY_TYPE: Record<string, ResourceCategory | null> = {
   va_health_facility: 'healthcare',
   dod_health_facility: 'healthcare',
   vet_center: 'healthcare', // Vet Centers are readjustment / mental-health counseling
   va_benefits_facility: 'benefits_help',
-  va_cemetery: null,
+  va_cemetery: 'community_support',
 };
+
+/**
+ * Health services that mean a facility belongs in a second category too.
+ *
+ * A VA medical center running a homeless program is a real, geocoded, veteran
+ * housing resource — and before this, `housing` had **zero** geocoded
+ * veteran-specific rows nationwide (SSVF, the only other veteran housing
+ * source, has no addresses). Measured against the API on 2026-07-27:
+ * Homeless Veteran care 262 facilities, Social work 482, CaregiverSupport 142.
+ *
+ * Deliberately NOT mapped: "Nutrition, food, and dietary care" is clinical
+ * dietetics, not a food pantry — mapping it to `food` would repeat exactly the
+ * mistake that put schools in that category.
+ */
+const CROSS_LIST_BY_SERVICE: { service: string; category: ResourceCategory }[] = [
+  { service: 'Homeless Veteran care', category: 'housing' },
+  { service: 'CaregiverSupport', category: 'community_support' },
+  { service: 'Social work', category: 'community_support' },
+  // `emergency` and `transportation` held one national referral each and no
+  // local rows at all, in any state. These are the VA's own answer to both.
+  { service: 'Emergency care', category: 'emergency' },
+  { service: 'Urgent care', category: 'emergency' },
+  { service: 'Travel reimbursement', category: 'transportation' },
+];
 
 interface VaFacility {
   id: string;
@@ -65,8 +93,17 @@ interface VaFacility {
         zip?: string | null;
       } | null;
     } | null;
-    phone?: { main?: string | null } | null;
+    // `main` is absent on some clinics; the coordinator lines are still a real
+    // human who can route a veteran, which beats showing no number at all.
+    phone?: {
+      main?: string | null;
+      patientAdvocate?: string | null;
+      enrollmentCoordinator?: string | null;
+    } | null;
     hours?: Record<string, string | null> | null;
+    /** Health facilities list the services they actually offer; we cross-list
+     *  off these so thin categories hold real VA places. */
+    services?: { health?: { name?: string | null }[] | null } | null;
   };
 }
 
@@ -206,6 +243,15 @@ function describeVaFacility(
     };
   }
 
+  if (facilityType === 'va_cemetery') {
+    return {
+      description:
+        'VA national cemetery — burial space, headstones and markers, and a Presidential Memorial Certificate, at no cost to the family of an eligible veteran.',
+      eligibility:
+        'For veterans discharged under conditions other than dishonorable, and often their spouse and dependent children. Call the cemetery to confirm eligibility and arrange a burial — you do not need to apply in advance.',
+    };
+  }
+
   if (facilityType === 'va_benefits_facility') {
     if (cls.includes('pre-discharge')) {
       return {
@@ -260,7 +306,12 @@ function normalize(facility: VaFacility, today: string): NormalizedResource | nu
     address: buildAddress(a.address?.physical),
     latitude: a.lat as number,
     longitude: a.long as number,
-    phone: trimOrNull(a.phone?.main),
+    // An older veteran's first move is to call. Where a clinic publishes no main
+    // line, a coordinator who can route them beats an empty phone field.
+    phone:
+      trimOrNull(a.phone?.main) ??
+      trimOrNull(a.phone?.patientAdvocate) ??
+      trimOrNull(a.phone?.enrollmentCoordinator),
     website,
     hours: vaHoursToControlled(a.hours),
     eligibility,
@@ -303,9 +354,74 @@ function crossListVetCenter(base: NormalizedResource): NormalizedResource {
   };
 }
 
+/** Copy describing what a cross-listed service actually offers, so the second
+ *  row reads as that service rather than as a duplicate of the medical centre. */
+const SERVICE_COPY: Record<string, { description: string; eligibility: string }> = {
+  'Homeless Veteran care': {
+    description:
+      'VA homeless program — help for veterans who are homeless or about to lose housing: emergency and transitional housing referrals, HUD-VASH vouchers, and case management.',
+    eligibility:
+      'For veterans who are homeless or at risk of becoming homeless. Walk in or call — you do not need to be enrolled in VA health care first.',
+  },
+  CaregiverSupport: {
+    description:
+      'VA Caregiver Support Program — a caregiver support coordinator who helps the family member looking after a veteran: training, respite care, counseling, and possible stipends.',
+    eligibility:
+      'For family members and friends caring for a veteran. Ask for the Caregiver Support Coordinator.',
+  },
+  'Social work': {
+    description:
+      'VA social work services — a social worker who helps a veteran sort out housing, benefits, transportation, home care, and family support alongside their medical care.',
+    eligibility: 'For enrolled veterans. Ask your care team for a social work referral, or call ahead.',
+  },
+  'Emergency care': {
+    description:
+      'VA emergency department — 24/7 emergency care for a serious or life-threatening condition.',
+    eligibility:
+      'In an emergency, go to the nearest emergency room or call 911 — do not travel further to reach a VA hospital. VA may help cover emergency care at a non-VA hospital; tell VA within 72 hours.',
+  },
+  'Urgent care': {
+    description:
+      'VA urgent care — same-day care for something that needs attention today but is not life-threatening, like a sprain, a bad cough, or a minor infection.',
+    eligibility:
+      'For enrolled veterans who have used VA health care in the past 24 months. Call ahead to confirm hours. For anything life-threatening, call 911 instead.',
+  },
+  'Travel reimbursement': {
+    description:
+      'VA beneficiary travel — money back for mileage, and sometimes tolls, parking, or a ride, when you travel to a VA appointment. Some sites also arrange transport for veterans who cannot drive.',
+    eligibility:
+      'For veterans who qualify on service-connected disability, income, or certain other grounds. Ask the travel office before your appointment — most claims must be filed within 30 days.',
+  },
+};
+
+/**
+ * A second row for a facility that also runs a named service, so categories with
+ * almost no local veteran places hold real, nearby VA sites. Same physical
+ * location and phone, re-described as that service. Generalizes the Vet Center
+ * cross-list above; distinct id/external_id keeps provenance rows separate.
+ */
+function crossListService(
+  base: NormalizedResource,
+  service: string,
+  category: ResourceCategory,
+): NormalizedResource {
+  const slug = service.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const copy = SERVICE_COPY[service];
+  return {
+    ...base,
+    id: `${base.id}:${slug}`,
+    external_id: `${base.external_id}:${slug}`,
+    category,
+    name: `${base.name} — ${service}`,
+    description: copy?.description ?? base.description,
+    eligibility: copy?.eligibility ?? base.eligibility,
+    tags: [...base.tags, slug],
+  };
+}
+
 // Response `facilityType` values → the `?type=` param values used for nationwide
-// pulls. We ingest the three usable types (cemeteries are skipped downstream).
-const NATIONAL_TYPES = ['health', 'benefits', 'vet_center'] as const;
+// pulls. Cemeteries joined 2026-07-27 (see CATEGORY_BY_FACILITY_TYPE).
+const NATIONAL_TYPES = ['health', 'benefits', 'vet_center', 'cemetery'] as const;
 
 function buildUrl(baseUrl: string, query: IngestionQuery, page: number, typeFilter?: string): string {
   const params = new URLSearchParams({ per_page: String(query.perPage), page: String(page) });
@@ -397,6 +513,16 @@ export const createVaFacilitiesSource: SourceFactory = (config: SourceConfig): I
             results.push(normalized);
             if (facility.attributes.facilityType === 'vet_center') {
               results.push(crossListVetCenter(normalized));
+            }
+            const offered = new Set(
+              (facility.attributes.services?.health ?? [])
+                .map((s) => trimOrNull(s?.name ?? undefined))
+                .filter((n): n is string => Boolean(n)),
+            );
+            for (const { service, category } of CROSS_LIST_BY_SERVICE) {
+              if (offered.has(service)) {
+                results.push(crossListService(normalized, service, category));
+              }
             }
           }
           if (facilities.length < query.perPage) break; // last page of this segment
