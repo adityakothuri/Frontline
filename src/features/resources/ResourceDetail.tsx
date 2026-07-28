@@ -104,18 +104,26 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
   return (
     <SafeAreaView style={styles.root} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Category hero — a soft header zone in the category's own hue behind a
-            large medallion, so every resource type opens with a distinct,
-            premium identity. Full-bleed under the nav header. */}
+        {/* Category hero — a soft header zone in the category's own hue, so every
+            resource type opens with a distinct, premium identity. The medallion
+            rides beside the category label (same pattern as ResourceCard) rather
+            than on its own line, so the name stays high on the page. Full-bleed
+            under the nav header. */}
         <View style={[styles.hero, { backgroundColor: surfaceTint(meta.color, 0.14) }]}>
-          <CategoryMedallion icon={meta.icon} color={meta.color} size={60} />
-          <AppText variant="label" color="textSecondary" style={styles.heroCategory}>
-            {meta.label}
-          </AppText>
-          <AppText variant="title">{resource.name}</AppText>
-          <View style={styles.headerMeta}>
-            {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
+          <View style={styles.heroCategory}>
+            <CategoryMedallion icon={meta.icon} color={meta.color} size={36} />
+            <AppText variant="label" color="textSecondary">
+              {meta.label}
+            </AppText>
           </View>
+          <AppText variant="title">{resource.name}</AppText>
+          {/* Jobs have no visiting hours, so the wrapper is skipped entirely
+              rather than left to contribute empty space to the hero. */}
+          {showStatus ? (
+            <View style={styles.headerMeta}>
+              <StatusPill label={open.label} tone={open.tone} />
+            </View>
+          ) : null}
         </View>
 
         {/* Rating sits below the tinted hero so its muted caption keeps AA
@@ -162,7 +170,7 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
         ) : (
           <>
             {/* What it is */}
-            <AiContentBlock title="Summary" loading={!summary}>
+            <AiContentBlock title="Summary" color={meta.color} loading={!summary}>
               {summary ? (
                 <>
                   <SummaryLine label="What it is" value={summary.whatItIs} />
@@ -175,7 +183,7 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
             </AiContentBlock>
 
             {/* What to do */}
-            <AiContentBlock title="Your next steps" loading={!plan}>
+            <AiContentBlock title="Your next steps" color={meta.color} loading={!plan}>
               {plan ? (
                 <>
                   {plan.steps.map((step, i) => (
@@ -308,7 +316,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.xl },
   // Full-bleed hero: cancel the content padding (top + sides), re-inset its own
-  // content, and clip the gradient. `gap` on `content` keeps the next section spaced.
+  // content, and clip the rounded bottom corners. `gap` on `content` keeps the
+  // next section spaced.
   hero: {
     marginTop: -spacing.xl,
     marginHorizontal: -spacing.xl,
@@ -320,14 +329,8 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: radii.xl,
     overflow: 'hidden',
   },
-  heroCategory: { marginTop: spacing.xs },
-  headerMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginTop: spacing.xs,
-  },
+  heroCategory: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md },
   section: { gap: spacing.sm },
   summaryLine: { gap: spacing.xxs },
   trustWarning: { color: colors.warningText },

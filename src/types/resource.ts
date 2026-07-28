@@ -98,63 +98,74 @@ export interface ResourceCategoryMeta {
 
 /**
  * Display metadata for each resource category — one source of truth for UI.
- * Colors come from the app's olive/earth family and match the corresponding
- * need category in NEED_CATEGORY_META (`types/need.ts`); keep the two in sync.
+ *
+ * Each category owns its own muted hue, so a food resource never reads like a
+ * housing one. The set is chosen against three measured constraints, not by eye
+ * (see `docs/obsidian/02 Design/UI Design System.md` → Category identity hues):
+ *   1. >=12 CIEDE2000 from every semantic token (accent olive, success emerald,
+ *      warning amber, danger red) so a category never impersonates a state.
+ *      `emergency` is the deliberate exception — there, identity IS severity.
+ *   2. >=11 CIEDE2000 from every other category.
+ *   3. >=3:1 contrast for the icon on its own medallion wash (the compound
+ *      tint-on-tint case, which is the worst surface each hue lands on).
+ * They are used for icons, pins, borders and washes — never as small text, which
+ * several are too light to carry. Mirrored in NEED_CATEGORY_META (`types/need.ts`)
+ * for the categories that correspond; keep the two in sync.
  */
 export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMeta> = {
   food: {
     label: 'Food',
     icon: 'fast-food-outline',
     blurb: 'Food pantries, meals, and grocery assistance.',
-    color: '#A56E24',
+    color: '#B85C1E',
   },
   clothing: {
     label: 'Clothing',
     icon: 'shirt-outline',
     blurb: 'Clothing closets and essential-item assistance.',
-    color: '#8A6A48',
+    color: '#7E6144',
   },
   housing: {
     label: 'Housing',
     icon: 'home-outline',
     blurb: 'Shelter, rent help, and housing programs.',
-    color: '#5F7326',
+    color: '#35521F',
   },
   healthcare: {
     label: 'Healthcare',
     icon: 'medkit-outline',
     blurb: 'Clinics, mental health, and VA health services.',
-    color: '#4E7D5B',
+    color: '#1F7A7A',
   },
   benefits_help: {
     label: 'Benefits help',
     icon: 'document-text-outline',
     blurb: 'Help understanding and applying for VA benefits.',
-    color: '#46602A',
+    color: '#4A5580',
   },
   legal: {
     label: 'Legal',
     icon: 'shield-outline',
     blurb: 'VA-accredited VSO reps who help with claims and appeals.',
-    color: '#587045',
+    color: '#2F5550',
   },
   jobs: {
     label: 'Jobs',
     icon: 'briefcase-outline',
     blurb: 'Employment support, training, and placement.',
-    color: '#A98E2E',
+    color: '#8A6B1C',
   },
   education: {
     label: 'Education',
     icon: 'school-outline',
     blurb: 'Education benefits, tuition, and training help.',
-    color: '#87702A',
+    color: '#47708A',
   },
   transportation: {
     label: 'Transportation',
     icon: 'bus-outline',
     blurb: 'Rides to appointments and transit assistance.',
-    color: '#6F8F5A',
+    color: '#6A5266',
   },
   emergency: {
     label: 'Emergency',
@@ -166,7 +177,7 @@ export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMe
     label: 'Community support',
     icon: 'people-outline',
     blurb: 'Peer groups, caregiver support, and local orgs.',
-    color: '#7E9146',
+    color: '#9C606E',
   },
 };
 
