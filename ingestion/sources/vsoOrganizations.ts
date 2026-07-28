@@ -46,7 +46,13 @@ import type {
 const PROVIDER = 'vso-organizations';
 const SOURCE_URL = 'https://www.va.gov/ogc/apps/accreditation/';
 const REQUEST_TIMEOUT_MS = 120_000;
-const MAX_RETRIES = 3;
+// The export is a single ~4.7 MB body and va.gov drops the connection
+// (ECONNRESET) if it's re-requested soon after a previous large download —
+// observed 2026-07-27, where four attempts ~7s apart all failed and a fresh run
+// half a minute later succeeded first time. Back off in whole tens of seconds so
+// a transient throttle doesn't fail the monthly cron.
+const MAX_RETRIES = 4;
+const RETRY_BASE_MS = 3_000;
 
 /** Column order in the OGC export. Verified 2026-07-27. */
 const COLUMNS = [
@@ -111,7 +117,11 @@ async function fetchExport(url: string): Promise<string> {
       return await response.text();
     } catch (err) {
       if (attempt >= MAX_RETRIES) throw err;
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      const wait = RETRY_BASE_MS * 2 ** attempt;
+      console.warn(
+        `[ingest] vso-organizations: ${String(err).slice(0, 80)} — retrying in ${wait / 1000}s`,
+      );
+      await new Promise((r) => setTimeout(r, wait));
     } finally {
       clearTimeout(timeout);
     }
