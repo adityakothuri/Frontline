@@ -65,29 +65,77 @@ function capDenseGeneral(results: ResourceSearchResult[]): ResourceSearchResult[
   });
 }
 
-const rpcBody = (need: Need) => ({
+const rpcBody = (need: Need, radiusMiles: number) => ({
   zip: need.location.zip ?? null,
   lat: need.location.latitude ?? null,
   lng: need.location.longitude ?? null,
-  radius_miles: need.location.radiusMiles,
+  radius_miles: radiusMiles,
   categories: needToResourceCategories(need.category),
   in_person_only: need.modality === 'in_person',
   per_category_limit: SEARCH_PER_CATEGORY_LIMIT,
 });
 
+// Rural searches routinely come back empty at the default 15 miles — measured
+// 2026-07-27, a search from rural Montana found 5 resources of any category
+// within 25. Widening beats handing that veteran a national hotline. Steps
+// follow the radius options a veteran can pick themselves (types/profile.ts),
+// extended once past the top so the last resort is still a real place.
+//
+// Each card shows its own distance, so a result found at 100 miles reads as
+// "97 mi" rather than silently posing as nearby.
+const RADIUS_STEPS_MILES = [25, 50, 100] as const;
+
+// Below this many located results, widening is worth the extra round trip.
+const THIN_RESULT_COUNT = 3;
+
+/** Located rows only — referrals come back regardless of radius, so counting
+ *  them would make an empty area look covered and suppress the widening. */
+const countLocated = (results: ResourceSearchResult[]): number =>
+  results.filter((r) => r.distanceMiles !== null).length;
+
+/** Whether the RPC can resolve a search origin (ZIP centroid or device coords). */
+const hasOrigin = (location: Need['location']): boolean =>
+  location.zip != null || location.latitude != null;
+
 class SupabaseResourceService implements ResourceService {
   async search(query: ResourceQuery): Promise<ResourceSearchResult[]> {
-    const rows = await supabaseRequest<SearchRow[]>('/rest/v1/rpc/search_resources', {
-      method: 'POST',
-      body: rpcBody(query.need),
-    });
-    const now = new Date();
-    return capDenseGeneral(
-      sortSearchResults(
-        rows.map((row) => toResult(row, now)),
-        query.need.urgency,
-      ),
-    );
+    const requested = query.need.location.radiusMiles;
+    const runAt = async (radiusMiles: number): Promise<ResourceSearchResult[]> => {
+      const rows = await supabaseRequest<SearchRow[]>('/rest/v1/rpc/search_resources', {
+        method: 'POST',
+        body: rpcBody(query.need, radiusMiles),
+      });
+      const now = new Date();
+      return capDenseGeneral(
+        sortSearchResults(
+          rows.map((row) => toResult(row, now)),
+          query.need.urgency,
+        ),
+      );
+    };
+
+    const results = await runAt(requested);
+    // Without an origin the RPC can't compute distance or apply a radius at all
+    // (0021: every row comes back with a null distance and no radius filter), so
+    // `countLocated` would read 0 forever and every step would re-fetch the same
+    // unfiltered payload. Widening only means something once we know where the
+    // veteran is.
+    if (!hasOrigin(query.need.location)) return results;
+
+    let widened = results;
+    for (const step of RADIUS_STEPS_MILES) {
+      if (countLocated(widened) >= THIN_RESULT_COUNT) break;
+      if (step <= requested) continue; // never search a smaller ring than asked for
+      try {
+        widened = await runAt(step);
+      } catch {
+        // A wider search is a bonus, not the request. If it times out — this RPC
+        // has a history of it on dense categories — keep what we already found
+        // rather than turning two usable results into an error screen.
+        break;
+      }
+    }
+    return widened;
   }
 
   async listResources(

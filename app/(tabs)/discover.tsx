@@ -14,10 +14,9 @@ import {
 } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import {
-  filterReferralsByState,
-  isNationalReferral,
   resourceService,
   resourceToNeedCategory,
+  splitLocalsAndReferrals,
   type ResourceSearchResult,
 } from '@/services/resources';
 import { stateFromZip } from '@/lib/zipState';
@@ -25,6 +24,7 @@ import { useProfile } from '@/services/profile';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { NeedCategoryCard } from '@/features/needs/NeedCategoryCard';
 import { CategoryShells, shellCategory, type ShellId } from '@/features/discover/CategoryShells';
+import { ReferralSection } from '@/features/resources/ReferralSection';
 import { NEED_CATEGORIES, DEFAULT_RADIUS_MILES, type NeedCategory } from '@/types/need';
 
 type BrowseState =
@@ -95,22 +95,38 @@ export default function DiscoverScreen() {
 
   // The multi-category "all" browse alternates categories; a single category
   // keeps its natural nearest-first order, with statewide/national veteran help
-  // (no location) pulled into its own strip on top, filtered to the veteran's
-  // state so SSVF and the like aren't out-of-state noise.
+  // (no location) pulled into its own strip — above the list only when there's
+  // little nearby — and filtered to the veteran's state so SSVF and the like
+  // aren't out-of-state noise.
   const veteranState = stateFromZip(profile?.zip);
-  const { referrals, displayResults } = useMemo(() => {
-    if (state.status !== 'ready') return { referrals: [], displayResults: [] };
-    if (shellCategory(selected) === undefined) {
-      return { referrals: [], displayResults: interleaveByCategory(state.results) };
+  const { referrals, displayResults, referralsLead } = useMemo(() => {
+    if (state.status !== 'ready') {
+      return { referrals: [], displayResults: [], referralsLead: false };
     }
-    return {
-      referrals: filterReferralsByState(
-        state.results.filter((r) => isNationalReferral(r.resource)),
-        veteranState,
-      ),
-      displayResults: state.results.filter((r) => !isNationalReferral(r.resource)),
-    };
+    if (shellCategory(selected) === undefined) {
+      return {
+        referrals: [],
+        displayResults: interleaveByCategory(state.results),
+        referralsLead: false,
+      };
+    }
+    const { locals, referrals: stateReferrals, referralsLead: lead } = splitLocalsAndReferrals(
+      state.results,
+      veteranState,
+    );
+    return { referrals: stateReferrals, displayResults: locals, referralsLead: lead };
   }, [state, selected, veteranState]);
+
+  const referralSection = (
+    <ReferralSection
+      referrals={referrals}
+      leads={referralsLead}
+      hasLocals={displayResults.length > 0}
+      needCategoryFor={(item) =>
+        shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)
+      }
+    />
+  );
 
   const handleSelect = (id: ShellId) => {
     setSelected(id);
@@ -189,34 +205,8 @@ export default function DiscoverScreen() {
                 needCategory={shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)}
               />
             )}
-            ListHeaderComponent={
-              referrals.length > 0 ? (
-                <View style={styles.referralSection}>
-                  <AppText variant="label" color="textSecondary" accessibilityRole="header">
-                    Statewide &amp; national veteran help
-                  </AppText>
-                  {referrals.map((item) => (
-                    <ResourceCard
-                      key={item.resource.id}
-                      result={item}
-                      needCategory={
-                        shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)
-                      }
-                    />
-                  ))}
-                  {displayResults.length > 0 ? (
-                    <AppText
-                      variant="label"
-                      color="textSecondary"
-                      accessibilityRole="header"
-                      style={styles.nearYouLabel}
-                    >
-                      Near you
-                    </AppText>
-                  ) : null}
-                </View>
-              ) : null
-            }
+            ListHeaderComponent={referralsLead ? referralSection : null}
+            ListFooterComponent={referralsLead ? null : referralSection}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
           />
@@ -258,8 +248,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: spacing.xl,
   },
-  referralSection: { gap: spacing.md },
-  nearYouLabel: { marginTop: spacing.sm },
   misc: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
   backRow: {
     flexDirection: 'row',

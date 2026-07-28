@@ -20,14 +20,15 @@ unlabeled. This supersedes the 2026-07-22 strict veteran-only rule (see
 
 | `--source` | Provider | Categories | Relevance | Auth | Cadence |
 |---|---|---|---|---|---|
-| `va-facilities` | VA Lighthouse Facilities API | `healthcare`, `benefits_help`, Vet Centers also cross-listed → `community_support` | veteran_specific | `VA_API_KEY` | monthly |
+| `va-facilities` | VA Lighthouse Facilities API | `healthcare`, `benefits_help`, `community_support` (cemeteries + Vet Centers + social work/caregiver), `housing` (homeless programs), `emergency` (ER/urgent care), `transportation` (travel reimbursement) | veteran_specific | `VA_API_KEY` | monthly |
 | `gi-bill` | VA GI Bill Comparison Tool API | `education` | veteran_benefit | keyless | monthly |
 | `usajobs` | USAJOBS API | `jobs` | veteran_benefit | `USAJOBS_API_KEY` + `USAJOBS_USER_AGENT` | **weekly** + 21-day purge |
 | `hud-housing` | HUD housing counseling locator | `housing` | general | keyless | monthly (21-point national sweep); **capped to nearest ~20 in-app** |
 | `ssvf-providers` | VA SSVF grantee list (converted XLSX → `data/ssvf-providers.json`) | `housing` | veteran_specific | none (local file) | **quarterly, manual** |
 | `curated-national` | Hand-verified veteran hotlines (`data/curated-national.json`) | thin categories | veteran_specific | none (local file) | **quarterly, manual review** |
-| `vso-representatives` | VA-accredited VSO reps (`data/vso-representatives.json`) | `legal` | veteran_specific | none (local file) | **quarterly, manual re-export** |
-| `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | monthly — 8 veteran-dense states; **capped to nearest ~20 in-app** |
+| `vso-organizations` | VA OGC accredited-organization export (va.gov/ogc) | `benefits_help` + `legal` | veteran_specific | keyless | monthly — ~7,200 offices; fetched over HTTP, no manual step |
+| `feed-america` | Feed America HSDS 3.0 feed (feedam.org) | `food` | general | keyless | monthly — national; **capped to nearest ~20 in-app** |
+| `state-veterans-homes` | NASVH `veterans-homes` wp-json (nasvh.org) | `housing` + `healthcare` | veteran_specific | keyless | monthly — 166 homes, all 50 states; Census-geocoded |
 
 **Two general (non-veteran) sources, each kept for a reason.** Both are badged
 "Open to everyone", rank below veteran rows, and are **capped to the nearest ~20
@@ -37,13 +38,29 @@ rows in the same category are never dropped):
 - `hud-housing` — HUD-VASH is a veteran voucher program and homelessness is a
   signature veteran issue; veteran SSVF providers rank above it.
 - `feed-america` — veterans face food insecurity and **no veteran-specific food
-  dataset exists**. Kept scoped: 8 states only, with the veteran food referral
-  always shown. So it's useful without dominating the veteran feed.
+  dataset exists**. Runs nationally as of 2026-07-27; the in-app cap keeps it
+  from dominating the veteran feed. It previously ran in 8 states only, which
+  left 42 states — including all of New York — with zero food resources, so a
+  veteran there saw nothing but a national hunger hotline.
+
+  Two properties of this feed shape the adapter. Its **row ids are reassigned on
+  every rebuild** (71% of ingested ids had gone stale by 2026-07-27), so rows are
+  keyed on normalized name + address instead. And its **taxonomies are not always
+  right** — 5,215 SAMHSA behavioural-health facilities arrived tagged as food —
+  so clinical rows are excluded on content. Child-nutrition taxonomies
+  (`school-meals`, `summer-meals`) are **not** ingested: they are served at
+  schools, and they were 44% of the category.
 
 **Legal (LSC) was dropped 2026-07-24** — general civil aid; veterans' legal
-needs are covered by the veteran-specific referrals (Stateside Legal,
-VA-accredited). A veteran-specific legal source (VA-accredited representatives)
-is the planned replacement (manual export → committed file, like SSVF).
+needs are covered by veteran-specific sources. Its replacement, the VA-accredited
+**representative** list, was itself retired on 2026-07-27: 7,759 rows each naming
+an individual person with no street address (2,389 with no phone) is a phone book
+of strangers, not somewhere to go. `vso-organizations` replaces it with ~7,200
+rows naming an organization a veteran recognises — American Legion, VFW, DAV,
+their state department of veterans affairs, or their **County Veterans Service
+Officer** — and a town near them. Note the export carries one phone per
+organization (its national line), so row copy says exactly that rather than
+implying a local number.
 
 ### Geocoding (exact pins or none)
 
@@ -53,8 +70,8 @@ schools) set `geocode` address parts; the runner resolves them through the
 the `geocode_cache` table so re-runs don't re-submit. Addresses that don't
 match keep **null coordinates — listed, never pinned** at an approximate spot.
 The ZIP-centroid *fallback for street-addressed sources* was removed on
-2026-07-24 (VSO reps, which have only a ZIP and no street address, still place at
-their ZIP centroid on purpose — see below).
+2026-07-24 (VSO organizations, which have only a city/state/ZIP and no street
+address, still place at their ZIP centroid on purpose — see below).
 
 ### Trust labels (what the app shows)
 
@@ -109,14 +126,12 @@ For the cron to actually run: the workflow must be on the **default branch**
 - **Curated referrals**: re-check each entry in `data/curated-national.json`
   against its official site, bump its `verified_on`, re-run
   `--source curated-national`.
-- **VSO representatives**: from the VA accreditation search
-  (<https://www.va.gov/ogc/apps/accreditation/>) use "Download Complete Lists
-  in Excel" for **Representatives**; it saves an HTML table
-  (`data/repexcellist.asp`, git-ignored). Parse its `<TR>` rows (columns: Last
-  Name, First Name, Registration Num, City, State, Zip, Phone) into
-  `data/vso-representatives.json` (keep rows with a 5-digit zip; set
-  `retrieved_on`), then re-run `--source vso-representatives`. Reps are placed
-  at their ZIP centroid (the list has no street address).
+
+**No longer manual:** VSO representatives used to be a quarterly browser
+download into a committed JSON file, with no parser in the repo. As of
+2026-07-27 `vso-organizations` fetches the VA OGC **organization** export
+directly over HTTP and rolls it up, so it refreshes on the normal monthly
+schedule with everything else.
 
 ## Radius behavior (2026-07-24)
 
@@ -173,7 +188,8 @@ bash ingestion/refresh.sh jobs     # USAJOBS metro sweep + 21-day purge
 node --experimental-strip-types ingestion/run.ts --source gi-bill
 node --experimental-strip-types ingestion/run.ts --source hud-housing --lat 40.7 --long -74.0 --radius 500
 node --experimental-strip-types ingestion/run.ts --source ssvf-providers
-node --experimental-strip-types ingestion/run.ts --source feed-america --state "TX,FL,CA"  # comma list; hard-fails without --state
+node --experimental-strip-types ingestion/run.ts --source feed-america                     # national
+node --experimental-strip-types ingestion/run.ts --source feed-america --state "TX,FL,CA"  # narrow, for spot-checks
 ```
 
 Feed America is CC BY-SA 4.0 — attribution "Data from Feed America, feedam.org,

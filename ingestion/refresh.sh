@@ -6,7 +6,7 @@
 # Usage:
 #   ingestion/refresh.sh all      # everything (default)
 #   ingestion/refresh.sh places   # slow-changing places: VA, GI Bill, curated,
-#                                  #   SSVF, VSO reps, Feed America (food), HUD
+#                                  #   SSVF, VSO orgs, Feed America (food), HUD
 #   ingestion/refresh.sh jobs     # USAJOBS only (postings churn fast) + purge expired
 #
 # Recommended cadence (see docs/obsidian/04 Build Roadmap/Resource Source
@@ -61,16 +61,17 @@ refresh_jobs() {
 refresh_places() {
   # Veteran sources, plus the two kept general backfills (HUD housing — real
   # HUD-VASH tie-in — and Feed America food, both capped in-app). General legal
-  # aid (LSC) was dropped 2026-07-24 and replaced with veteran-specific
-  # VA-accredited VSO representatives — see Decision Log.
+  # aid (LSC) was dropped 2026-07-24 for veteran-specific VA-accredited reps,
+  # which in turn became `vso-organizations` on 2026-07-27 — see Decision Log.
   log "VA facilities (national)";              $RUN --source va-facilities --national
   log "GI Bill schools (national)";            $RUN --source gi-bill
   log "Veteran national referrals";            $RUN --source curated-national
   log "SSVF providers (from committed JSON)";  $RUN --source ssvf-providers
-  log "VSO representatives (committed JSON)";   $RUN --source vso-representatives
-  # Food pantries (open to everyone, labeled) — veteran-dense states only; the
-  # app caps them to the nearest ~20 so they stay scoped. Decision 2026-07-24.
-  log "Feed America food (8 states)";          $RUN --source feed-america --state "TX,FL,CA,VA,NC,GA,AZ,PA"
+  log "VSO organizations (VA OGC export)";      $RUN --source vso-organizations
+  log "State Veterans Homes (NASVH)";          $RUN --source state-veterans-homes
+  # Food pantries (open to everyone, labeled) — national; the app caps them to
+  # the nearest ~20 so they stay scoped.
+  log "Feed America food (national)";          $RUN --source feed-america
 
   # HUD locator caps at ~1,329/query, so sweep regional points (CONUS + HI + AK);
   # the idempotent upsert dedups by agency id.

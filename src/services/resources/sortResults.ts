@@ -52,6 +52,45 @@ export const filterReferralsByState = (
     return veteranState !== null && stateTags.includes(`state:${veteranState}`);
   });
 
+/**
+ * Below this many local results, the statewide/national referrals are treated as
+ * the answer and lead the list; at or above it they're backup and sit underneath.
+ *
+ * Two or fewer nearby places is not a real set of options — that's the case a
+ * hotline genuinely helps with. Above that, leading with "call this national
+ * number" buries the local help the veteran actually asked for.
+ */
+const THIN_LOCAL_RESULTS = 3;
+
+export interface SplitResults {
+  /** Places near the veteran, strictly within the search radius. */
+  locals: ResourceSearchResult[];
+  /** Statewide/national veteran referrals serving the veteran's state. */
+  referrals: ResourceSearchResult[];
+  /** True when referrals should render above locals rather than below. */
+  referralsLead: boolean;
+}
+
+/**
+ * Split search results into nearby places and statewide/national referrals.
+ *
+ * Shared by the Results and Discover screens, which previously each carried
+ * their own copy of this logic — and both rendered the referral strip above the
+ * local list unconditionally, so a veteran with 100 nearby VSO offices still led
+ * with a national hotline. `referralsLead` makes that placement conditional.
+ */
+export function splitLocalsAndReferrals(
+  results: ResourceSearchResult[],
+  veteranState: string | null,
+): SplitResults {
+  const locals = results.filter((r) => !isNationalReferral(r.resource));
+  const referrals = filterReferralsByState(
+    results.filter((r) => isNationalReferral(r.resource)),
+    veteranState,
+  );
+  return { locals, referrals, referralsLead: locals.length < THIN_LOCAL_RESULTS };
+}
+
 /** null distances (location-independent resources, e.g. a crisis line) sort last. */
 const distanceKey = (distance: number | null): number =>
   distance === null ? Number.POSITIVE_INFINITY : distance;
