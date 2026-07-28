@@ -62,6 +62,21 @@ const FOOD_TAXONOMIES = new Set([
 // content. Checked against `eligibility_description` + service name.
 const CLINICAL_TEXT =
   /\b(opioid treatment|methadone|buprenorphine|naltrexone|medication-assisted|substance use disorder|detox|psychiatric|mental health treatment facility)\b/i;
+
+// Dropping the child-nutrition taxonomies removed the school-meal *programs*,
+// but ~3,700 sites tagged as ordinary pantries are still hosted INSIDE a school
+// or childcare centre — "Kids Café Parkwood Elementary", "H.T. Jaramillo
+// Elementary Head Start". Whatever the taxonomy says, the venue is a school:
+// many serve enrolled families only, and a veteran in his seventies is not going
+// to walk into an elementary school for groceries. Same reasoning as the
+// taxonomy cut, applied to the venue.
+//
+// Deliberately narrow. It matches school/childcare venue words, NOT every
+// building that happens to sit on a campus — "University Baptist Church" and
+// "College Hill Food Pantry" are community pantries and must survive, so
+// `college`/`university` are matched only as a standalone venue name.
+const SCHOOL_VENUE =
+  /(\belementary\b|\bmiddle school\b|\bhigh school\b|\bjunior high\b|\bpreschool\b|\bpre-k\b|\bhead start\b|\bkids caf|\bdaycare\b|\bday care\b|\bchild care\b|\bchildcare\b|\bacademy\b|\bschool district\b|\b[A-Z]{2,4} ISD\b|\bisd\b)/i;
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 3;
 const PER_PAGE = 1000;
@@ -280,6 +295,7 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
         // worse than showing nothing, so drop rather than re-file — the
         // healthcare category is served by sources we trust.
         if (CLINICAL_TEXT.test(`${name} ${eligibility ?? ''}`)) continue;
+        if (SCHOOL_VENUE.test(name)) continue;
 
         // Keyed on identity, not on the feed's volatile row ids — see stableKey().
         const externalId = stableKey(name, address, state);
