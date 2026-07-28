@@ -23,6 +23,7 @@
  * Backfills the housing category under the hybrid rule (2026-07-23): the UI
  * labels these "Open to everyone" and veteran rows always rank first.
  */
+import { titleCaseName } from '../lib/displayName.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -169,7 +170,8 @@ function normalize(agency: HudAgency, today: string): NormalizedResource | null 
 
   return {
     id: `hud:${externalId}`,
-    name,
+    // Upstream stores names in upper case; see lib/displayName.ts.
+    name: titleCaseName(name),
     category: 'housing',
     description: describe(agency),
     address: buildAddress(agency),

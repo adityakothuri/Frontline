@@ -20,7 +20,6 @@
 import { resolve } from 'node:path';
 import { loadEnvFile } from './lib/env.ts';
 import { createVaFacilitiesSource } from './sources/vaFacilities.ts';
-import { createUsaJobsSource } from './sources/usaJobs.ts';
 import { createVaGiBillSchoolsSource } from './sources/vaGiBillSchools.ts';
 import { createCuratedNationalSource } from './sources/curatedNational.ts';
 import { createHudCounselingSource } from './sources/hudCounseling.ts';
@@ -30,7 +29,6 @@ import { createAmericanJobCentersSource } from './sources/americanJobCenters.ts'
 import { createFisherHousesSource } from './sources/fisherHouses.ts';
 import { createHrsaHealthCentersSource } from './sources/hrsaHealthCenters.ts';
 import { createHudPublicHousingAuthoritiesSource } from './sources/hudPublicHousingAuthorities.ts';
-import { createIrsVeteransOrganizationsSource } from './sources/irsVeteransOrganizations.ts';
 import { createNacvsoOfficersSource } from './sources/nacvsoOfficers.ts';
 import { createCatholicCharitiesSource } from './sources/catholicCharities.ts';
 import { createNtdTransitAgenciesSource } from './sources/ntdTransitAgencies.ts';
@@ -55,7 +53,6 @@ const root = resolve(import.meta.dirname, '..');
 // sandbox is the correct, complete source here — do not "upgrade" the default to
 // api.va.gov without first provisioning a production key, or ingestion will break.
 const VA_SANDBOX_BASE = 'https://sandbox-api.va.gov/services/va_facilities/v1';
-const USAJOBS_BASE = 'https://data.usajobs.gov/api';
 const VA_GIBILL_BASE = 'https://api.va.gov/v0/gi/institutions/search';
 const HUD_HCS_BASE = 'https://data.hud.gov/Housing_Counselor';
 
@@ -73,14 +70,6 @@ const SOURCES: Record<string, SourceDef> = {
       apiKey: requireEnv(process.env.VA_API_KEY, 'VA_API_KEY', 'a free key from developer.va.gov'),
       baseUrl: process.env.VA_FACILITIES_BASE_URL ?? VA_SANDBOX_BASE,
       throttleMs: numberArg(process.env.VA_THROTTLE_MS),
-    }),
-  },
-  usajobs: {
-    factory: createUsaJobsSource,
-    resolveConfig: () => ({
-      apiKey: requireEnv(process.env.USAJOBS_API_KEY, 'USAJOBS_API_KEY', 'a free key from developer.usajobs.gov'),
-      baseUrl: process.env.USAJOBS_BASE_URL ?? USAJOBS_BASE,
-      userAgent: requireEnv(process.env.USAJOBS_USER_AGENT, 'USAJOBS_USER_AGENT', 'the email the USAJOBS key is registered to'),
     }),
   },
   'gi-bill': {
@@ -256,18 +245,6 @@ const SOURCES: Record<string, SourceDef> = {
         'https://data.hrsa.gov/DataDownload/DD_Files/Health_Center_Service_Delivery_and_LookAlike_Sites.csv',
     }),
   },
-  'irs-veterans-orgs': {
-    factory: createIrsVeteransOrganizationsSource,
-    // IRS Business Master File, filtered to 501(c)(19) veterans posts and NTEE
-    // W30 military/veterans organizations. This is how ~15,000 American Legion /
-    // VFW / DAV posts get in WITHOUT scraping five bespoke locators, none of
-    // which exposes JSON. Monthly bulk CSV, keyless. Mailing addresses only, so
-    // rows are `needs_review` and the runner geocodes them.
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: process.env.IRS_EO_BMF_BASE_URL ?? 'https://www.irs.gov/pub/irs-soi',
-    }),
-  },
   'fisher-houses': {
     factory: createFisherHousesSource,
     // Free lodging for the family of a hospitalised veteran. Only ~74 houses, but
@@ -322,7 +299,6 @@ const SOURCES: Record<string, SourceDef> = {
 
 /** Per-source paging defaults (overridable with --per-page / --max-pages). */
 const PAGE_DEFAULTS: Record<string, { perPage: number; maxPages: number }> = {
-  usajobs: { perPage: 25, maxPages: 4 },
   // VA GI Bill: ~13.8k schools; the API hard-caps per_page at 10 → ~1,380 pages.
   'gi-bill': { perPage: 10, maxPages: 1500 },
 };

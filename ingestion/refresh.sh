@@ -7,11 +7,9 @@
 #   ingestion/refresh.sh all      # everything (default)
 #   ingestion/refresh.sh places   # slow-changing places: VA, GI Bill, curated,
 #                                  #   SSVF, VSO orgs, Feed America (food), HUD
-#   ingestion/refresh.sh jobs     # USAJOBS only (postings churn fast) + purge expired
 #
 # Recommended cadence (see docs/obsidian/04 Build Roadmap/Resource Source
 # Integration Plan.md — "Refresh schedule"):
-#   jobs    → weekly
 #   places  → monthly
 #
 # Reads keys from the environment, or (for local runs) run.ts loads .env.seed
@@ -52,28 +50,6 @@ reap() {
   }
 }
 
-refresh_jobs() {
-  # USAJOBS postings are location-scoped and expire, so sweep major metros, then
-  # purge anything not refreshed in 21 days (a closed/expired posting).
-  local metros=(
-    "Washington, DC" "New York, New York" "Los Angeles, California"
-    "Chicago, Illinois" "Houston, Texas" "Atlanta, Georgia"
-    "Denver, Colorado" "Seattle, Washington" "San Antonio, Texas"
-    "Norfolk, Virginia"
-  )
-  for m in "${metros[@]}"; do
-    log "usajobs — $m"
-    $RUN --source usajobs --location "$m" --radius 60
-  done
-
-  # Purge expired postings. 21 days rather than "not seen in this run": the sweep
-  # only covers 10 metros and a single lost page shouldn't retire a live posting.
-  # Postings close constantly, so high turnover here is correct — hence the
-  # loosened reap floor, which stays at the strict default for every place feed.
-  log "reap expired USAJOBS postings (not seen in 21 days)"
-  reap usajobs --run-date="$(node -e "console.log(new Date(Date.now()-21*864e5).toISOString().slice(0,10))")" --max-fraction=0.9
-}
-
 refresh_places() {
   # Veteran sources, plus the two kept general backfills (HUD housing — real
   # HUD-VASH tie-in — and Feed America food, both capped in-app). General legal
@@ -101,8 +77,6 @@ refresh_places() {
   reap samhsa-veteran-bh
   log "VA/DOL grantees (USAspending)";        $RUN --source usaspending-va-grants
   reap usaspending-va-grants
-  log "IRS veterans organizations";           $RUN --source irs-veterans-orgs
-  reap irs-veterans-orgs
   log "LSC legal aid grantees";               $RUN --source lsc-legal-aid
   reap lsc-legal-aid
   log "American Job Centers (CareerOneStop)";  $RUN --source american-job-centers
@@ -144,11 +118,13 @@ refresh_places() {
   done
 }
 
+# `jobs` was USAJOBS postings, retired 2026-07-28 (migration 0033): expiring adverts
+# with no phone and no street address, superseded by the 2,169 real job centres in
+# `american-job-centers`. The mode is kept as an alias so an existing cron or a
+# muscle-memory invocation does not fail.
 case "$MODE" in
-  jobs)   refresh_jobs ;;
-  places) refresh_places ;;
-  all)    refresh_jobs; refresh_places ;;
-  *) echo "Unknown mode '$MODE' (use: all | places | jobs)"; exit 1 ;;
+  places|jobs|all) refresh_places ;;
+  *) echo "Unknown mode '$MODE' (use: all | places)"; exit 1 ;;
 esac
 
 log "refresh '$MODE' complete."

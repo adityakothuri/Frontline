@@ -14,7 +14,6 @@ import { resolve } from 'node:path';
 import { loadEnvFile } from './lib/env.ts';
 
 const CADENCE_DAYS: Record<string, number> = {
-  usajobs: 10, // weekly refresh
   'va-facilities': 40, // monthly
   'va-gi-bill': 40, // monthly
   'hud-housing-counseling': 40, // monthly
@@ -23,7 +22,6 @@ const CADENCE_DAYS: Record<string, number> = {
   'vso-organizations': 40, // monthly (VA OGC export, rolled up to organization × state)
   'samhsa-veteran-bh': 40, // monthly (FindTreatment.gov, sCodes=VET)
   'usaspending-va-grants': 40, // monthly (USAspending refreshes on a monthly cycle)
-  'irs-veterans-orgs': 40, // monthly (IRS EO BMF publishes on the 2nd Tuesday)
   'hrsa-health-centers': 40, // monthly (HRSA refreshes the site file near-daily)
   'hud-pha': 40, // monthly (HUD updates the PHA layer roughly quarterly)
   'careeronestop-ajc': 40, // monthly (CareerOneStop republishes the AJC workbook periodically)

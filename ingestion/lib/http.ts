@@ -100,7 +100,18 @@ export async function httpRequest(url: string, options: HttpOptions = {}): Promi
         throw new Error(`${label}: HTTP ${response.status} for ${url} after ${attempt + 1} attempts`);
       }
       // The server told us how long to wait; believe it over our own guess.
-      const wait = retryAfterMs(response.headers.get('retry-after')) ?? retryBaseMs * 2 ** attempt;
+      // A server asking us back in 18 hours is not throttling, it is closed for the
+      // day (api.data.gov answers an exhausted key with `Retry-After: 66729`).
+      // Sleeping on that hangs the whole ingest run, so it becomes a hard failure.
+      const requested = retryAfterMs(response.headers.get('retry-after'));
+      if (requested !== null && requested > MAX_RETRY_AFTER_MS) {
+        throw new Error(
+          `${label}: HTTP ${response.status} for ${url} with Retry-After ` +
+            `${Math.round(requested / 1000)}s — that is a spent quota, not a rate limit. ` +
+            `Refusing to sleep; fix the key or the request volume.`,
+        );
+      }
+      const wait = requested ?? retryBaseMs * 2 ** attempt;
       console.warn(`[ingest] ${label}: HTTP ${response.status} — retrying in ${Math.round(wait / 1000)}s`);
       await sleep(wait);
     } catch (err) {

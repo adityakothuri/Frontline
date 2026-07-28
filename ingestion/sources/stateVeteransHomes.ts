@@ -24,6 +24,7 @@
  * `housing`: a veteran looking for either nursing care or somewhere to live
  * should find them.
  */
+import { titleCaseName } from '../lib/displayName.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -161,7 +162,8 @@ function normalize(post: WpPost, today: string): NormalizedResource | null {
 
   return {
     id: `svh:${post.id}`,
-    name,
+    // Upstream stores names in upper case; see lib/displayName.ts.
+    name: titleCaseName(name),
     category: 'housing',
     description:
       `State Veterans Home — long-term care built for veterans: skilled nursing, ` +

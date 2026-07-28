@@ -27,6 +27,7 @@
  */
 import { fromDayRanges, type DayRange } from '../lib/openingHours.ts';
 import { stableKey } from '../lib/stableKey.ts';
+import { titleCaseName } from '../lib/displayName.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -78,6 +79,51 @@ const CLINICAL_TEXT =
 // `college`/`university` are matched only as a standalone venue name.
 const SCHOOL_VENUE =
   /(\belementary\b|\bmiddle school\b|\bhigh school\b|\bjunior high\b|\bpreschool\b|\bpre-k\b|\bhead start\b|\bkids caf|\bdaycare\b|\bday care\b|\bchild care\b|\bchildcare\b|\bacademy\b|\bschool district\b|\b[A-Z]{2,4} ISD\b|\bisd\b)/i;
+// The aggregator also mixes in SNAP-accepting RETAILERS, and they are unmistakable
+// once you look: "Subway # 42247", "WALMART #5663", "Pizza Hut #26198",
+// "Great Am Chicken Corp dba KFC E791005". 3,289 of them were sitting in the food
+// category on 2026-07-28.
+//
+// A veteran who taps Food and is shown KFC does not conclude "this one row is
+// wrong", they conclude the app is junk — and they are right to. Accepting SNAP is
+// not food assistance either: the category promises somewhere to GET food when you
+// have none, and a veteran already knows where Walmart is.
+//
+// Same reasoning as SCHOOL_VENUE above, applied to commercial venues. Matched on
+// three signals, any one of which is decisive:
+//   1. a national chain brand,
+//   2. `dba` — a franchisee trading name, which no pantry has,
+//   3. a bare franchise store number (`Subway # 42247`, `WALMART #5663`).
+//
+// Deliberately conservative on generic food words: a real pantry can legitimately
+// be "St Mary's Kitchen" or "The Bread of Life Bakery", so `kitchen`, `bakery` and
+// `deli` are NOT matched on their own.
+// NOTE ON THE REGEX FLAVOUR — this bit me. Postgres word boundaries are `\m` and
+// `\M`; JavaScript's is `\b`. The first version of this filter used the Postgres
+// form in a JS regex, where `\m` is just an identity escape for the letter "m", so
+// the pattern silently matched NOTHING and 507 retailers walked straight back in on
+// the next re-ingest. The SQL purge in migration 0032 worked because Postgres
+// understood it. Two dialects, same file, different escapes.
+const COMMERCIAL_CHAIN =
+  // Possessive brands REQUIRE the apostrophe-s. Chains write themselves that way
+  // ("McDonald's 34450"), while charities named after a person do not — dropping
+  // that requirement made this filter reject "McDonald Mission Center", a real
+  // mission. Same reasoning excludes `target` altogether: "Target Hope" and "On
+  // Target Ministries" are genuine nonprofits, and Walmart/Costco/Kroger already
+  // cover big-box retail.
+  /\b(kfc|mcdonald's|subway|starbucks|domino's|pizza hut|taco bell|wendy's|burger king|chipotle|dunkin|panera|popeyes|chick[- ]?fil[- ]?a|little caesars|papa john's|jack in the box|sonic drive|arby's|hardee's|whataburger|culver's|jimmy john's|firehouse subs|wingstop|panda express|olive garden|applebee's|denny's|ihop|waffle house|7[- ]?eleven|walmart|kroger|safeway|costco|dollar general|dollar tree|family dollar|cvs|walgreens|rite aid|circle k|speedway|wawa|sheetz|aldi|publix|winn[- ]?dixie|trader joe's|whole foods)\b/i;
+
+/**
+ * Franchise markers. `dba` is a franchisee trading name, which no pantry has.
+ * Store numbers appear three ways in this feed — `Subway # 42247`, `Subway 20053`,
+ * and `Kfc K312047` — so a bare run of four or more digits counts, with or without
+ * the hash. Real pantries do not carry four-digit numbers in their names.
+ */
+const COMMERCIAL_MARKER = /\bdba\b|#\s*\d{2,}|\b[A-Z]?\d{4,}\b/i;
+
+export const isCommercialVenue = (name: string): boolean =>
+  COMMERCIAL_CHAIN.test(name) || COMMERCIAL_MARKER.test(name);
+
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 3;
 const PER_PAGE = 1000;
@@ -306,6 +352,7 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
         // healthcare category is served by sources we trust.
         if (CLINICAL_TEXT.test(`${name} ${eligibility ?? ''}`)) continue;
         if (SCHOOL_VENUE.test(name)) continue;
+        if (isCommercialVenue(name)) continue;
 
         // Keyed on identity, not on the feed's volatile row ids — see stableKey().
         const externalId = stableKey(name, address, state);
@@ -316,7 +363,8 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
         seen.add(id);
         results.push({
           id,
-          name,
+          // Upstream stores names in upper case; see lib/displayName.ts.
+          name: titleCaseName(name),
           category: 'food',
           description:
             (service ? trimOrNull(str(service, 'description')) : null) ??
