@@ -91,7 +91,11 @@ function managerPhone(content: string | null | undefined): string | null {
  * a veteran is looking for, so it is put back in.
  */
 function houseName(title: string): string {
-  const withoutState = title.replace(/^[A-Za-z\s]+:\s*/, '').trim() || title.trim();
+  // The API returns WordPress-escaped titles, so entities must be decoded or the
+  // card literally reads "Veterans&#039; Hospital I &amp; II". `decodeEntities`
+  // existed here but was only ever applied to the manager phone.
+  const decoded = decodeEntities(title);
+  const withoutState = decoded.replace(/^[A-Za-z\s]+:\s*/, '').trim() || decoded.trim();
   return /fisher house/i.test(withoutState)
     ? withoutState
     : `Fisher House — ${withoutState}`;

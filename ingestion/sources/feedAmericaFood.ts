@@ -23,7 +23,7 @@
  * Two properties of this feed drive the defensive code below: its row ids are
  * reassigned on every rebuild (so identity is derived, not read — see
  * `stableKey`), and its taxonomies are not always right (so clinical rows are
- * excluded on content — see `CLINICAL_TEXT`).
+ * proven on content, not assumed — see `isProvenFoodSite`).
  */
 import { fromDayRanges, type DayRange } from '../lib/openingHours.ts';
 import { stableKey } from '../lib/stableKey.ts';
@@ -57,13 +57,54 @@ const FOOD_TAXONOMIES = new Set([
   'emergency-food',
 ]);
 
-// Feed America aggregates from 211/Plentiful/AmpleHarvest and mis-tags some
-// upstream sets: 5,215 ingested rows were SAMHSA behavioural-health facilities
-// (opioid treatment programs, psychiatric clinics) carrying a food taxonomy.
-// The taxonomy can't be trusted alone, so clinical service text is excluded on
-// content. Checked against `eligibility_description` + service name.
-const CLINICAL_TEXT =
-  /\b(opioid treatment|methadone|buprenorphine|naltrexone|medication-assisted|substance use disorder|detox|psychiatric|mental health treatment facility)\b/i;
+// THE TAXONOMY CANNOT BE TRUSTED, SO FOOD MUST BE PROVEN, NOT ASSUMED.
+//
+// This aggregator is not a food feed. It is a general health-and-human-services
+// directory, and its food taxonomies are attached to things that are not food. A
+// 2026-07-28 audit of the live `food` category found, alongside real pantries:
+//
+//   10,928  HUD Section 202 subsidised senior APARTMENT buildings
+//   10,882  Medicare-certified home health agencies
+//    5,997  HOSPICE providers
+//    5,421  rural health clinics
+//    2,346  community clinics
+//    1,493  VA facilities (Vet Centers, CBOCs)
+//      892  intermediate care facilities
+//           dialysis centres, Ryan White HIV providers, Indian Health Service sites
+//
+// A veteran searching for food was being shown end-of-life care. That is the
+// fourth distinct class of non-food to reach this category — after school
+// cafeterias, mis-tagged behavioural health, and SNAP retailers — and the pattern
+// is now unmistakable: excluding each bad class as it is discovered will never
+// finish, because the feed's taxonomy simply does not mean what it says.
+//
+// So the logic is INVERTED. A row is not food unless the feed's own service text
+// SAYS it is food, and a row that also carries a clinical or housing class marker
+// is rejected even if it does. Everything unproven is dropped.
+//
+// This cuts the category roughly in half — and the survivors, ~61,000, match
+// Feeding America's own published network size of about 60,000 pantries and meal
+// programmes. The previous 127,671 was never a food count.
+const FOOD_EVIDENCE =
+  // Plurals matter: `\bmeal\b` does NOT match "meals", which silently rejected
+  // "Hot meals served daily to anyone in need" — a soup kitchen.
+  /\b(foods?|meals?|pantr(?:y|ies)|grocer\w*|produce|hunger|harvest|commodit\w*|soup kitchen|congregate dining|WIC|SNAP|nutrition assistance|feeding)\b/i;
+
+/**
+ * Class markers that disqualify a row no matter what else it says. Dialysis
+ * centres are here because their service text mentions renal *diet* and therefore
+ * trips FOOD_EVIDENCE — proof that positive evidence alone is not enough.
+ */
+const NON_FOOD_CLASS =
+  /\b(home health|hospice|rural health clinic|federally.certified rural|HUD Section|Rent typically|apply via property management|LIHTC|Medicare.certified|intermediate care facility|Ryan White|Indian Health Service|Department of Veterans Affairs facility|dialysis|end.stage renal|skilled nursing|assisted living|opioid treatment|methadone|buprenorphine|naltrexone|medication.assisted|substance use disorder|detox|psychiatric|mental health treatment facility)\b/i;
+
+/**
+ * Is this actually somewhere a veteran can get food? Checked against the service's
+ * `eligibility_description` plus the location name — the only two pieces of text
+ * the feed gives us that describe what the place does.
+ */
+export const isProvenFoodSite = (text: string): boolean =>
+  FOOD_EVIDENCE.test(text) && !NON_FOOD_CLASS.test(text);
 
 // Dropping the child-nutrition taxonomies removed the school-meal *programs*,
 // but ~3,700 sites tagged as ordinary pantries are still hosted INSIDE a school
@@ -350,7 +391,8 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
         // taxonomy. Sending a veteran to a methadone clinic for groceries is
         // worse than showing nothing, so drop rather than re-file — the
         // healthcare category is served by sources we trust.
-        if (CLINICAL_TEXT.test(`${name} ${eligibility ?? ''}`)) continue;
+        // Food must be proven, not assumed — see isProvenFoodSite.
+        if (!isProvenFoodSite(`${name} ${eligibility ?? ''}`)) continue;
         if (SCHOOL_VENUE.test(name)) continue;
         if (isCommercialVenue(name)) continue;
 

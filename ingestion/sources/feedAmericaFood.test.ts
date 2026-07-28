@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCommercialVenue } from './feedAmericaFood.ts';
+import { isCommercialVenue, isProvenFoodSite } from './feedAmericaFood.ts';
 
 /**
  * These are REAL names that were sitting in the food category on 2026-07-28, taken
@@ -50,5 +50,45 @@ describe('isCommercialVenue', () => {
     'Meals on Wheels',
   ])('keeps the real food programme %s', (name) => {
     expect(isCommercialVenue(name)).toBe(false);
+  });
+});
+
+/**
+ * The aggregator's food taxonomy is attached to things that are not food. Every
+ * string below is the real `eligibility_description` of a row that was sitting in
+ * the live `food` category on 2026-07-28 — including hospices, so a veteran
+ * searching for a meal was shown end-of-life care.
+ *
+ * Four separate classes of non-food have now reached this category (school
+ * cafeterias, mis-tagged behavioural health, SNAP retailers, and this lot), which
+ * is why the logic is inverted: food must be PROVEN by the feed's own words.
+ */
+describe('isProvenFoodSite', () => {
+  it.each([
+    ['Open to anyone who needs food.', 'plain pantry'],
+    ['Food pantry location in Tullahoma', 'named pantry'],
+    ['Food distribution location at East Compassion Community Center', 'distribution site'],
+    ["Host site for Houston Food Bank's Senior Box distributions.", 'senior box host'],
+    ['Free groceries, no ID required', 'groceries'],
+    ['Hot meals served daily to anyone in need', 'soup kitchen'],
+    ['Mobile produce distribution, first Saturday monthly', 'mobile produce'],
+  ])('accepts %s (%s)', (text) => {
+    expect(isProvenFoodSite(text)).toBe(true);
+  });
+
+  it.each([
+    ['HUD Section 202 / Multifamily 202/811 for Elderly (age 62+). Rent typically 30% of adjusted income. 29 units.', 'senior apartments'],
+    ['Medicare-certified home health agency. Skilled nursing, physical therapy.', 'home health'],
+    ['Medicare-certified hospice care provider. Comprehensive end-of-life care for terminally-ill patients.', 'hospice'],
+    ['Federally-certified Rural Health Clinic (RHC). Primary care services in rural areas.', 'rural clinic'],
+    ['Medicare-certified dialysis facility. Treats end-stage renal disease with hemodialysis.', 'dialysis — trips food words via renal diet'],
+    ['Intermediate Care Facility for Developmentally Disabled - Nursing. Long-term residential care.', 'ICF'],
+    ['Department of Veterans Affairs facility (Vet Center). Free or low-cost healthcare.', 'VA facility'],
+    ['Ryan White HIV/AIDS Program (RWHAP)-funded provider.', 'Ryan White'],
+    ['Federally-certified opioid treatment program. Methadone maintenance.', 'opioid treatment'],
+    ['appointment', 'no evidence either way'],
+    ['', 'empty'],
+  ])('rejects %s (%s)', (text) => {
+    expect(isProvenFoodSite(text)).toBe(false);
   });
 });

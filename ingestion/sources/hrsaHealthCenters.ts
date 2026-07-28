@@ -43,6 +43,22 @@ const ATTRIBUTION_URL = 'https://findahealthcenter.hrsa.gov/';
 /** Site types we can honestly place on a map. */
 const PLACEABLE_LOCATION_TYPES = new Set(['Permanent', 'Seasonal']);
 
+// School-based health centres are real HRSA sites, but they serve the students
+// enrolled at that school — an adult veteran cannot walk into an elementary-school
+// clinic and be seen. 2,959 of them were sitting in `healthcare` on 2026-07-28,
+// carrying this adapter's generic "open to everyone, including veterans" text,
+// which for these sites is simply untrue.
+//
+// Exactly the same reasoning retired 51,839 school cafeterias from `food` in
+// migration 0025: Frontline serves older veterans, and a resource they are not
+// eligible to use is worse than no resource.
+//
+// `academy` is included because charter and vocational schools use it; that risks
+// dropping a genuine clinic named "Academy Health", which is the acceptable side of
+// this trade.
+const SCHOOL_BASED_SITE =
+  /\b(elementary|middle school|high school|jr\.? high|junior high|head start|preschool|pre-k|daycare|day care|academy|school[- ]based health|school health center)\b/i;
+
 /** Below this, assume the file moved or its columns changed. ~17,600 placeable of 18,963. */
 const MIN_SITES = 10_000;
 
@@ -124,6 +140,9 @@ function normalize(row: Record<string, string>, today: string): NormalizedResour
 
   const locationType = trimOrNull(row[COL.locationType]) ?? '';
   if (!PLACEABLE_LOCATION_TYPES.has(locationType)) return null;
+
+  // A clinic inside a school is not somewhere an adult veteran can be seen.
+  if (SCHOOL_BASED_SITE.test(siteName)) return null;
 
   const city = trimOrNull(row[COL.city]);
   const zip = trimOrNull(row[COL.zip])?.slice(0, 5) ?? null;
