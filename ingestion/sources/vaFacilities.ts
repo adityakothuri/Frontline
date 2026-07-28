@@ -13,6 +13,7 @@
  * verified against a live sample (via `--dry-run`) before any bulk write.
  */
 import type { ResourceCategory } from '../../src/types/resource.ts';
+import { fromVaHours } from '../lib/openingHours.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -109,94 +110,6 @@ interface VaFacility {
 
 interface VaResponse {
   data?: VaFacility[];
-}
-
-const DAY_ORDER = [
-  { key: 'monday', abbr: 'Mon' },
-  { key: 'tuesday', abbr: 'Tue' },
-  { key: 'wednesday', abbr: 'Wed' },
-  { key: 'thursday', abbr: 'Thu' },
-  { key: 'friday', abbr: 'Fri' },
-  { key: 'saturday', abbr: 'Sat' },
-  { key: 'sunday', abbr: 'Sun' },
-] as const;
-
-const pad = (n: number): string => String(n).padStart(2, '0');
-const toClock = (minutes: number): string => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
-
-/** Parse a VA time token ("800AM", "8:00AM", "1630") to minutes-from-midnight. */
-function parseVaTime(raw: string): number | null {
-  const t = raw.trim().toUpperCase().replace(/\s+/g, '');
-  const meridiem = t.endsWith('AM') ? 'AM' : t.endsWith('PM') ? 'PM' : null;
-  const body = meridiem ? t.slice(0, -2) : t;
-
-  let hour: number;
-  let minute: number;
-  if (body.includes(':')) {
-    const [h, m] = body.split(':');
-    hour = Number(h);
-    minute = Number(m);
-  } else if (/^\d{3,4}$/.test(body)) {
-    hour = Number(body.slice(0, body.length - 2));
-    minute = Number(body.slice(-2));
-  } else if (/^\d{1,2}$/.test(body)) {
-    hour = Number(body);
-    minute = 0;
-  } else {
-    return null;
-  }
-
-  if (!Number.isInteger(hour) || !Number.isInteger(minute) || minute > 59) return null;
-  if (meridiem === 'PM' && hour < 12) hour += 12;
-  if (meridiem === 'AM' && hour === 12) hour = 0;
-  if (hour > 23) return null;
-  return hour * 60 + minute;
-}
-
-/** One VA day value ("800AM-430PM", "Closed", "24/7") → "HH:MM-HH:MM" or null. */
-function parseVaDay(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const v = value.trim();
-  if (!v || /closed|^-$/i.test(v)) return null;
-  if (/24\s*\/?\s*7|24 hours/i.test(v)) return '00:00-23:59';
-
-  const match = v.match(/^(.+?)\s*-\s*(.+)$/);
-  if (!match) return null;
-  const start = parseVaTime(match[1]);
-  const end = parseVaTime(match[2]);
-  if (start === null || end === null || end <= start) return null;
-  return `${toClock(start)}-${toClock(end)}`;
-}
-
-/**
- * VA's per-day hours object → the app's controlled hours string
- * (`Mon-Fri 08:00-16:30; Sat 09:00-13:00`, understood by `src/lib/hours.ts`).
- * Consecutive days with identical ranges collapse into a range. Days we can't
- * confidently parse are omitted; if none parse we return null ("unknown") — a
- * wrong "open now" is worse than an honest unknown.
- */
-function vaHoursToControlled(hours: Record<string, string | null> | null | undefined): string | null {
-  if (!hours) return null;
-  const byLowerKey: Record<string, string | null> = {};
-  for (const [k, val] of Object.entries(hours)) byLowerKey[k.toLowerCase()] = val;
-
-  const parsed = DAY_ORDER.map((d) => ({ abbr: d.abbr, range: parseVaDay(byLowerKey[d.key]) }));
-
-  const groups: string[] = [];
-  let i = 0;
-  while (i < parsed.length) {
-    const { range } = parsed[i];
-    if (!range) {
-      i++;
-      continue;
-    }
-    let j = i;
-    while (j + 1 < parsed.length && parsed[j + 1].range === range) j++;
-    const label = i === j ? parsed[i].abbr : `${parsed[i].abbr}-${parsed[j].abbr}`;
-    groups.push(`${label} ${range}`);
-    i = j + 1;
-  }
-  return groups.length > 0 ? groups.join('; ') : null;
 }
 
 const trimOrNull = (s: string | null | undefined): string | null => {
@@ -313,7 +226,7 @@ function normalize(facility: VaFacility, today: string): NormalizedResource | nu
       trimOrNull(a.phone?.patientAdvocate) ??
       trimOrNull(a.phone?.enrollmentCoordinator),
     website,
-    hours: vaHoursToControlled(a.hours),
+    hours: fromVaHours(a.hours),
     eligibility,
     documents_needed: [],
     source_url: website,

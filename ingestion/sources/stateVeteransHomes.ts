@@ -10,13 +10,14 @@
  * The VA publishes no machine-readable list. NASVH, the association the homes
  * belong to, runs a WordPress site whose `veterans-homes` post type is exposed
  * over `wp-json`, so this reads that rather than scraping rendered pages.
- * Measured 2026-07-27: 174 homes, 171 with a street address, 170 with a phone,
- * 167 with bed capacity.
+ * Measured 2026-07-28: the feed returns 174 posts, of which **166 parse into a
+ * home with an address** — that is the number that lands in the table, and the
+ * one ingestion/README.md and freshnessGate.ts now agree on.
  *
  * The record body is WPBakery shortcode soup, but the useful part is a flat
  * sequence of `LABEL:` headings followed by their values — see `parseSections`.
  * That layout is the load-bearing assumption here; `fetch` fails loudly if it
- * stops holding rather than silently ingesting 174 empty rows.
+ * stops holding rather than silently ingesting empty rows.
  *
  * Homes carry no coordinates, so rows emit `geocode` parts and the runner pins
  * them via the Census batch geocoder. Cross-listed into `healthcare` as well as

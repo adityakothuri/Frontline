@@ -22,6 +22,7 @@
  * Official → `source_type:'official'` / `verification_status:'verified'`.
  * Shapes verified against a live sample (via `--dry-run`) before any write.
  */
+import { fetchJson } from '../lib/http.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -37,6 +38,8 @@ const REQUEST_TIMEOUT_MS = 30_000;
 // and a transient timeout can't kill the whole run.
 const DEFAULT_MAX_RETRIES = 6;
 const CONCURRENCY = 15;
+/** College Scorecard: website + coordinates, joined on the IPEDS UNITID. */
+const SCORECARD_URL = 'https://api.data.gov/ed/collegescorecard/v1/schools';
 const THROTTLE_MS = 120;
 
 // Institution `type` values we keep — real schools a veteran attends. OJT,
@@ -188,6 +191,144 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Enrichment: a phone number and a website, neither of which the search
+// endpoint returns
+// ---------------------------------------------------------------------------
+//
+// Before this, all 2,794 education rows had NO phone and NO website — the third
+// data pass measured the category at **zero** usable rows, because a school you
+// cannot ring or look up is not a resource. Two free sources fix it:
+//
+//  1. The GI Bill *detail* endpoint (`/institutions/{facility_code}`) returns 114
+//     attributes where search returns 60. Among them is the school's **VA School
+//     Certifying Official** — the person whose actual job is GI Bill paperwork.
+//     That is a better number than a switchboard. Measured 2026-07-28: 25 of 25
+//     sampled schools returned one.
+//  2. College Scorecard supplies the website and real coordinates, joined on the
+//     detail endpoint's `cross` field, which is the IPEDS UNITID.
+//
+// `insturl` is null for every record, so the website cannot come from VA.
+
+/** Detail-endpoint fields we use; the response carries ~114 we don't. */
+interface GiDetail {
+  cross?: string | null;
+  versioned_school_certifying_officials?: {
+    phone_area_code?: string | null;
+    phone_number?: string | null;
+    phone_extension?: string | null;
+    priority?: string | null;
+    title?: string | null;
+  }[] | null;
+}
+
+interface Enrichment {
+  phone: string | null;
+  /** IPEDS UNITID, for the Scorecard join. */
+  cross: string | null;
+}
+
+/**
+ * The certifying official's number, preferring the one marked Primary.
+ * Source formatting is inconsistent — `918` + `631-3985`, but also `856` +
+ * `2252788` — so digits are reassembled rather than concatenated blindly.
+ */
+function certifyingOfficialPhone(detail: GiDetail): string | null {
+  const officials = detail.versioned_school_certifying_officials ?? [];
+  const ordered = [...officials].sort((a, b) => {
+    const ap = /primary/i.test(a.priority ?? '') ? 0 : 1;
+    const bp = /primary/i.test(b.priority ?? '') ? 0 : 1;
+    return ap - bp;
+  });
+  for (const o of ordered) {
+    const digits = `${o.phone_area_code ?? ''}${o.phone_number ?? ''}`.replace(/\D/g, '');
+    if (digits.length !== 10) continue;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  return null;
+}
+
+/** Fetch detail for every school, at the same concurrency the paging uses. */
+async function fetchEnrichment(baseUrl: string, codes: string[]): Promise<Map<string, Enrichment>> {
+  // The detail endpoint lives next to the search endpoint:
+  // .../v0/gi/institutions/search → .../v0/gi/institutions/{code}
+  const detailBase = baseUrl.replace(/\/search$/, '');
+  const out = new Map<string, Enrichment>();
+
+  for (let i = 0; i < codes.length; i += CONCURRENCY) {
+    const batch = codes.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (code) => {
+        try {
+          const body = await fetchJson<{ data?: { attributes?: GiDetail } }>(
+            `${detailBase}/${encodeURIComponent(code)}`,
+            { label: 'GI Bill detail', timeoutMs: 30_000, maxRetries: 2 },
+          );
+          const attrs = body.data?.attributes ?? {};
+          return [code, { phone: certifyingOfficialPhone(attrs), cross: trimOrNull(attrs.cross) }] as const;
+        } catch {
+          // One school failing to enrich is not worth failing the run; it keeps
+          // the address it already had.
+          return [code, { phone: null, cross: null }] as const;
+        }
+      }),
+    );
+    for (const [code, enrichment] of results) out.set(code, enrichment);
+    if (i > 0 && i % (CONCURRENCY * 40) === 0) {
+      console.log(`[ingest] gi-bill: enriched ${i}/${codes.length} schools…`);
+    }
+  }
+  return out;
+}
+
+interface ScorecardRow {
+  id?: number | null;
+  'school.school_url'?: string | null;
+  'location.lat'?: number | null;
+  'location.lon'?: number | null;
+}
+
+/**
+ * College Scorecard by IPEDS id → website + coordinates. Needs a free
+ * api.data.gov key; without one the API returns 403, so a missing key degrades
+ * to "no website" rather than failing the run.
+ */
+async function fetchScorecard(
+  apiKey: string | null,
+  unitIds: string[],
+): Promise<Map<string, { website: string | null; lat: number | null; lon: number | null }>> {
+  const out = new Map<string, { website: string | null; lat: number | null; lon: number | null }>();
+  if (!apiKey || unitIds.length === 0) return out;
+
+  const PAGE = 100;
+  for (let i = 0; i < unitIds.length; i += PAGE) {
+    const ids = unitIds.slice(i, i + PAGE);
+    const params = new URLSearchParams({
+      id: ids.join(','),
+      api_key: apiKey,
+      per_page: String(PAGE),
+      fields: 'id,school.school_url,location.lat,location.lon',
+    });
+    try {
+      const body = await fetchJson<{ results?: ScorecardRow[] }>(
+        `${SCORECARD_URL}?${params.toString()}`,
+        { label: 'College Scorecard', timeoutMs: 60_000 },
+      );
+      for (const row of body.results ?? []) {
+        if (row.id == null) continue;
+        out.set(String(row.id), {
+          website: normalizeUrl(row['school.school_url']),
+          lat: typeof row['location.lat'] === 'number' ? row['location.lat'] : null,
+          lon: typeof row['location.lon'] === 'number' ? row['location.lon'] : null,
+        });
+      }
+    } catch (err) {
+      console.warn(`[ingest] gi-bill: Scorecard page failed, continuing — ${String(err).slice(0, 90)}`);
+    }
+  }
+  return out;
+}
+
 function buildUrl(baseUrl: string, perPage: number, page: number): string {
   // `category=school` filters server-side to the ~13.8k schools (excludes the
   // ~19k OJT/employer rows). The API hard-caps per_page at 10, so this pages a lot.
@@ -261,6 +402,47 @@ export const createVaGiBillSchoolsSource: SourceFactory = (config: SourceConfig)
         bodies.forEach(collect);
         if (throttleMs > 0) await sleep(throttleMs);
       }
+
+      // --- Enrichment ---------------------------------------------------------
+      // Without this every row ends with phone: null and website: null, which is
+      // what made `education` measure zero usable rows.
+      const codes = results.map((r) => r.external_id);
+      console.log(`[ingest] gi-bill: fetching certifying-official contacts for ${codes.length} schools…`);
+      const enrichment = await fetchEnrichment(config.baseUrl, codes);
+
+      const unitIds = [...new Set([...enrichment.values()].map((e) => e.cross).filter((c): c is string => !!c))];
+      const scorecard = await fetchScorecard(config.apiKey || null, unitIds);
+
+      let withPhone = 0;
+      let withWebsite = 0;
+      let withCoords = 0;
+      for (const row of results) {
+        const extra = enrichment.get(row.external_id);
+        if (extra?.phone) {
+          row.phone = extra.phone;
+          withPhone += 1;
+        }
+        const card = extra?.cross ? scorecard.get(extra.cross) : undefined;
+        if (card?.website) {
+          row.website = card.website;
+          row.source_url = card.website;
+          withWebsite += 1;
+        }
+        // Scorecard coordinates are the institution's own, so they beat a Census
+        // geocode of the mailing address — take them and skip the geocoder.
+        if (card?.lat != null && card?.lon != null) {
+          row.latitude = card.lat;
+          row.longitude = card.lon;
+          delete row.geocode;
+          withCoords += 1;
+        }
+      }
+
+      console.log(
+        `[ingest] gi-bill: ${withPhone}/${results.length} with a certifying-official phone, ` +
+          `${withWebsite} with a website, ${withCoords} pre-geocoded` +
+          (config.apiKey ? '' : ' (no DATA_GOV_API_KEY — websites and coordinates skipped)'),
+      );
       return results;
     },
   };

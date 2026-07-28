@@ -1,0 +1,33 @@
+-- Frontline — drop the ZIP-centroid VSO rows ahead of the referral re-ingest.
+--
+-- WHY A PURGE RATHER THAN AN UPSERT
+--
+-- vsoOrganizations.ts changed its grain. Rows used to be one per organization ×
+-- town, keyed `vsoorg:<state>-<zip>-<org-slug>`; they are now one per
+-- organization × state, keyed `vsoorg:<state>-<org-slug>`. Ingestion only ever
+-- upserts (ingestion/upsert.ts), and the ids no longer match, so a re-run would
+-- add ~1,200 correct referrals and leave all 14,316 old rows sitting there —
+-- every one of them still claiming a fabricated ZIP-centroid location.
+--
+-- The generic reaper added in this same phase (ingestion/reap.ts) is the durable
+-- answer to rows that vanish upstream, but it deliberately refuses to delete
+-- more than a fifth of a provider's rows in one run so a half-fetched feed can
+-- never empty a category. This is a 92% replacement, so it is explicitly a
+-- migration and not a reap.
+--
+-- WHAT WAS WRONG WITH THEM
+--
+-- All 14,316 had no street address. The adapter placed each at the centroid of
+-- its ZIP code, so the app drew a map pin and printed a confident distance for a
+-- location that does not exist, and Directions routed to the geometric centre of
+-- a ZIP. 64% of the entire veteran catalogue was affected — the
+-- highest-severity finding of the 2026-07-28 data audit. See
+-- docs/obsidian/07 Bugs/ for the write-up and
+-- 0027_search_state_scoped_referrals.sql for the query-side half of the fix.
+--
+-- resource_sources rows are left alone: resource_id is ON DELETE SET NULL, so
+-- the provenance trail of what we once ingested survives, which is the point of
+-- keeping that table.
+
+delete from public.resources
+where source_provider = 'vso-organizations';

@@ -72,6 +72,32 @@ export function trustWarning(resource: Resource): string | null {
     : 'This info isn’t verified yet — call ahead or check the official source.';
 }
 
+/**
+ * Licence attributions that must be VISIBLE TO THE USER, not merely recorded in
+ * the repo, keyed by the provenance tag their rows carry.
+ *
+ * OpenStreetMap's ODbL 1.0 requires the credit wherever the data is shown, and
+ * the clothing category is entirely OSM-derived. Putting it here rather than in a
+ * component means the card, the map preview and the detail page all get it from
+ * one place — `sourceStatus` is the only thing they share.
+ *
+ * Feed America (CC BY-SA) and CareerOneStop (DOL ETA + Minnesota DEED) carry
+ * their attribution inside each row's `description` instead, because both landed
+ * before this hook existed and the wording is longer than a badge can hold.
+ */
+const TAG_ATTRIBUTION: Record<string, string> = {
+  osm: '© OpenStreetMap contributors',
+};
+
+/** The licence credit a resource owes, if any. */
+export function attribution(resource: Resource): string | null {
+  for (const tag of resource.tags) {
+    const credit = TAG_ATTRIBUTION[tag];
+    if (credit) return credit;
+  }
+  return null;
+}
+
 /** The trust badge: what the source is, how verified, and whether it's stale. */
 export function sourceStatus(resource: Resource): { label: string; tone: StatusTone } {
   const stale = isStale(resource.last_checked);
@@ -80,9 +106,14 @@ export function sourceStatus(resource: Resource): { label: string; tone: StatusT
   // "updated", not "checked" — last_checked is the last successful upstream
   // fetch (or, for curated lists, the real manual-review date), not a visit.
   const base = SOURCE_TYPE_LABEL[resource.source_type];
-  const label = stale
+  const dated = stale
     ? `${base} · may be outdated`
     : `${base} · updated ${formatCheckedDate(resource.last_checked)}`;
+
+  // The licence credit rides on the same line the user already reads for
+  // provenance, which is exactly where ODbL wants it.
+  const credit = attribution(resource);
+  const label = credit ? `${dated} · ${credit}` : dated;
 
   return { label, tone: verified ? 'success' : 'warning' };
 }

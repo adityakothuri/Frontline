@@ -25,7 +25,8 @@
  * `stableKey`), and its taxonomies are not always right (so clinical rows are
  * excluded on content — see `CLINICAL_TEXT`).
  */
-import { createHash } from 'node:crypto';
+import { fromDayRanges, type DayRange } from '../lib/openingHours.ts';
+import { stableKey } from '../lib/stableKey.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -164,33 +165,16 @@ function isSaneCoord(lat: number, lng: number): boolean {
 }
 
 /**
- * Stable identity for a pantry.
+ * Why this pantry's id is a hash rather than the feed's own key: the feed's
+ * `loc-N` / `external_identifier` values are NOT durable — they are reassigned
+ * whenever the aggregator rebuilds. Measured 2026-07-27, 82,193 of 116,500
+ * ingested rows (71%) referenced ids past the feed's then-current maximum, and
+ * 4,099 rows were exact name+address duplicates left by earlier runs. Keying on
+ * the feed id orphans every previous row on each refresh instead of updating it.
  *
- * The feed's own `loc-N` / `external_identifier` values are NOT durable — they
- * are reassigned whenever the aggregator rebuilds. Measured 2026-07-27: 82,193
- * of 116,500 ingested rows (71%) referenced ids past the feed's then-current
- * maximum, and 4,099 rows were exact name+address duplicates left behind by
- * earlier runs. Keying on the feed id therefore orphans every previous row on
- * each refresh instead of updating it.
- *
- * A pantry is identified by where it is and what it's called, so that's the
- * key: normalized name + street address, hashed to keep ids short.
+ * The hash itself lives in ../lib/stableKey.ts, shared with the SAMHSA adapter,
+ * which has the same problem for the same reason.
  */
-function stableKey(name: string, address: string | null, state: string): string {
-  const norm = (s: string): string =>
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim();
-  // `address` already ends with the state today; it stays in the basis so the
-  // key doesn't silently start colliding if that formatting ever changes.
-  const basis = `${norm(name)}|${norm(address ?? '')}|${state}`;
-  // A collision here silently DROPS a real pantry (the `seen` guard skips it),
-  // so the hash has to be wide. A 32-bit hash would be far too narrow: across
-  // ~310k national rows the birthday bound predicts ~10 collisions, i.e. ~10
-  // food banks quietly missing. 16 base64url chars is 96 bits — negligible.
-  return createHash('sha1').update(basis).digest('base64url').slice(0, 16);
-}
 
 export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig): IngestionSource => {
   return {
@@ -214,8 +198,8 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
           )
         : null;
 
-      console.log('[ingest] feed-america: downloading locations/addresses/phones/services/attributes…');
-      const [locations, addresses, phones, services, attributes, serviceAtLocation] =
+      console.log('[ingest] feed-america: downloading locations/addresses/phones/services/attributes/schedules…');
+      const [locations, addresses, phones, services, attributes, serviceAtLocation, schedules] =
         await Promise.all([
           fetchTable(config.baseUrl, 'locations'),
           fetchTable(config.baseUrl, 'addresses'),
@@ -223,6 +207,7 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
           fetchTable(config.baseUrl, 'services'),
           fetchTable(config.baseUrl, 'attributes'),
           fetchTable(config.baseUrl, 'service_at_location'),
+          fetchTable(config.baseUrl, 'schedules'),
         ]);
 
       const addressByLocation = new Map(addresses.map((a) => [str(a, 'location_id'), a]));
@@ -246,6 +231,31 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
           foodServices.add(str(t, 'link_id'));
         }
       }
+      // HSDS `schedules` is one row per open day per service, with real clock
+      // times — the only source of opening hours for the food category, which is
+      // the app's largest and the one where "is it open right now" matters most.
+      // Rows are keyed by location; a location legitimately appears several times
+      // (once per day, sometimes once per service), so they are grouped and the
+      // widest span per day wins.
+      const scheduleByLocation = new Map<string, DayRange[]>();
+      for (const row of schedules) {
+        const locId = str(row, 'location_id');
+        if (!locId) continue;
+        // `attending_type` distinguishes open hours from other kinds of window
+        // (delivery, appointment-only). Anything that isn't explicitly open is
+        // not something we can promise a veteran.
+        const attending = str(row, 'attending_type').toLowerCase();
+        if (attending && attending !== 'open') continue;
+        const day = str(row, 'byday');
+        const opens = str(row, 'opens_at');
+        const closes = str(row, 'closes_at');
+        if (!day || !opens || !closes) continue;
+        const bucket = scheduleByLocation.get(locId);
+        const entry = { day, opens, closes };
+        if (bucket) bucket.push(entry);
+        else scheduleByLocation.set(locId, [entry]);
+      }
+
       const phoneByLocation = new Map<string, string>();
       for (const p of phones) {
         const locId = str(p, 'location_id');
@@ -316,7 +326,7 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
           longitude: located ? lng : null,
           phone: phoneByLocation.get(locId) ?? null,
           website,
-          hours: null, // schedules exist upstream but are irregular — call ahead
+          hours: fromDayRanges(scheduleByLocation.get(locId) ?? []),
           eligibility:
             eligibility ??
             'Open to everyone, including veterans and families. Call ahead to confirm hours and what to bring.',

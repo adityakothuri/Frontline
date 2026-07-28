@@ -19,8 +19,22 @@ const CADENCE_DAYS: Record<string, number> = {
   'va-gi-bill': 40, // monthly
   'hud-housing-counseling': 40, // monthly
   'feed-america': 40, // monthly (national, food-distribution taxonomies only)
-  'state-veterans-homes': 40, // monthly (NASVH wp-json; 174 homes, changes rarely)
-  'vso-organizations': 40, // monthly (VA OGC accredited-organization export)
+  'state-veterans-homes': 40, // monthly (NASVH wp-json; 166 homes, changes rarely)
+  'vso-organizations': 40, // monthly (VA OGC export, rolled up to organization × state)
+  'samhsa-veteran-bh': 40, // monthly (FindTreatment.gov, sCodes=VET)
+  'usaspending-va-grants': 40, // monthly (USAspending refreshes on a monthly cycle)
+  'irs-veterans-orgs': 40, // monthly (IRS EO BMF publishes on the 2nd Tuesday)
+  'hrsa-health-centers': 40, // monthly (HRSA refreshes the site file near-daily)
+  'hud-pha': 40, // monthly (HUD updates the PHA layer roughly quarterly)
+  'careeronestop-ajc': 40, // monthly (CareerOneStop republishes the AJC workbook periodically)
+  'osm-clothing': 40, // monthly (OpenStreetMap changes continuously; monthly is ample)
+  'va-transportation': 40, // monthly (VA edits the VTP representatives page in place)
+  'catholic-charities': 120, // quarterly (the agency roster changes rarely)
+  'fta-ntd': 400, // ANNUAL — the NTD publishes one release a year, so 40 days would
+  //                 fail permanently. This is the only source on a yearly cadence.
+  'nacvso-cvso': 120, // quarterly (officers turn over; offices rarely move)
+  'fisher-houses': 40, // monthly (74 houses; the network grows by one or two a year)
+  'lsc-legal-aid': 120, // quarterly (LSC updates Programs.json irregularly)
   'curated-national': 120, // quarterly manual review (last_checked = verified_on)
   'ssvf-providers': 120, // quarterly manual refresh from the VA FY list
 };
