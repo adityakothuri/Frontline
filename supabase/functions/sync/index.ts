@@ -57,7 +57,10 @@ async function pg(path: string, init: RequestInit): Promise<Response> {
 
 async function rateLimited(request: Request): Promise<boolean> {
   try {
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`sync:${clientIp(request)}`));
+    const digest = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(`sync:${clientIp(request)}`),
+    );
     const ipHash = Array.from(new Uint8Array(digest))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
@@ -80,10 +83,10 @@ async function upsertIfNewer(
   value: unknown,
   updatedAt: string,
 ): Promise<Response> {
-  const existing = await pg(
-    `${table}?device_id=eq.${deviceId}&select=updated_at`,
-    { method: 'GET', headers: { Accept: 'application/vnd.pgrst.object+json' } },
-  );
+  const existing = await pg(`${table}?device_id=eq.${deviceId}&select=updated_at`, {
+    method: 'GET',
+    headers: { Accept: 'application/vnd.pgrst.object+json' },
+  });
   if (existing.ok) {
     const { updated_at } = (await existing.json()) as { updated_at: string };
     if (new Date(updatedAt).getTime() <= new Date(updated_at).getTime()) {
@@ -134,8 +137,12 @@ Deno.serve(async (request) => {
         pg(`saved_backups?device_id=eq.${deviceId}&select=entries,updated_at`, { method: 'GET' }),
         pg(`profile_backups?device_id=eq.${deviceId}&select=profile,updated_at`, { method: 'GET' }),
       ]);
-      const saved = savedRes.ok ? ((await savedRes.json()) as { entries: unknown; updated_at: string }[]) : [];
-      const profile = profileRes.ok ? ((await profileRes.json()) as { profile: unknown; updated_at: string }[]) : [];
+      const saved = savedRes.ok
+        ? ((await savedRes.json()) as { entries: unknown; updated_at: string }[])
+        : [];
+      const profile = profileRes.ok
+        ? ((await profileRes.json()) as { profile: unknown; updated_at: string }[])
+        : [];
       return json({
         saved: saved[0]?.entries ?? null,
         savedUpdatedAt: saved[0]?.updated_at ?? null,
@@ -148,20 +155,39 @@ Deno.serve(async (request) => {
       if (!Array.isArray(body.entries) || typeof body.updatedAt !== 'string') {
         return json({ error: 'entries[] and updatedAt required' }, 400);
       }
-      if (body.entries.length > MAX_SAVED_ENTRIES || JSON.stringify(body.entries).length > MAX_SAVED_BYTES) {
+      if (
+        body.entries.length > MAX_SAVED_ENTRIES ||
+        JSON.stringify(body.entries).length > MAX_SAVED_BYTES
+      ) {
         return json({ error: 'Saved list too large' }, 413);
       }
-      return await upsertIfNewer('saved_backups', deviceId, 'entries', body.entries, body.updatedAt);
+      return await upsertIfNewer(
+        'saved_backups',
+        deviceId,
+        'entries',
+        body.entries,
+        body.updatedAt,
+      );
     }
 
     if (body.action === 'pushProfile') {
-      if (typeof body.profile !== 'object' || body.profile === null || typeof body.updatedAt !== 'string') {
+      if (
+        typeof body.profile !== 'object' ||
+        body.profile === null ||
+        typeof body.updatedAt !== 'string'
+      ) {
         return json({ error: 'profile and updatedAt required' }, 400);
       }
       if (JSON.stringify(body.profile).length > MAX_PROFILE_BYTES) {
         return json({ error: 'Profile too large' }, 413);
       }
-      return await upsertIfNewer('profile_backups', deviceId, 'profile', body.profile, body.updatedAt);
+      return await upsertIfNewer(
+        'profile_backups',
+        deviceId,
+        'profile',
+        body.profile,
+        body.updatedAt,
+      );
     }
 
     if (body.action === 'clearProfile') {

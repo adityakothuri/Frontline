@@ -58,7 +58,9 @@ const decodeEntities = (s: string): string =>
     .replace(/&amp;/g, '&');
 
 const stripTags = (html: string): string[] =>
-  decodeEntities(html.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '').replace(/<[^>]+>/g, '\n'))
+  decodeEntities(
+    html.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '').replace(/<[^>]+>/g, '\n'),
+  )
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean);
@@ -112,8 +114,7 @@ function parseFacilities(html: string): Facility[] {
 
     const site = trimOrNull(head[0]);
     // Everything between the site name and the city line is the street.
-    const street =
-      cityLineAt > 1 ? trimOrNull(head.slice(1, cityLineAt).join(', ')) : null;
+    const street = cityLineAt > 1 ? trimOrNull(head.slice(1, cityLineAt).join(', ')) : null;
 
     // Phones live in the attribute, not the text — see the header note.
     const phone = /<va-telephone[^>]*\bcontact="([^"]+)"/i.exec(body)?.[1] ?? null;
@@ -127,7 +128,12 @@ function parseFacilities(html: string): Facility[] {
 function normalize(facility: Facility, today: string): NormalizedResource {
   const name = facility.site ?? facility.system;
   const address =
-    [facility.street, [facility.city, [facility.state, facility.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
+    [
+      facility.street,
+      [facility.city, [facility.state, facility.zip].filter(Boolean).join(' ')]
+        .filter(Boolean)
+        .join(', '),
+    ]
       .filter(Boolean)
       .join(', ') || null;
 
@@ -136,7 +142,10 @@ function normalize(facility: Facility, today: string): NormalizedResource {
     : 'Call the medical centre and ask for the Veterans Transportation Program representative.';
 
   return {
-    id: `vatransport:${facility.state}-${name.replace(/[^A-Za-z0-9]+/g, '-').toLowerCase().slice(0, 60)}`,
+    id: `vatransport:${facility.state}-${name
+      .replace(/[^A-Za-z0-9]+/g, '-')
+      .toLowerCase()
+      .slice(0, 60)}`,
     name: `Rides to appointments — ${name}`,
     category: 'transportation',
     description:
@@ -193,7 +202,13 @@ export const createVaTransportationSource: SourceFactory = (
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

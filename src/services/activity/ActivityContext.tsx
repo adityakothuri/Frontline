@@ -18,6 +18,11 @@ const EMPTY: ActivityState = { engagements: [], ratings: {} };
 // Keep the engagement log small; one entry per resource (latest wins).
 const MAX_ENGAGEMENTS = 20;
 
+// How many unrated engagements the Home review deck is handed. The deck shows
+// one card and a peek of the next, so anything past a small buffer is invisible
+// — and a stack of twenty things to rate reads as a chore, not a nudge.
+const REVIEW_DECK_DEPTH = 3;
+
 interface ActivityContextValue {
   /** False until the stored activity has been read on launch. */
   isHydrated: boolean;
@@ -27,8 +32,8 @@ interface ActivityContextValue {
   rate: (resourceId: string, vote: Rating) => void;
   /** The veteran's own vote on a resource, if any. */
   getRating: (resourceId: string) => Rating | undefined;
-  /** The most recent engagement the veteran hasn't rated yet — the review prompt. */
-  pendingReview: EngagementEntry | null;
+  /** Engagements the veteran hasn't rated yet, newest first — the Home review deck. */
+  pendingReviews: EngagementEntry[];
 }
 
 const ActivityContext = createContext<ActivityContextValue | null>(null);
@@ -39,11 +44,18 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    loadActivity().then((stored) => {
-      if (!active) return;
-      setActivity(stored);
-      setIsHydrated(true);
-    });
+    loadActivity()
+      .then((stored) => {
+        if (!active) return;
+        setActivity(stored);
+        setIsHydrated(true);
+      })
+      // loadActivity already returns EMPTY on failure, so this only fires on an
+      // unexpected throw — but Home renders nothing until isHydrated, and a
+      // permanently blank slot is not a state worth risking.
+      .catch(() => {
+        if (active) setIsHydrated(true);
+      });
     return () => {
       active = false;
     };
@@ -71,15 +83,19 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     [activity.ratings],
   );
 
-  // Engagements are newest-first, so the first unrated one is the prompt.
-  const pendingReview = useMemo(
-    () => activity.engagements.find((e) => !(e.resourceId in activity.ratings)) ?? null,
+  // Engagements are already newest-first, so the unrated ones come out in the
+  // order the deck should ask about them.
+  const pendingReviews = useMemo(
+    () =>
+      activity.engagements
+        .filter((e) => !(e.resourceId in activity.ratings))
+        .slice(0, REVIEW_DECK_DEPTH),
     [activity.engagements, activity.ratings],
   );
 
   const value = useMemo(
-    () => ({ isHydrated, recordEngagement, rate, getRating, pendingReview }),
-    [isHydrated, recordEngagement, rate, getRating, pendingReview],
+    () => ({ isHydrated, recordEngagement, rate, getRating, pendingReviews }),
+    [isHydrated, recordEngagement, rate, getRating, pendingReviews],
   );
 
   return <ActivityContext.Provider value={value}>{children}</ActivityContext.Provider>;

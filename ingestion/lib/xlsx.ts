@@ -30,15 +30,17 @@ const run = promisify(execFile);
 
 /** Excel entity escapes, plus numeric character references. */
 function unescapeXml(s: string): string {
-  return s
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    // Ampersand last, so `&amp;lt;` does not become `<`.
-    .replace(/&amp;/g, '&');
+  return (
+    s
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      // Ampersand last, so `&amp;lt;` does not become `<`.
+      .replace(/&amp;/g, '&')
+  );
 }
 
 /** Concatenate the `<t>` runs inside one shared-string `<si>`. */

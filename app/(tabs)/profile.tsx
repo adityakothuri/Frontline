@@ -6,6 +6,8 @@ import {
   AppText,
   Card,
   EmptyState,
+  Loading,
+  useLoadingGate,
   OptionGroup,
   PrimaryButton,
   ScreenContainer,
@@ -14,7 +16,12 @@ import {
 } from '@/components';
 import { useProfile } from '@/services/profile';
 import { colors, radii, spacing, withAlpha } from '@/theme';
-import { ROLE_OPTIONS, RADIUS_OPTIONS, VETERAN_ROLE_LABELS, type VeteranRole } from '@/types/profile';
+import {
+  ROLE_OPTIONS,
+  RADIUS_OPTIONS,
+  VETERAN_ROLE_LABELS,
+  type VeteranRole,
+} from '@/types/profile';
 import {
   DEFAULT_RADIUS_MILES,
   DOCUMENT_OPTIONS,
@@ -34,7 +41,7 @@ function documentsSummary(docs: VeteranDocument[]): string {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, saveDetails, resetProfile } = useProfile();
+  const { profile, isHydrated, saveDetails, resetProfile } = useProfile();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(profile?.firstName ?? '');
@@ -43,6 +50,12 @@ export default function ProfileScreen() {
   const [docs, setDocs] = useState<VeteranDocument[]>(profile?.documentsOnHand ?? []);
   const [radius, setRadius] = useState<number | undefined>(profile?.preferredRadiusMiles);
   const [saving, setSaving] = useState(false);
+
+  // Reading the profile off disk is usually quicker than `timings.loadingQuiet`,
+  // so the common case now shows nothing at all instead of flashing a shield for
+  // three frames. Called up here with the other hooks — the hydration branch
+  // below is an early return, and hooks cannot live behind one.
+  const gate = useLoadingGate(!isHydrated);
 
   // Keep the form in sync when the stored profile changes (save, or re-setup).
   useEffect(() => {
@@ -53,6 +66,30 @@ export default function ProfileScreen() {
     setDocs(profile.documentsOnHand ?? []);
     setRadius(profile.preferredRadiusMiles);
   }, [profile]);
+
+  // "No profile" is a real, permanent answer — it invites the veteran to set one
+  // up. Not-yet-read-from-disk looks identical in `profile` but means nothing of
+  // the sort, and showing the invitation there tells a veteran who *has* a
+  // profile that they don't. So the read has to finish before either branch
+  // below can be trusted.
+  //
+  // Gated on `holding` rather than `!isHydrated`: if the shield did make it on
+  // screen it is owed its finale, and the form waits for the hand-over instead of
+  // cutting the celebration off mid-bloom.
+  if (gate.holding) {
+    return (
+      <ScreenContainer>
+        {/* No subtitle while the read is in flight. The two branches below say
+            different things ("Optional — never required" when there is no profile,
+            "Your details, kept on this device" when there is one), and committing
+            to either here makes the header appear to reword itself on arrival. */}
+        <ScreenHeader title="Profile" />
+        {gate.showShield ? (
+          <Loading label="Loading your profile…" done={gate.done} onFinish={gate.finish} />
+        ) : null}
+      </ScreenContainer>
+    );
+  }
 
   if (!profile) {
     return (
@@ -84,7 +121,13 @@ export default function ProfileScreen() {
     if (!canSave || saving) return;
     setSaving(true);
     try {
-      await saveDetails({ firstName, zip, role, documentsOnHand: docs, preferredRadiusMiles: radius });
+      await saveDetails({
+        firstName,
+        zip,
+        role,
+        documentsOnHand: docs,
+        preferredRadiusMiles: radius,
+      });
       setEditing(false);
     } catch {
       Alert.alert("Couldn't save", 'Something went wrong saving your changes. Please try again.');
@@ -192,7 +235,9 @@ export default function ProfileScreen() {
       <ScreenHeader
         title="Profile"
         subtitle="Your details, kept on this device"
-        action={<HeaderButton icon="pencil" label="Edit profile" onPress={() => setEditing(true)} />}
+        action={
+          <HeaderButton icon="pencil" label="Edit profile" onPress={() => setEditing(true)} />
+        }
       />
 
       <View style={styles.hero}>
@@ -222,7 +267,12 @@ export default function ProfileScreen() {
               : `${DEFAULT_RADIUS_MILES} miles (default)`
           }
         />
-        <InfoRow icon="folder-open-outline" label="Documents" value={documentsSummary(storedDocs)} last />
+        <InfoRow
+          icon="folder-open-outline"
+          label="Documents"
+          value={documentsSummary(storedDocs)}
+          last
+        />
       </Card>
 
       <View style={styles.spacer} />
@@ -247,7 +297,15 @@ export default function ProfileScreen() {
 }
 
 // Small round icon action for the header's trailing slot (edit / cancel).
-function HeaderButton({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
+function HeaderButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -288,7 +346,15 @@ function InfoRow({
   );
 }
 
-function Section({ icon, label, children }: { icon: IconName; label: string; children: ReactNode }) {
+function Section({
+  icon,
+  label,
+  children,
+}: {
+  icon: IconName;
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>

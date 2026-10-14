@@ -78,7 +78,10 @@ function normalize(program: LscProgram, today: string): NormalizedResource | nul
   const direct = trimOrNull(program.Phone);
 
   return {
-    id: `lsc:${trimOrNull(program.Serv_Area_ID) ?? state}-${name.replace(/[^A-Za-z0-9]+/g, '-').toLowerCase().slice(0, 50)}`,
+    id: `lsc:${trimOrNull(program.Serv_Area_ID) ?? state}-${name
+      .replace(/[^A-Za-z0-9]+/g, '-')
+      .toLowerCase()
+      .slice(0, 50)}`,
     name,
     category: 'legal',
     description:
@@ -130,7 +133,13 @@ export const createLscLegalAidSource: SourceFactory = (config: SourceConfig): In
       if (!Array.isArray(programs)) throw new Error('LSC: Programs.json is not an array');
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];
@@ -151,7 +160,9 @@ export const createLscLegalAidSource: SourceFactory = (config: SourceConfig): In
         );
       }
 
-      console.log(`[ingest] lsc-legal-aid: ${results.length} grantees from ${programs.length} records`);
+      console.log(
+        `[ingest] lsc-legal-aid: ${results.length} grantees from ${programs.length} records`,
+      );
       return results;
     },
   };

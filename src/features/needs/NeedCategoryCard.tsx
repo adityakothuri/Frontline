@@ -5,7 +5,9 @@ import { colors, spacing, surfaceTint } from '@/theme';
 import { NEED_CATEGORY_META, type NeedCategory } from '@/types/need';
 
 // A single need-category row: color-coded icon chip + label + one-line
-// description + chevron. One source of truth for the Home and Discover lists.
+// description + chevron. Discover's full category index ("Other"), and since
+// 2026-08-05 the only place in the app that lists categories — Home's four-tile
+// shortcut was removed rather than restyled, and its start card now points here.
 export function NeedCategoryCard({
   category,
   onPress,

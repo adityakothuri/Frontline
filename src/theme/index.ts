@@ -1,8 +1,20 @@
 import { colors } from './colors';
 import { spacing, radii, shadows } from './spacing';
 import { fonts, textVariants } from './typography';
+import { durations, loops, timings, springs, stagger, rise, pressScale } from './motion';
 
 export { colors, spacing, radii, shadows, fonts, textVariants };
+export {
+  durations,
+  loops,
+  timings,
+  springs,
+  stagger,
+  rise,
+  pressScale,
+  MIN_DAMPING_RATIO,
+} from './motion';
+export type { DurationToken, SpringToken } from './motion';
 export { withAlpha, onboardingAccents } from './colors';
 export { categoryVisual, medallionStyle, surfaceTint } from './categoryVisual';
 export type { ColorToken } from './colors';
@@ -11,5 +23,22 @@ export type { TextVariant } from './typography';
 export type { CategoryVisual } from './categoryVisual';
 
 // Aggregate token object for when a screen wants the whole theme in one import.
-export const theme = { colors, spacing, radii, shadows, fonts, textVariants } as const;
+// The easing curves are the one deliberate omission — they need Reanimated, and
+// this barrel has to stay importable from the node test environment. Import them
+// from '@/theme/motionPresets' instead.
+export const theme = {
+  colors,
+  spacing,
+  radii,
+  shadows,
+  fonts,
+  textVariants,
+  durations,
+  loops,
+  timings,
+  springs,
+  stagger,
+  rise,
+  pressScale,
+} as const;
 export type Theme = typeof theme;

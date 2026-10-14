@@ -127,8 +127,7 @@ const SOURCES: Record<string, SourceDef> = {
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
-        process.env.SAMHSA_LOCATOR_URL ??
-        'https://findtreatment.gov/locator/exportsAsJson/v2',
+        process.env.SAMHSA_LOCATOR_URL ?? 'https://findtreatment.gov/locator/exportsAsJson/v2',
     }),
   },
   'american-job-centers': {
@@ -179,7 +178,8 @@ const SOURCES: Record<string, SourceDef> = {
     // on Socrata with no key. Public domain; attribution: Federal Transit Admin.
     resolveConfig: () => ({
       apiKey: '',
-      baseUrl: process.env.NTD_AGENCIES_URL ?? 'https://data.transportation.gov/resource/ccvf-fykn.json',
+      baseUrl:
+        process.env.NTD_AGENCIES_URL ?? 'https://data.transportation.gov/resource/ccvf-fykn.json',
     }),
   },
   'va-transportation': {

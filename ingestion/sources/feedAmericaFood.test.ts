@@ -77,13 +77,31 @@ describe('isProvenFoodSite', () => {
   });
 
   it.each([
-    ['HUD Section 202 / Multifamily 202/811 for Elderly (age 62+). Rent typically 30% of adjusted income. 29 units.', 'senior apartments'],
+    [
+      'HUD Section 202 / Multifamily 202/811 for Elderly (age 62+). Rent typically 30% of adjusted income. 29 units.',
+      'senior apartments',
+    ],
     ['Medicare-certified home health agency. Skilled nursing, physical therapy.', 'home health'],
-    ['Medicare-certified hospice care provider. Comprehensive end-of-life care for terminally-ill patients.', 'hospice'],
-    ['Federally-certified Rural Health Clinic (RHC). Primary care services in rural areas.', 'rural clinic'],
-    ['Medicare-certified dialysis facility. Treats end-stage renal disease with hemodialysis.', 'dialysis — trips food words via renal diet'],
-    ['Intermediate Care Facility for Developmentally Disabled - Nursing. Long-term residential care.', 'ICF'],
-    ['Department of Veterans Affairs facility (Vet Center). Free or low-cost healthcare.', 'VA facility'],
+    [
+      'Medicare-certified hospice care provider. Comprehensive end-of-life care for terminally-ill patients.',
+      'hospice',
+    ],
+    [
+      'Federally-certified Rural Health Clinic (RHC). Primary care services in rural areas.',
+      'rural clinic',
+    ],
+    [
+      'Medicare-certified dialysis facility. Treats end-stage renal disease with hemodialysis.',
+      'dialysis — trips food words via renal diet',
+    ],
+    [
+      'Intermediate Care Facility for Developmentally Disabled - Nursing. Long-term residential care.',
+      'ICF',
+    ],
+    [
+      'Department of Veterans Affairs facility (Vet Center). Free or low-cost healthcare.',
+      'VA facility',
+    ],
     ['Ryan White HIV/AIDS Program (RWHAP)-funded provider.', 'Ryan White'],
     ['Federally-certified opioid treatment program. Methadone maintenance.', 'opioid treatment'],
     ['appointment', 'no evidence either way'],

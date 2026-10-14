@@ -5,7 +5,13 @@ import { Chip } from './Chip';
 import { SelectableOption } from './SelectableOption';
 
 type IconName = keyof typeof Ionicons.glyphMap;
-type Option<T> = { value: T; label: string; description?: string; icon?: IconName; iconColor?: string };
+type Option<T> = {
+  value: T;
+  label: string;
+  description?: string;
+  icon?: IconName;
+  iconColor?: string;
+};
 
 type OptionGroupProps<T> = {
   /** `pill` = compact chips (default); `row` = full-width selectable rows. */
@@ -29,7 +35,9 @@ export function OptionGroup<T extends string | number>(props: OptionGroupProps<T
       const next = has
         ? props.value.filter((v) => v !== value)
         : // keep the display order stable
-          props.options.filter((o) => o.value === value || props.value.includes(o.value)).map((o) => o.value);
+          props.options
+            .filter((o) => o.value === value || props.value.includes(o.value))
+            .map((o) => o.value);
       props.onChange(next);
     } else {
       props.onChange(value);

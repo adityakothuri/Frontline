@@ -154,12 +154,16 @@ export async function reap(rest: Rest, args: ReapArgs): Promise<number> {
   }
 
   if (args.dryRun) {
-    console.log(`[reap] dry run — would delete ${stale} of ${total} ${args.provider} rows (${pct}%).`);
+    console.log(
+      `[reap] dry run — would delete ${stale} of ${total} ${args.provider} rows (${pct}%).`,
+    );
     return stale;
   }
 
   await deleteRows(rest, staleFilter);
-  console.log(`[reap] ${args.provider}: deleted ${stale} of ${total} rows (${pct}%) not seen on ${args.runDate}.`);
+  console.log(
+    `[reap] ${args.provider}: deleted ${stale} of ${total} rows (${pct}%) not seen on ${args.runDate}.`,
+  );
   return stale;
 }
 

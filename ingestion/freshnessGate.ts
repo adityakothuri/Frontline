@@ -64,8 +64,11 @@ for (const [provider, maxDays] of Object.entries(CADENCE_DAYS)) {
   }
   const ageDays = (Date.now() - new Date(newest).getTime()) / 86_400_000;
   const status = ageDays > maxDays ? 'STALE' : 'ok';
-  console.log(`${status.padEnd(5)} ${provider}: newest last_checked ${newest} (${Math.floor(ageDays)}d, limit ${maxDays}d)`);
-  if (ageDays > maxDays) failures.push(`${provider}: ${Math.floor(ageDays)}d old (limit ${maxDays}d)`);
+  console.log(
+    `${status.padEnd(5)} ${provider}: newest last_checked ${newest} (${Math.floor(ageDays)}d, limit ${maxDays}d)`,
+  );
+  if (ageDays > maxDays)
+    failures.push(`${provider}: ${Math.floor(ageDays)}d old (limit ${maxDays}d)`);
 }
 
 if (failures.length > 0) {

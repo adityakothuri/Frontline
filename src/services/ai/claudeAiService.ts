@@ -35,6 +35,9 @@ class ClaudeAiService implements AiService {
       method: 'POST',
       body,
       timeoutMs: AI_TIMEOUT_MS,
+      // A second 30s attempt would leave the veteran waiting a minute for one
+      // block; the per-block retry tap in the UI is the better place to decide.
+      retry: false,
     });
   }
 
@@ -53,15 +56,12 @@ class ClaudeAiService implements AiService {
   }
 
   async buildNextStepPlan(input: { need: Need; resource: Resource }): Promise<NextStepPlan> {
-    const plan = await this.cached(
-      'plan',
-      { need: input.need, resource: input.resource },
-      () =>
-        this.callFunction<NextStepPlan>({
-          task: 'plan',
-          need: input.need,
-          resource: input.resource,
-        }),
+    const plan = await this.cached('plan', { need: input.need, resource: input.resource }, () =>
+      this.callFunction<NextStepPlan>({
+        task: 'plan',
+        need: input.need,
+        resource: input.resource,
+      }),
     );
     return { ...plan, disclaimer: AI_NOT_ADVICE_DISCLAIMER };
   }

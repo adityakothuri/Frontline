@@ -31,12 +31,7 @@ export type ResourceCategory =
   | 'community_support';
 
 /** Where a resource's information came from — drives the trust badge. */
-export type SourceType =
-  | 'official'
-  | 'directory'
-  | 'nonprofit'
-  | 'community'
-  | 'unverified';
+export type SourceType = 'official' | 'directory' | 'nonprofit' | 'community' | 'unverified';
 
 /** How confident we are the information is current and correct. */
 export type VerificationStatus = 'verified' | 'needs_review' | 'unverified';
@@ -139,6 +134,8 @@ export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMe
   },
   benefits_help: {
     label: 'Benefits help',
+    // Kept in step with `va_benefits` in NEED_CATEGORY_META — the two maps must
+    // not show a veteran two different glyphs for the same thing.
     icon: 'document-text-outline',
     blurb: 'Help understanding and applying for VA benefits.',
     color: '#4A5580',

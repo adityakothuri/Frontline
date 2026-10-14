@@ -1,19 +1,18 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import {
   View,
   ScrollView,
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Animated,
-  Easing,
-  AccessibilityInfo,
   StyleSheet,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PrimaryButton } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { colors, durations, radii, rise, spacing, withAlpha } from '@/theme';
+import { easings, riseIn } from '@/theme/motionPresets';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -56,54 +55,26 @@ export function OnboardingStep({
   canContinue,
   loading = false,
 }: OnboardingStepProps) {
-  const [anim] = useState(() => new Animated.Value(0));
   // Starts at the previously shown step's fill so the bar eases into place on
-  // each remount — forward or back. Width % needs the JS driver; it's a 4px bar.
-  const [fill] = useState(
-    () =>
-      new Animated.Value(
-        previousStepIndex === undefined
-          ? stepIndex / stepCount
-          : (previousStepIndex + 1) / stepCount,
-      ),
+  // each remount — forward or back. The bar animates its `width` percentage,
+  // which RN's `Animated` could only drive from JS; under Reanimated the same
+  // interpolation runs on the UI thread.
+  const fill = useSharedValue(
+    previousStepIndex === undefined ? stepIndex / stepCount : (previousStepIndex + 1) / stepCount,
   );
 
   useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!active) return;
-      if (reduce) {
-        anim.setValue(1);
-        fill.setValue((stepIndex + 1) / stepCount);
-      } else {
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 260,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }).start();
-        Animated.timing(fill, {
-          toValue: (stepIndex + 1) / stepCount,
-          duration: 320,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: false,
-        }).start();
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [anim, fill, stepIndex, stepCount]);
+    fill.set(
+      withTiming((stepIndex + 1) / stepCount, {
+        duration: durations.slow,
+        easing: easings.out,
+      }),
+    );
+  }, [fill, stepIndex, stepCount]);
 
-  const bodyStyle = {
-    opacity: anim,
-    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
-  };
-  const fillWidth = fill.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-    extrapolate: 'clamp',
-  });
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${Math.min(100, Math.max(0, fill.get() * 100))}%`,
+  }));
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -135,7 +106,7 @@ export function OnboardingStep({
           accessibilityRole="progressbar"
           accessibilityValue={{ min: 0, max: stepCount, now: stepIndex + 1 }}
         >
-          <Animated.View style={[styles.trackFill, { width: fillWidth }]} />
+          <Animated.View style={[styles.trackFill, fillStyle]} />
         </View>
 
         <ScrollView
@@ -143,7 +114,7 @@ export function OnboardingStep({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={bodyStyle}>
+          <Animated.View entering={riseIn(0, rise.md)}>
             <View style={[styles.hero, { backgroundColor: withAlpha(iconColor, 0.14) }]}>
               <Ionicons name={icon} size={30} color={iconColor} />
             </View>

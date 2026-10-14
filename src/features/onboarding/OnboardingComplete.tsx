@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Pressable, Animated, Easing, AccessibilityInfo, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PrimaryButton } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { AppText, PrimaryButton, ShieldTrace } from '@/components';
+import { colors, radii, rise, spacing, stagger, timings } from '@/theme';
+import { riseIn, stepDelay } from '@/theme/motionPresets';
 import { VETERAN_ROLE_LABELS, type VeteranRole } from '@/types/profile';
 import type { VeteranDocument } from '@/types/need';
 
@@ -25,36 +27,23 @@ type OnboardingCompleteProps = {
 // The finale of setup: a warm confirmation + a recap, then "Create account" —
 // which saves the profile on-device. The celebratory moment of the flow.
 export function OnboardingComplete({ draft, onBack, onCreate, loading }: OnboardingCompleteProps) {
-  const [pop] = useState(() => new Animated.Value(0));
-
+  // The one genuine milestone in the app, so it gets the one genuine
+  // celebration: the shield traces its outline once, then the star draws, blooms
+  // and bursts — and `hold` keeps the finished mark on screen instead of fading
+  // it down, because here the mark is the destination rather than a handover.
+  // This replaces a generic check-in-a-circle, so the page gains a moment and
+  // loses a piece of furniture.
+  const [markDone, setMarkDone] = useState(false);
   useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!active) return;
-      if (reduce) {
-        pop.setValue(1);
-      } else {
-        Animated.timing(pop, {
-          toValue: 1,
-          duration: 380,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }).start();
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [pop]);
-
-  const checkStyle = {
-    opacity: pop,
-    transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }],
-  };
+    const timer = setTimeout(() => setMarkDone(true), timings.introHold);
+    return () => clearTimeout(timer);
+  }, []);
 
   const recap: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
     { icon: 'location-outline', text: draft.zip },
-    ...(draft.role ? [{ icon: 'ribbon-outline' as const, text: VETERAN_ROLE_LABELS[draft.role] }] : []),
+    ...(draft.role
+      ? [{ icon: 'ribbon-outline' as const, text: VETERAN_ROLE_LABELS[draft.role] }]
+      : []),
     ...(draft.documentsOnHand.length
       ? [
           {
@@ -83,30 +72,43 @@ export function OnboardingComplete({ draft, onBack, onCreate, loading }: Onboard
       </View>
 
       <View style={styles.body}>
-        <Animated.View style={[styles.check, checkStyle]}>
-          <Ionicons name="checkmark" size={44} color={colors.success} />
+        <View
+          style={styles.mark}
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel="Setup complete"
+        >
+          <ShieldTrace size={92} color={colors.success} done={markDone} hold />
+        </View>
+
+        <Animated.View entering={riseIn(stagger.step)}>
+          <AppText variant="displayLarge" style={styles.title}>
+            You&apos;re ready, {draft.firstName.trim()}.
+          </AppText>
+        </Animated.View>
+        <Animated.View entering={riseIn(stagger.step * 2)}>
+          <AppText variant="body" color="textSecondary" style={styles.subtitle}>
+            Here&apos;s your setup — create your account to save it and get your personalized help.
+          </AppText>
         </Animated.View>
 
-        <AppText variant="displayLarge" style={styles.title}>
-          You&apos;re ready, {draft.firstName.trim()}.
-        </AppText>
-        <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-          Here&apos;s your setup — create your account to save it and get your personalized help.
-        </AppText>
-
         <View style={styles.recap}>
-          {recap.map((r) => (
-            <View key={r.text} style={styles.recapChip}>
+          {recap.map((r, i) => (
+            <Animated.View
+              key={r.text}
+              entering={riseIn(stepDelay(i + 3))}
+              style={styles.recapChip}
+            >
               <Ionicons name={r.icon} size={13} color={colors.accent} />
               <AppText variant="label" color="textSecondary">
                 {r.text}
               </AppText>
-            </View>
+            </Animated.View>
           ))}
         </View>
       </View>
 
-      <View style={styles.footer}>
+      <Animated.View entering={riseIn(stagger.max, rise.md)} style={styles.footer}>
         <PrimaryButton label="Create account" onPress={onCreate} loading={loading} />
         <View style={styles.reassure}>
           <Ionicons name="phone-portrait-outline" size={13} color={colors.textMuted} />
@@ -114,25 +116,24 @@ export function OnboardingComplete({ draft, onBack, onCreate, loading }: Onboard
             Saved on this device · no sign-in
           </AppText>
         </View>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  topBar: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, height: 40, justifyContent: 'center' },
+  topBar: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    height: 40,
+    justifyContent: 'center',
+  },
   backBtn: { width: 32, height: 32, alignItems: 'flex-start', justifyContent: 'center' },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
-  check: {
-    width: 92,
-    height: 92,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: withAlpha(colors.success, 0.14),
-    marginBottom: spacing.xl,
-  },
+  // No tinted disc behind the mark: the shield draws its own silhouette, and a
+  // circle behind it would be the rounded icon tile the design rules ban.
+  mark: { marginBottom: spacing.xl },
   title: { textAlign: 'center', marginBottom: spacing.sm },
   subtitle: { textAlign: 'center', maxWidth: 330, marginBottom: spacing.xl },
   recap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
@@ -148,6 +149,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   footer: { paddingHorizontal: spacing.xl, gap: spacing.md },
-  reassure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  reassure: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
   pressed: { opacity: 0.6 },
 });

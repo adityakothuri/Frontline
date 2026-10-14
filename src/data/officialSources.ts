@@ -69,7 +69,8 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
     {
       title: 'Food, clothing & everyday basics',
       sourceName: '211 · United Way',
-      description: 'Free, confidential help finding food, meals, clothing, and other basics nearby.',
+      description:
+        'Free, confidential help finding food, meals, clothing, and other basics nearby.',
       url: 'https://www.211.org/',
       trust: 'nonprofit',
     },
@@ -85,7 +86,8 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
     {
       title: 'VA home loan benefits',
       sourceName: 'VA.gov',
-      description: 'Understand and apply for VA-backed home loans and your Certificate of Eligibility.',
+      description:
+        'Understand and apply for VA-backed home loans and your Certificate of Eligibility.',
       url: 'https://www.va.gov/housing-assistance/home-loans/',
       trust: 'va',
     },
@@ -134,7 +136,13 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       trust: 'federal',
     },
   ],
-  disability_benefits: [
+  // Merged from the former `disability_benefits` + `general_benefits` blocks
+  // (2026-07-28). Claims-first, because that's the dominant intent, then VA
+  // benefits generally, then the humans who help with either. The accredited-rep
+  // link appeared in both blocks and is kept once, with the broader wording.
+  // Dropped in the merge: "Find VA forms", reachable from "Explore all VA
+  // benefits" and the weakest of the eight once the two lists were combined.
+  va_benefits: [
     {
       title: 'VA disability compensation',
       sourceName: 'VA.gov',
@@ -150,9 +158,16 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       trust: 'va',
     },
     {
+      title: 'Explore all VA benefits',
+      sourceName: 'VA.gov',
+      description: 'The official home for health care, disability, education, and more.',
+      url: 'https://www.va.gov/',
+      trust: 'va',
+    },
+    {
       title: 'Get free help from an accredited rep',
       sourceName: 'VA.gov',
-      description: 'Find a VSO or accredited representative to help file your claim — at no cost.',
+      description: 'Find a VSO or accredited representative to guide you through benefits.',
       url: 'https://www.va.gov/get-help-from-accredited-representative/',
       trust: 'va',
     },
@@ -162,6 +177,20 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       description: 'Free help from Disabled American Veterans with filing and appeals.',
       url: 'https://www.dav.org/',
       trust: 'nonprofit',
+    },
+    {
+      title: 'Your state’s veterans affairs office',
+      sourceName: 'NASDVA directory',
+      description: 'Find your state veterans office — many offer added state-level benefits.',
+      url: 'https://www.nasdva.us/',
+      trust: 'state',
+    },
+    {
+      title: 'Your county veteran service officer',
+      sourceName: 'NACVSO directory',
+      description: 'Locate a county VSO for free, local, one-on-one benefits help.',
+      url: 'https://www.nacvso.org/',
+      trust: 'county',
     },
   ],
   education_benefits: [
@@ -335,43 +364,6 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       description: 'Locate crisis, mental-health, and substance-use help lines and services.',
       url: 'https://www.samhsa.gov/find-help',
       trust: 'federal',
-    },
-  ],
-  general_benefits: [
-    {
-      title: 'Explore all VA benefits',
-      sourceName: 'VA.gov',
-      description: 'The official home for health care, disability, education, and more.',
-      url: 'https://www.va.gov/',
-      trust: 'va',
-    },
-    {
-      title: 'Find VA forms',
-      sourceName: 'VA.gov',
-      description: 'Search and download official VA application and claim forms.',
-      url: 'https://www.va.gov/find-forms/',
-      trust: 'va',
-    },
-    {
-      title: 'Get free help from an accredited rep',
-      sourceName: 'VA.gov',
-      description: 'Find a VSO or accredited representative to guide you through benefits.',
-      url: 'https://www.va.gov/get-help-from-accredited-representative/',
-      trust: 'va',
-    },
-    {
-      title: 'Your state’s veterans affairs office',
-      sourceName: 'NASDVA directory',
-      description: 'Find your state veterans office — many offer added state-level benefits.',
-      url: 'https://www.nasdva.us/',
-      trust: 'state',
-    },
-    {
-      title: 'Your county veteran service officer',
-      sourceName: 'NACVSO directory',
-      description: 'Locate a county VSO for free, local, one-on-one benefits help.',
-      url: 'https://www.nacvso.org/',
-      trust: 'county',
     },
   ],
 };

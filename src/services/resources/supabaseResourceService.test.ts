@@ -6,6 +6,7 @@ const supabaseRequest = vi.hoisted(() => vi.fn());
 vi.mock('../supabase/client', () => ({ supabaseRequest }));
 
 const { SupabaseResourceService } = await import('./supabaseResourceService');
+const { invalidateResourceCache } = await import('./resourceCache');
 
 /** RPC rows: a located row carries a distance, a referral carries null. */
 const located = (id: string, distance = 2) => ({
@@ -21,13 +22,18 @@ const needAt = (location: Need['location']): Need =>
   ({ category: 'housing', urgency: 'this_week', modality: 'either', location }) as Need;
 
 const radiiRequested = () =>
-  supabaseRequest.mock.calls.map(([, init]) => (init as { body: { radius_miles: number } }).body.radius_miles);
+  supabaseRequest.mock.calls.map(
+    ([, init]) => (init as { body: { radius_miles: number } }).body.radius_miles,
+  );
 
 describe('SupabaseResourceService.search — radius widening', () => {
   const service = new SupabaseResourceService();
 
   beforeEach(() => {
     supabaseRequest.mockReset();
+    // The service caches reads for the session; these cases reuse identical
+    // queries, so each needs a clean one (same reset a "Try again" performs).
+    invalidateResourceCache();
   });
 
   it('does not widen when the first search already has enough nearby places', async () => {
@@ -102,6 +108,9 @@ describe('SupabaseResourceService — uncontactable rows are capped', () => {
 
   beforeEach(() => {
     supabaseRequest.mockReset();
+    // The service caches reads for the session; these cases reuse identical
+    // queries, so each needs a clean one (same reset a "Try again" performs).
+    invalidateResourceCache();
   });
 
   /** A located row a veteran cannot reach: no phone, no website. */
@@ -166,6 +175,9 @@ describe('SupabaseResourceService — veteran_state reaches the RPC', () => {
 
   beforeEach(() => {
     supabaseRequest.mockReset();
+    // The service caches reads for the session; these cases reuse identical
+    // queries, so each needs a clean one (same reset a "Try again" performs).
+    invalidateResourceCache();
     supabaseRequest.mockResolvedValue([located('a'), located('b'), located('c')]);
   });
 
@@ -190,5 +202,59 @@ describe('SupabaseResourceService — veteran_state reaches the RPC', () => {
   it('sends null on browse when no ZIP is given', async () => {
     await service.listResources('housing');
     expect(bodyOf(0).body.veteran_state).toBeNull();
+  });
+});
+
+/**
+ * Discover and Map open on the identical browse query, so a cold launch used to
+ * pay for it twice — and again on every tab switch. These pin the dedup and the
+ * "an error stays retryable" rule, both of which are easy to break silently.
+ */
+describe('SupabaseResourceService — session cache', () => {
+  const service = new SupabaseResourceService();
+
+  beforeEach(() => {
+    supabaseRequest.mockReset();
+    invalidateResourceCache();
+  });
+
+  it('issues one request when two callers browse the same thing at once', async () => {
+    supabaseRequest.mockResolvedValue([located('a')]);
+
+    await Promise.all([
+      service.listResources(undefined, '78701', 25),
+      service.listResources(undefined, '78701', 25),
+    ]);
+
+    expect(supabaseRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves a repeat browse from the cache', async () => {
+    supabaseRequest.mockResolvedValue([located('a')]);
+
+    await service.listResources(undefined, '78701', 25);
+    const second = await service.listResources(undefined, '78701', 25);
+
+    expect(supabaseRequest).toHaveBeenCalledTimes(1);
+    expect(second).toHaveLength(1);
+  });
+
+  it('still queries when the browse differs', async () => {
+    supabaseRequest.mockResolvedValue([located('a')]);
+
+    await service.listResources(undefined, '78701', 25);
+    await service.listResources(undefined, '02903', 25);
+
+    expect(supabaseRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not cache a failure — the next attempt is real', async () => {
+    supabaseRequest.mockRejectedValueOnce(new Error('network')).mockResolvedValue([located('a')]);
+
+    await expect(service.listResources(undefined, '78701', 25)).rejects.toThrow('network');
+    const retried = await service.listResources(undefined, '78701', 25);
+
+    expect(supabaseRequest).toHaveBeenCalledTimes(2);
+    expect(retried).toHaveLength(1);
   });
 });

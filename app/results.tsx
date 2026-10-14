@@ -1,18 +1,23 @@
 import { useMemo, useState } from 'react';
-import { View, FlatList, LayoutAnimation, ScrollView, StyleSheet } from 'react-native';
+import { View, FlatList, ScrollView, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AppText,
   ErrorState,
+  RefreshFailedBanner,
   NavigatorDisclaimer,
   PrimaryButton,
   ScreenContainer,
   Skeleton,
 } from '@/components';
 import { colors, radii, spacing } from '@/theme';
+import { fadeIn, fadeOut, riseIn, stepDelay } from '@/theme/motionPresets';
+import { useStaggerGate } from '@/hooks/useStaggerGate';
 import { useProfile } from '@/services/profile';
-import { splitLocalsAndReferrals } from '@/services/resources';
+import { demoteDownvoted, splitLocalsAndReferrals } from '@/services/resources';
+import { useActivity } from '@/services/activity';
 import { stateFromZip } from '@/lib/zipState';
 import { CrisisBanner } from '@/features/resources/CrisisBanner';
 import { ResourceCard } from '@/features/resources/ResourceCard';
@@ -20,19 +25,15 @@ import { ReferralSection } from '@/features/resources/ReferralSection';
 import { ResourceMap } from '@/features/resources/ResourceMap';
 import { OfficialSourcesWidget } from '@/features/resources/OfficialSourcesWidget';
 import { ViewToggle, type ResultsView } from '@/features/resources/ViewToggle';
-import { useResourceSearch } from '@/features/resources/useResourceSearch';
-import {
-  defaultNeedForCategory,
-  NEED_CATEGORY_META,
-  type NeedCategory,
-} from '@/types/need';
+import { resultsOf, useResourceSearch } from '@/features/resources/useResourceSearch';
+import { defaultNeedForCategory, NEED_CATEGORY_META, type NeedCategory } from '@/types/need';
 
 // Results for a category, as a list or a map of the same nearby resources. The
 // local opportunity finder is the focus; an "Official online sources" widget sits
 // below it (and in the empty state) as trusted backup.
 export default function ResultsScreen() {
   const router = useRouter();
-  const { profile } = useProfile();
+  const { profile, isHydrated: isProfileHydrated } = useProfile();
   const params = useLocalSearchParams<{ category: NeedCategory }>();
 
   const need = useMemo(
@@ -40,10 +41,15 @@ export default function ResultsScreen() {
     [params.category, profile?.zip, profile?.preferredRadiusMiles],
   );
 
-  const { state, reload } = useResourceSearch(need);
+  const { state, reload } = useResourceSearch(need, isProfileHydrated);
+  const { getRating } = useActivity();
   const [view, setView] = useState<ResultsView>('list');
+  // Only the first screenful of a fresh result set gets a staggered entrance.
+  const staggered = useStaggerGate(state);
   // Selection is shared so the map preview and the list stay in sync across toggles.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Measured so the map can keep its own overlays clear of the floating toggle.
+  const [toggleHeight, setToggleHeight] = useState(0);
 
   // Located results are strictly within whichever radius the search settled on
   // — the service widens past the veteran's setting when almost nothing is near
@@ -52,17 +58,28 @@ export default function ResultsScreen() {
   // "statewide" section, filtered to the veteran's state so it isn't
   // out-of-state noise.
   const veteranState = stateFromZip(profile?.zip);
-  const { referrals, locals, referralsLead } = useMemo(
-    () =>
-      splitLocalsAndReferrals(state.status === 'ready' ? state.results : [], veteranState),
-    [state, veteranState],
-  );
+  // `resultsOf` falls back to the last good results on a failed refresh, so the
+  // screen keeps showing nearby help under a banner instead of an error card.
+  //
+  // A place the veteran marked "Not helpful" on Home sinks to the bottom of the
+  // local list. It has to happen here rather than in the service: the ratings
+  // live in `ActivityContext`, and `sortSearchResults` is called from
+  // `supabaseResourceService`, where there is no React.
+  //
+  // `demoteDownvoted` is deliberately the **last** thing to touch a list that is
+  // about to be rendered — the same rule Discover follows. Ordering it before a
+  // regrouping step silently undoes it (see the `interleaveByCategory` note
+  // there), and one uniform rule is easier to keep than a per-site judgement
+  // about which downstream steps happen to preserve order.
+  const { referrals, locals, referralsLead } = useMemo(() => {
+    const split = splitLocalsAndReferrals(resultsOf(state), veteranState);
+    return { ...split, locals: demoteDownvoted(split.locals, getRating) };
+  }, [state, veteranState, getRating]);
 
-  // One-shot cross-layout ease so list⇄map doesn't snap. (No-op on web.)
-  const changeView = (next: ResultsView) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setView(next);
-  };
+  // The two views crossfade rather than snapping. This used to be a one-shot
+  // `LayoutAnimation`, which silently did nothing on web; the entering/exiting
+  // pair below works on every platform.
+  const changeView = (next: ResultsView) => setView(next);
 
   // "See in map" on a card: flip to this screen's own map and focus the pin
   // (ResourceMap glides to selectedId). Keeps the veteran in the results context
@@ -87,11 +104,14 @@ export default function ResultsScreen() {
   const isEmergency = need.category === 'emergency';
 
   // Map view is the whole screen — edge-to-edge under the header, with the toggle
-  // floating over it — so it reads as a real map, not a widget. Gated on located
-  // results: referral-only results (national help lines) would map to zero pins.
-  if (state.status === 'ready' && locals.length > 0 && view === 'map') {
+  // floating over it — so it reads as a real map, not a widget. Gated on
+  // `locals.length`: referral-only results (national help lines) would map to zero
+  // pins. Note that `locals` is split on "not a national referral", not on having
+  // coordinates, so a local row with no geocode still lands here and shows up in
+  // the map's off-map note instead of as a pin.
+  if (locals.length > 0 && view === 'map') {
     return (
-      <View style={styles.mapScreen}>
+      <Animated.View entering={fadeIn()} exiting={fadeOut()} style={styles.mapScreen}>
         <Stack.Screen options={{ title: categoryLabel }} />
         {isEmergency ? (
           <View style={styles.mapCrisis}>
@@ -106,12 +126,20 @@ export default function ResultsScreen() {
             needCategory={need.category}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            // The toggle floats over the map's top-right, and the map's off-map
+            // note is centred at the top — wide enough, on a narrow screen, to run
+            // straight under it. Reporting the toggle's real height pushes the note
+            // clear of it.
+            topInset={toggleHeight}
           />
-          <View style={styles.toggleFloat}>
+          <View
+            style={styles.toggleFloat}
+            onLayout={(e) => setToggleHeight(e.nativeEvent.layout.height + spacing.sm * 2)}
+          >
             <ViewToggle value={view} onChange={changeView} />
           </View>
         </View>
-      </View>
+      </Animated.View>
     );
   }
 
@@ -123,8 +151,9 @@ export default function ResultsScreen() {
       {isEmergency ? <CrisisBanner style={styles.crisis} /> : null}
       {state.status === 'loading' ? (
         <ResultsSkeleton />
-      ) : state.status === 'error' ? (
-        <ErrorState onRetry={reload} />
+      ) : state.status === 'error' && referrals.length + locals.length === 0 ? (
+        // Nothing to fall back on — the only case that earns the whole screen.
+        <ErrorState error={state.error} onRetry={reload} />
       ) : referrals.length + locals.length === 0 ? (
         <ScrollView contentContainerStyle={styles.emptyScroll} showsVerticalScrollIndicator={false}>
           <View style={styles.emptyMsg}>
@@ -150,7 +179,10 @@ export default function ResultsScreen() {
           <NavigatorDisclaimer style={styles.disclaimer} />
         </ScrollView>
       ) : (
-        <View style={styles.ready}>
+        <Animated.View entering={fadeIn()} style={styles.ready}>
+          {state.status === 'error' ? (
+            <RefreshFailedBanner error={state.error} onRetry={reload} />
+          ) : null}
           <View style={styles.headerRow}>
             <AppText variant="body" color="textSecondary">
               {referrals.length + locals.length}{' '}
@@ -163,8 +195,10 @@ export default function ResultsScreen() {
             style={styles.fill}
             data={locals}
             keyExtractor={(item) => item.resource.id}
-            renderItem={({ item }) => (
-              <ResourceCard result={item} needCategory={need.category} onSeeInMap={seeInMap} />
+            renderItem={({ item, index }) => (
+              <Animated.View entering={staggered(index) ? riseIn(stepDelay(index)) : undefined}>
+                <ResourceCard result={item} needCategory={need.category} onSeeInMap={seeInMap} />
+              </Animated.View>
             )}
             ListHeaderComponent={referralsLead ? referralSection : null}
             ListFooterComponent={
@@ -177,7 +211,7 @@ export default function ResultsScreen() {
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
           />
-        </View>
+        </Animated.View>
       )}
     </ScreenContainer>
   );

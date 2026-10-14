@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -31,22 +32,47 @@ const ProfileContext = createContext<ProfileContextValue | null>(null);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<VeteranProfile | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  // Lets the late-arriving backup restore tell whether the veteran has since
+  // written a profile of their own, without making `profile` a dependency of the
+  // mount-once effect below.
+  const profileRef = useRef<VeteranProfile | null>(null);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   useEffect(() => {
     let active = true;
-    // Restore from the backup when there's no local profile (e.g. a reinstall);
-    // local wins when present. If a restore happened, mirror it straight back so
-    // the backup's updated_at advances. No-op when sync is off.
     loadProfile()
-      .then((stored) => restoreProfile(stored))
-      .then((resolved) => {
+      .then((stored) => {
         if (!active) return;
-        setProfile(resolved);
-        setIsHydrated(true);
-        if (resolved) {
-          saveProfile(resolved);
-          pushProfile(resolved);
+        // A local profile is the whole answer — hydrate on it and skip the
+        // network entirely. This is every launch after setup.
+        if (stored) {
+          setProfile(stored);
+          setIsHydrated(true);
+          return;
         }
+        // No local profile (first install, or a reinstall). Hydrate as "no
+        // profile" now rather than holding the app on a blank screen for a cold
+        // `sync` round trip — up to 12s — and let a restore land after. Routing
+        // in app/index.tsx sends this veteran to onboarding meanwhile; a restore
+        // that arrives while they're still there fills the fields in.
+        setIsHydrated(true);
+        return restoreProfile(null).then((restored) => {
+          // If the veteran finished onboarding while the pull was in flight,
+          // their profile is the newer one — leave it alone. Writing `restored`
+          // here would overwrite it on disk and in the backup.
+          if (!active || !restored || profileRef.current) return;
+          setProfile(restored);
+          // Mirror the restore back so the backup's updated_at advances.
+          saveProfile(restored);
+          pushProfile(restored);
+        });
+      })
+      .catch(() => {
+        // isHydrated gates the entire app (app/index.tsx won't route without
+        // it), so it must never be left false by an unexpected throw.
+        if (active) setIsHydrated(true);
       });
     return () => {
       active = false;

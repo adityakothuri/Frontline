@@ -28,19 +28,9 @@ export function Chip({ label, selected, onPress, icon }: ChipProps) {
       ]}
     >
       {selected ? (
-        <Ionicons
-          name="checkmark"
-          size={16}
-          color={colors.accent}
-          style={styles.icon}
-        />
+        <Ionicons name="checkmark" size={16} color={colors.accent} style={styles.icon} />
       ) : icon ? (
-        <Ionicons
-          name={icon}
-          size={16}
-          color={colors.textSecondary}
-          style={styles.icon}
-        />
+        <Ionicons name={icon} size={16} color={colors.textSecondary} style={styles.icon} />
       ) : null}
       <AppText variant="label" color={selected ? 'textPrimary' : 'textSecondary'}>
         {label}

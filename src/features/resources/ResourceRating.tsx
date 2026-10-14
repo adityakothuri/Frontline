@@ -50,8 +50,7 @@ export function ResourceRating({ resourceId }: { resourceId: string }) {
 
   const { helpful, notHelpful } = aggregate;
   const total = helpful + notHelpful;
-  const label =
-    total === 0 ? 'No ratings yet' : `${helpful} of ${total} found this helpful`;
+  const label = total === 0 ? 'No ratings yet' : `${helpful} of ${total} found this helpful`;
 
   return (
     <View style={styles.row}>
@@ -94,7 +93,11 @@ function ThumbButton({
       accessibilityState={{ selected }}
       onPress={onPress}
       hitSlop={8}
-      style={({ pressed }) => [styles.thumb, selected && styles.thumbSelected, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.thumb,
+        selected && styles.thumbSelected,
+        pressed && styles.pressed,
+      ]}
     >
       <Ionicons
         name={selected ? icon : (`${icon}-outline` as const)}

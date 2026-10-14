@@ -226,7 +226,9 @@ function normalize(office: Office, today: string): NormalizedResource {
     // The city cannot be split off the street reliably (see the header note), so
     // the geocoder gets street + state + ZIP, which is enough for a match in
     // most cases. Offices with no printed address stay unpinned but callable.
-    geocode: office.street ? { street: office.street, city: null, state: office.state, zip: office.zip } : undefined,
+    geocode: office.street
+      ? { street: office.street, city: null, state: office.state, zip: office.zip }
+      : undefined,
     phone: office.phone,
     website: DIRECTORY_URL,
     hours: null,
@@ -243,7 +245,13 @@ function normalize(office: Office, today: string): NormalizedResource {
     verification_status: 'needs_review',
     last_checked: today,
     last_updated: today,
-    tags: ['cvso', 'county-veterans-service-officer', 'claims-help', 'accredited', `state:${office.state}`],
+    tags: [
+      'cvso',
+      'county-veterans-service-officer',
+      'claims-help',
+      'accredited',
+      `state:${office.state}`,
+    ],
     created_at: today,
     updated_at: today,
     external_id: slug,
@@ -276,7 +284,10 @@ export const createNacvsoOfficersSource: SourceFactory = (
     async fetch(query: IngestionQuery): Promise<NormalizedResource[]> {
       const today = new Date().toISOString().slice(0, 10);
 
-      const sitemap = await fetchText(config.baseUrl, { label: 'NACVSO sitemap', timeoutMs: 60_000 });
+      const sitemap = await fetchText(config.baseUrl, {
+        label: 'NACVSO sitemap',
+        timeoutMs: 60_000,
+      });
       const urls = slugsFromSitemap(sitemap);
       if (urls.length < MIN_PROFILE_URLS) {
         throw new Error(
@@ -286,7 +297,13 @@ export const createNacvsoOfficersSource: SourceFactory = (
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
       // A state-scoped run is for spot-checks; the sitemap gives no state, so it
       // still has to fetch every page and filter after parsing. Cap the work.
@@ -335,7 +352,9 @@ export const createNacvsoOfficersSource: SourceFactory = (
         }
         await sleep(DELAY_MS);
         if (i > 0 && i % (CONCURRENCY * 100) === 0) {
-          console.log(`[ingest] nacvso-cvso: ${i}/${targets.length} profiles, ${byOffice.size} offices…`);
+          console.log(
+            `[ingest] nacvso-cvso: ${i}/${targets.length} profiles, ${byOffice.size} offices…`,
+          );
         }
       }
 

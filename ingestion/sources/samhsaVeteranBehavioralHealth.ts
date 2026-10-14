@@ -233,7 +233,13 @@ function normalize(row: LocatorRow, today: string): NormalizedResource | null {
     verification_status: 'needs_review',
     last_checked: today,
     last_updated: today,
-    tags: ['behavioral-health', 'mental-health', 'substance-use', 'veterans-program', `state:${state}`],
+    tags: [
+      'behavioral-health',
+      'mental-health',
+      'substance-use',
+      'veterans-program',
+      `state:${state}`,
+    ],
     created_at: today,
     updated_at: today,
     external_id: key,
@@ -290,7 +296,13 @@ export const createSamhsaVeteranBehavioralHealthSource: SourceFactory = (
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

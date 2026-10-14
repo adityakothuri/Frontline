@@ -117,7 +117,9 @@ const trimOrNull = (s: string | null | undefined): string | null => {
   return t ? t : null;
 };
 
-function buildAddress(physical: NonNullable<VaFacility['attributes']['address']>['physical']): string | null {
+function buildAddress(
+  physical: NonNullable<VaFacility['attributes']['address']>['physical'],
+): string | null {
   if (!physical) return null;
   const street = [physical.address1, physical.address2, physical.address3]
     .map((s) => s?.trim())
@@ -176,7 +178,8 @@ function describeVaFacility(
     return {
       description:
         'VA benefits office — in-person help understanding and applying for VA benefits like disability compensation, pension, and the GI Bill.',
-      eligibility: 'Open to veterans and eligible family members. Bring your DD-214 if you have one.',
+      eligibility:
+        'Open to veterans and eligible family members. Bring your DD-214 if you have one.',
     };
   }
 
@@ -285,7 +288,8 @@ const SERVICE_COPY: Record<string, { description: string; eligibility: string }>
   'Social work': {
     description:
       'VA social work services — a social worker who helps a veteran sort out housing, benefits, transportation, home care, and family support alongside their medical care.',
-    eligibility: 'For enrolled veterans. Ask your care team for a social work referral, or call ahead.',
+    eligibility:
+      'For enrolled veterans. Ask your care team for a social work referral, or call ahead.',
   },
   'Emergency care': {
     description:
@@ -336,7 +340,12 @@ function crossListService(
 // pulls. Cemeteries joined 2026-07-27 (see CATEGORY_BY_FACILITY_TYPE).
 const NATIONAL_TYPES = ['health', 'benefits', 'vet_center', 'cemetery'] as const;
 
-function buildUrl(baseUrl: string, query: IngestionQuery, page: number, typeFilter?: string): string {
+function buildUrl(
+  baseUrl: string,
+  query: IngestionQuery,
+  page: number,
+  typeFilter?: string,
+): string {
   const params = new URLSearchParams({ per_page: String(query.perPage), page: String(page) });
   if (typeFilter) {
     // Nationwide-by-type: no geo filter.

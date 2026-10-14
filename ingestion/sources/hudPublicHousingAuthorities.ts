@@ -144,7 +144,13 @@ function normalize(attrs: PhaAttributes, today: string): NormalizedResource | nu
     verification_status: 'verified',
     last_checked: today,
     last_updated: today,
-    tags: ['public-housing-authority', 'hud-vash', 'housing-voucher', 'section-8', `state:${state}`],
+    tags: [
+      'public-housing-authority',
+      'hud-vash',
+      'housing-voucher',
+      'section-8',
+      `state:${state}`,
+    ],
     created_at: today,
     updated_at: today,
     external_id: code,
@@ -163,7 +169,13 @@ export const createHudPublicHousingAuthoritiesSource: SourceFactory = (
       const today = new Date().toISOString().slice(0, 10);
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

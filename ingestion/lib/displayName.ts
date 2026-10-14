@@ -21,7 +21,8 @@ const SMALL = new Set(['of', 'the', 'and', 'for', 'a', 'an', 'in', 'on', 'at', '
  * Tokens to leave exactly as they are. Acronyms only — no ordinary words, which is
  * the mistake that produced "AMERICAN Legion".
  */
-const ACRONYM = /^(?:VFW|DAV|AMVETS|VVA|VA|USA|US|POW|MIA|LLC|HIV|AIDS|WIC|FQHC|YMCA|YWCA|MTA|RTA|RTD|II|III|IV|[A-Z]&[A-Z])$/;
+const ACRONYM =
+  /^(?:VFW|DAV|AMVETS|VVA|VA|USA|US|POW|MIA|LLC|HIV|AIDS|WIC|FQHC|YMCA|YWCA|MTA|RTA|RTD|II|III|IV|[A-Z]&[A-Z])$/;
 
 /** Trailing punctuation should not stop a token being recognised as an acronym. */
 const bare = (word: string): string => word.replace(/[^A-Za-z&]/g, '').toUpperCase();
@@ -43,7 +44,10 @@ export function titleCaseName(raw: string): string {
       // must become "Mary's", not "Mary'S". The cost is that "O'BRIEN" comes out
       // as "O'brien" — the lesser of the two wrong answers, and possessives are
       // far more common in these names than Irish prefixes.
-      return lower.replace(/(^|[^a-z'])([a-z])/g, (_, prefix: string, letter: string) => prefix + letter.toUpperCase());
+      return lower.replace(
+        /(^|[^a-z'])([a-z])/g,
+        (_, prefix: string, letter: string) => prefix + letter.toUpperCase(),
+      );
     })
     .join(' ');
 }

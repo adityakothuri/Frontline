@@ -55,7 +55,8 @@ import type {
 } from '../types.ts';
 
 const PROVIDER = 'careeronestop-ajc';
-const ATTRIBUTION_URL = 'https://www.careeronestop.org/localhelp/americanjobcenters/find-american-job-centers.aspx';
+const ATTRIBUTION_URL =
+  'https://www.careeronestop.org/localhelp/americanjobcenters/find-american-job-centers.aspx';
 
 /**
  * Required by the CareerOneStop data licence. Kept as one sentence so it can ride
@@ -247,11 +248,19 @@ export const createAmericanJobCentersSource: SourceFactory = (
 
       const missing = Object.values(COL).filter((c) => !rows.some((r) => c in r));
       if (missing.length > 0) {
-        throw new Error(`CareerOneStop: workbook is missing expected columns: ${missing.join(', ')}`);
+        throw new Error(
+          `CareerOneStop: workbook is missing expected columns: ${missing.join(', ')}`,
+        );
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

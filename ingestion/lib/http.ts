@@ -29,7 +29,8 @@
  */
 
 /** Providers that reject a non-browser client, so this is the default. */
-const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; FrontlineIngest/1.0; +https://github.com/adiKothuri)';
+const DEFAULT_USER_AGENT =
+  'Mozilla/5.0 (compatible; FrontlineIngest/1.0; +https://github.com/adiKothuri)';
 
 export interface HttpOptions {
   /** Milliseconds before the request is aborted. */
@@ -97,7 +98,9 @@ export async function httpRequest(url: string, options: HttpOptions = {}): Promi
       });
       if (!isRetryableStatus(response.status)) return response;
       if (attempt >= maxRetries) {
-        throw new Error(`${label}: HTTP ${response.status} for ${url} after ${attempt + 1} attempts`);
+        throw new Error(
+          `${label}: HTTP ${response.status} for ${url} after ${attempt + 1} attempts`,
+        );
       }
       // The server told us how long to wait; believe it over our own guess.
       // A server asking us back in 18 hours is not throttling, it is closed for the
@@ -112,7 +115,9 @@ export async function httpRequest(url: string, options: HttpOptions = {}): Promi
         );
       }
       const wait = requested ?? retryBaseMs * 2 ** attempt;
-      console.warn(`[ingest] ${label}: HTTP ${response.status} — retrying in ${Math.round(wait / 1000)}s`);
+      console.warn(
+        `[ingest] ${label}: HTTP ${response.status} — retrying in ${Math.round(wait / 1000)}s`,
+      );
       await sleep(wait);
     } catch (err) {
       clearTimeout(timeout);
@@ -120,7 +125,9 @@ export async function httpRequest(url: string, options: HttpOptions = {}): Promi
       if (err instanceof Error && err.message.startsWith(`${label}: HTTP`)) throw err;
       if (attempt >= maxRetries) throw err;
       const wait = retryBaseMs * 2 ** attempt;
-      console.warn(`[ingest] ${label}: ${String(err).slice(0, 90)} — retrying in ${Math.round(wait / 1000)}s`);
+      console.warn(
+        `[ingest] ${label}: ${String(err).slice(0, 90)} — retrying in ${Math.round(wait / 1000)}s`,
+      );
       await sleep(wait);
       continue;
     } finally {
@@ -151,7 +158,11 @@ export async function fetchText(url: string, options: HttpOptions = {}): Promise
 }
 
 /** POST a JSON body and parse the JSON response. */
-export async function postJson<T>(url: string, body: unknown, options: HttpOptions = {}): Promise<T> {
+export async function postJson<T>(
+  url: string,
+  body: unknown,
+  options: HttpOptions = {},
+): Promise<T> {
   return fetchJson<T>(url, {
     ...options,
     method: 'POST',

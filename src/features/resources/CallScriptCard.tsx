@@ -5,6 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import { AppText } from '@/components';
 import { colors, radii, spacing } from '@/theme';
 import { aiService } from '@/services/ai';
+import { reportDataError } from '@/services/monitoring';
 import type { CallScript, CallScriptTone } from '@/services/ai';
 import type { Need } from '@/types/need';
 import { RESOURCE_CATEGORY_META, type Resource } from '@/types/resource';
@@ -21,7 +22,12 @@ type CallScriptCardProps = {
 
 // The call-script workflow: one script, generated on mount (the veteran opts in
 // by opening the sheet), personalized by name, with one-tap copy.
-export function CallScriptCard({ need, resource, firstName, tone = 'standard' }: CallScriptCardProps) {
+export function CallScriptCard({
+  need,
+  resource,
+  firstName,
+  tone = 'standard',
+}: CallScriptCardProps) {
   const [script, setScript] = useState<CallScript | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -34,7 +40,10 @@ export function CallScriptCard({ need, resource, firstName, tone = 'standard' }:
     try {
       const result = await aiService.buildCallScript({ need, resource, tone, firstName });
       setScript(result);
-    } catch {
+    } catch (error) {
+      // Reported, not just shown — see useAiGuidance: a silent AI failure is
+      // invisible in monitoring while every resource read is not.
+      reportDataError('Call script', error);
       setFailed(true);
     } finally {
       setLoading(false);
@@ -46,9 +55,12 @@ export function CallScriptCard({ need, resource, firstName, tone = 'standard' }:
   }, [generate]);
 
   // Clear any pending "Copied" reset on unmount (the sheet can be closed).
-  useEffect(() => () => {
-    if (copyTimer.current) clearTimeout(copyTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    },
+    [],
+  );
 
   const copy = async () => {
     if (!script) return;
@@ -77,7 +89,16 @@ export function CallScriptCard({ need, resource, firstName, tone = 'standard' }:
   }
 
   return (
-    <AiContentBlock color={RESOURCE_CATEGORY_META[resource.category].color} loading={loading}>
+    // No `title` here — the sheet's own header already names the card, so the
+    // block renders no header and therefore no breathing sparkle. The sweep line
+    // is the only motion in this wait, which is also the longest one in the app,
+    // behind a modal where there is nothing else to look at. Hence a real label
+    // rather than the default "Generating…".
+    <AiContentBlock
+      color={RESOURCE_CATEGORY_META[resource.category].color}
+      loading={loading}
+      loadingLabel="Writing your call script…"
+    >
       {script ? (
         <>
           <View style={styles.scriptBlock}>

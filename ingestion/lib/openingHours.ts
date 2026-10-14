@@ -30,17 +30,35 @@ const DAY_ABBR = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 /** Day index (0 = Monday) keyed by every spelling the upstream sources use. */
 const DAY_INDEX: Record<string, number> = {
-  mon: 0, monday: 0, mo: 0,
-  tue: 1, tuesday: 1, tu: 1, tues: 1,
-  wed: 2, wednesday: 2, we: 2,
-  thu: 3, thursday: 3, th: 3, thur: 3, thurs: 3,
-  fri: 4, friday: 4, fr: 4,
-  sat: 5, saturday: 5, sa: 5,
-  sun: 6, sunday: 6, su: 6,
+  mon: 0,
+  monday: 0,
+  mo: 0,
+  tue: 1,
+  tuesday: 1,
+  tu: 1,
+  tues: 1,
+  wed: 2,
+  wednesday: 2,
+  we: 2,
+  thu: 3,
+  thursday: 3,
+  th: 3,
+  thur: 3,
+  thurs: 3,
+  fri: 4,
+  friday: 4,
+  fr: 4,
+  sat: 5,
+  saturday: 5,
+  sa: 5,
+  sun: 6,
+  sunday: 6,
+  su: 6,
 };
 
 const pad = (n: number): string => String(n).padStart(2, '0');
-const toClock = (minutes: number): string => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+const toClock = (minutes: number): string =>
+  `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
 
 const dayIndex = (token: string): number | null => {
   const i = DAY_INDEX[token.trim().toLowerCase()];
@@ -135,7 +153,9 @@ function parseRange(value: string): string | null {
  * VA's per-day object → controlled string.
  * `{ monday: "800AM-430PM", …, sunday: "Closed" }` → `Mon-Fri 08:00-16:30`.
  */
-export function fromVaHours(hours: Record<string, string | null> | null | undefined): string | null {
+export function fromVaHours(
+  hours: Record<string, string | null> | null | undefined,
+): string | null {
   if (!hours) return null;
   const ranges: (string | null)[] = Array(7).fill(null);
   for (const [key, value] of Object.entries(hours)) {

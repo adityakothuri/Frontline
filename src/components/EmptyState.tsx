@@ -14,13 +14,7 @@ type EmptyStateProps = {
 
 // A polished, reassuring empty state — not a blank screen. Orients the user and
 // says what will appear here once the feature is live.
-export function EmptyState({
-  icon,
-  title,
-  message,
-  actionLabel,
-  onAction,
-}: EmptyStateProps) {
+export function EmptyState({ icon, title, message, actionLabel, onAction }: EmptyStateProps) {
   return (
     <View style={styles.root}>
       <View style={styles.iconWrap}>

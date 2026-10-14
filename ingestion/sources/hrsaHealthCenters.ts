@@ -151,9 +151,7 @@ function normalize(row: Record<string, string>, today: string): NormalizedResour
   const hasCoords = isSaneCoord(lat, lng);
 
   const seasonal =
-    locationType === 'Seasonal'
-      ? ' This site is seasonal, so check it is open before you go.'
-      : '';
+    locationType === 'Seasonal' ? ' This site is seasonal, so check it is open before you go.' : '';
 
   // The parent organization, when it differs, tells a veteran who runs the site.
   const centerName = trimOrNull(row[COL.centerName]);
@@ -165,7 +163,10 @@ function normalize(row: Record<string, string>, today: string): NormalizedResour
   return {
     // Site name + address is the identity; this file has no stable site id column
     // that survives its annual rebuild.
-    id: `hrsa:${state}-${zip ?? '00000'}-${siteName.replace(/[^A-Za-z0-9]+/g, '-').toLowerCase().slice(0, 60)}`,
+    id: `hrsa:${state}-${zip ?? '00000'}-${siteName
+      .replace(/[^A-Za-z0-9]+/g, '-')
+      .toLowerCase()
+      .slice(0, 60)}`,
     name: titleCase(siteName),
     category: 'healthcare',
     description:
@@ -218,7 +219,13 @@ export const createHrsaHealthCentersSource: SourceFactory = (
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

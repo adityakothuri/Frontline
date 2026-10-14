@@ -1,23 +1,27 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { View, ScrollView, Pressable, Linking, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, CategoryMedallion, NavigatorDisclaimer } from '@/components';
-import { colors, radii, spacing, surfaceTint } from '@/theme';
+import { colors, radii, rise, spacing, stagger, surfaceTint } from '@/theme';
+import { heroMedallionIn, riseIn } from '@/theme/motionPresets';
 import { isOpenNow } from '@/lib/hours';
 import { useProfile } from '@/services/profile';
 import { useActivity } from '@/services/activity';
+import { useReminders } from '@/services/reminders';
 import { aiService, type BenefitSummary, type NextStepPlan } from '@/services/ai';
 import { RESOURCE_CATEGORY_META, type Resource } from '@/types/resource';
 import { defaultNeedForCategory, type NeedCategory } from '@/types/need';
 import { callPhone, openDirections } from './resourceActions';
-import { openNowStatus, trustWarning } from './resourceStatus';
+import { openNowStatus, toReminderSnapshot, trustWarning } from './resourceStatus';
 import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
 import { ActionRow } from './ActionRow';
 import { AiContentBlock } from './AiContentBlock';
 import { DocumentChecklist } from './DocumentChecklist';
 import { CallScriptSheet } from './CallScriptSheet';
+import { useAiGuidance } from './useAiGuidance';
 import { EmergencyCallBanner } from './EmergencyCallBanner';
 import { ResourceRating } from './ResourceRating';
 
@@ -33,42 +37,29 @@ type ResourceDetailProps = {
 export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) {
   const { profile } = useProfile();
   const { recordEngagement } = useActivity();
+  const { refreshSnapshots } = useReminders();
   const need = useMemo(
     () => defaultNeedForCategory(needCategory, profile?.zip, profile?.preferredRadiusMiles),
     [needCategory, profile?.zip, profile?.preferredRadiusMiles],
   );
 
-  const [summary, setSummary] = useState<BenefitSummary | null>(null);
-  const [plan, setPlan] = useState<NextStepPlan | null>(null);
-  const [aiFailed, setAiFailed] = useState(false);
-  // Bumped by the retry tap to re-run the AI effect.
-  const [aiAttempt, setAiAttempt] = useState(0);
   const [scriptOpen, setScriptOpen] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    setSummary(null);
-    setPlan(null);
-    setAiFailed(false);
-    Promise.all([
-      aiService.summarizeBenefit({ resource }),
-      aiService.buildNextStepPlan({ need, resource }),
-    ])
-      .then(([s, p]) => {
-        if (!active) return;
-        setSummary(s);
-        setPlan(p);
-      })
-      .catch(() => {
-        // A real AI proxy can fail — offer a retry instead of skeletons forever.
-        if (active) setAiFailed(true);
-      });
-    return () => {
-      active = false;
-    };
-    // Reload only when the resource changes (or a retry is requested).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resource.id, aiAttempt]);
+  // Both calls fire at once and each block paints the moment its own lands, so a
+  // veteran reads whichever guidance is ready instead of waiting on the slower
+  // of the two. Each also fails and retries on its own.
+  const summary = useAiGuidance<BenefitSummary>(
+    () => aiService.summarizeBenefit({ resource }),
+    resource.id,
+  );
+  // The plan is built from the need, so it keys on the ZIP as well as the
+  // resource: a page opened before the profile hydrated would otherwise keep
+  // showing location-less next steps after the ZIP arrived. (The summary is
+  // about the resource alone, so the id is the whole key there.)
+  const plan = useAiGuidance<NextStepPlan>(
+    () => aiService.buildNextStepPlan({ need, resource }),
+    `${resource.id}:${need.location.zip ?? ''}`,
+  );
 
   useEffect(() => {
     // Opening the page counts as engaging — it drives the Home review prompt.
@@ -81,6 +72,14 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resource.id]);
+
+  useEffect(() => {
+    // Opportunistic: this page already has the live record, so any reminder on
+    // it gets fresh hours and a fresh trust line without a dedicated fetch.
+    // A no-op unless something the schedule depends on actually changed.
+    refreshSnapshots([{ resourceId: resource.id, snapshot: toReminderSnapshot(resource) }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resource.id, resource.hours, resource.name]);
 
   const meta = RESOURCE_CATEGORY_META[resource.category];
   const open = openNowStatus(isOpenNow(resource.hours));
@@ -109,9 +108,17 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
             rides beside the category label (same pattern as ResourceCard) rather
             than on its own line, so the name stays high on the page. Full-bleed
             under the nav header. */}
-        <View style={[styles.hero, { backgroundColor: surfaceTint(meta.color, 0.14) }]}>
+        <Animated.View
+          entering={riseIn(0, rise.md)}
+          style={[styles.hero, { backgroundColor: surfaceTint(meta.color, 0.14) }]}
+        >
           <View style={styles.heroCategory}>
-            <CategoryMedallion icon={meta.icon} color={meta.color} size={36} />
+            {/* The medallion arrives at the size it left on the card (44 -> 36),
+                so opening a resource reads as the card growing into the page
+                rather than a new screen appearing. */}
+            <Animated.View entering={heroMedallionIn()}>
+              <CategoryMedallion icon={meta.icon} color={meta.color} size={36} />
+            </Animated.View>
             <AppText variant="label" color="textSecondary">
               {meta.label}
             </AppText>
@@ -124,93 +131,96 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
               <StatusPill label={open.label} tone={open.tone} />
             </View>
           ) : null}
-        </View>
+        </Animated.View>
 
         {/* Rating sits below the tinted hero so its muted caption keeps AA
             contrast on the plain paper background. Real votes only (0 until then). */}
-        <ResourceRating resourceId={resource.id} />
+        <Animated.View entering={riseIn(stagger.step)}>
+          <ResourceRating resourceId={resource.id} />
+        </Animated.View>
 
         {/* Emergency: a prominent way to call, right up top */}
         {isEmergency ? (
-          <EmergencyCallBanner
-            resource={resource}
-            onCall={recordAnd('called', () => callPhone(resource.phone as string))}
-          />
+          <Animated.View entering={riseIn(stagger.step * 2)}>
+            <EmergencyCallBanner
+              resource={resource}
+              onCall={recordAnd('called', () => callPhone(resource.phone as string))}
+            />
+          </Animated.View>
         ) : null}
 
-        {/* Every action, one compact cluster — Call stays above the fold */}
-        <ActionRow
-          resource={resource}
-          onCall={
-            resource.phone
-              ? recordAnd('called', () => callPhone(resource.phone as string))
-              : undefined
-          }
-          onDirections={
-            hasDirections ? recordAnd('directions', () => openDirections(resource)) : undefined
-          }
-          onGetScript={resource.phone ? () => setScriptOpen(true) : undefined}
-        />
+        {/* Every action, one compact cluster — Call stays above the fold.
+            The stagger stops here: everything below is off-screen on arrival,
+            so animating it would be cost with nothing to show for it. */}
+        <Animated.View entering={riseIn(stagger.step * (isEmergency ? 3 : 2))}>
+          <ActionRow
+            resource={resource}
+            onCall={
+              resource.phone
+                ? recordAnd('called', () => callPhone(resource.phone as string))
+                : undefined
+            }
+            onDirections={
+              hasDirections ? recordAnd('directions', () => openDirections(resource)) : undefined
+            }
+            onGetScript={resource.phone ? () => setScriptOpen(true) : undefined}
+          />
+        </Animated.View>
 
-        {/* AI guidance failed (real proxy later) — one retry for both blocks */}
-        {aiFailed ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Try loading the guidance again"
-            onPress={() => setAiAttempt((n) => n + 1)}
-            style={({ pressed }) => [styles.aiRetry, pressed && styles.pressed]}
-          >
-            <AppText variant="body" color="danger">
-              Couldn’t load the guidance.
-            </AppText>
-            <AppText variant="label" color="accentPressed">
-              Tap to try again
-            </AppText>
-          </Pressable>
-        ) : (
-          <>
-            {/* What it is */}
-            <AiContentBlock title="Summary" color={meta.color} loading={!summary}>
-              {summary ? (
-                <>
-                  <SummaryLine label="What it is" value={summary.whatItIs} />
-                  <SummaryLine label="Who may qualify" value={summary.whoMayQualify} />
-                  {summary.deadlinesOrWarnings ? (
-                    <SummaryLine label="Heads up" value={summary.deadlinesOrWarnings} />
-                  ) : null}
-                </>
+        {/* What it is */}
+        <AiContentBlock
+          title="Summary"
+          color={meta.color}
+          loading={!summary.data}
+          loadingLabel="Reading this resource…"
+          failed={summary.failed}
+          onRetry={summary.retry}
+        >
+          {summary.data ? (
+            <>
+              <SummaryLine label="What it is" value={summary.data.whatItIs} />
+              <SummaryLine label="Who may qualify" value={summary.data.whoMayQualify} />
+              {summary.data.deadlinesOrWarnings ? (
+                <SummaryLine label="Heads up" value={summary.data.deadlinesOrWarnings} />
               ) : null}
-            </AiContentBlock>
+            </>
+          ) : null}
+        </AiContentBlock>
 
-            {/* What to do */}
-            <AiContentBlock title="Your next steps" color={meta.color} loading={!plan}>
-              {plan ? (
-                <>
-                  {plan.steps.map((step, i) => (
-                    <View key={step.title} style={styles.step}>
-                      <View style={styles.stepNum}>
-                        <AppText variant="label" color="textOnAccent">
-                          {i + 1}
-                        </AppText>
-                      </View>
-                      <View style={styles.stepBody}>
-                        <AppText variant="bodyStrong">{step.title}</AppText>
-                        <AppText variant="body" color="textSecondary">
-                          {step.detail}
-                        </AppText>
-                      </View>
-                    </View>
-                  ))}
-                  {plan.backup ? (
-                    <AppText variant="body" color="textSecondary" style={styles.backup}>
-                      {plan.backup}
+        {/* What to do */}
+        <AiContentBlock
+          title="Your next steps"
+          color={meta.color}
+          loading={!plan.data}
+          loadingLabel="Working out your next steps…"
+          failed={plan.failed}
+          onRetry={plan.retry}
+        >
+          {plan.data ? (
+            <>
+              {plan.data.steps.map((step, i) => (
+                <View key={step.title} style={styles.step}>
+                  <View style={styles.stepNum}>
+                    <AppText variant="label" color="textOnAccent">
+                      {i + 1}
                     </AppText>
-                  ) : null}
-                </>
+                  </View>
+                  <View style={styles.stepBody}>
+                    <AppText variant="bodyStrong">{step.title}</AppText>
+                    <AppText variant="body" color="textSecondary">
+                      {step.detail}
+                    </AppText>
+                  </View>
+                </View>
+              ))}
+              {plan.data.backup ? (
+                <AppText variant="body" color="textSecondary" style={styles.backup}>
+                  {plan.data.backup}
+                </AppText>
               ) : null}
-            </AiContentBlock>
-          </>
-        )}
+            </>
+          ) : null}
+        </AiContentBlock>
 
         {/* What to bring */}
         <Section title="What should I bring?">
@@ -220,10 +230,18 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
         {/* How to reach it */}
         <Section title="Contact">
           {resource.phone ? (
-            <ContactRow icon="call-outline" text={resource.phone} onPress={() => callPhone(resource.phone as string)} />
+            <ContactRow
+              icon="call-outline"
+              text={resource.phone}
+              onPress={() => callPhone(resource.phone as string)}
+            />
           ) : null}
           {resource.website ? (
-            <ContactRow icon="globe-outline" text={resource.website} onPress={() => Linking.openURL(resource.website as string)} />
+            <ContactRow
+              icon="globe-outline"
+              text={resource.website}
+              onPress={() => Linking.openURL(resource.website as string)}
+            />
           ) : null}
           {resource.address ? <ContactRow icon="location-outline" text={resource.address} /> : null}
           {resource.hours ? <ContactRow icon="time-outline" text={resource.hours} /> : null}
@@ -240,12 +258,15 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
             </AppText>
           ) : null}
           {resource.source_url ? (
-            <ContactRow icon="open-outline" text="View the source" onPress={() => Linking.openURL(resource.source_url as string)} />
+            <ContactRow
+              icon="open-outline"
+              text="View the source"
+              onPress={() => Linking.openURL(resource.source_url as string)}
+            />
           ) : null}
         </Section>
 
         <NavigatorDisclaimer />
-
       </ScrollView>
 
       {/* The call script rides in a sheet so the page itself stays short */}
@@ -306,7 +327,11 @@ function ContactRow({
   );
   if (!onPress) return content;
   return (
-    <Pressable accessibilityRole="link" onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable
+      accessibilityRole="link"
+      onPress={onPress}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
       {content}
     </Pressable>
   );
@@ -334,14 +359,6 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   summaryLine: { gap: spacing.xxs },
   trustWarning: { color: colors.warningText },
-  aiRetry: {
-    gap: spacing.xs,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
   step: { flexDirection: 'row', gap: spacing.sm },
   stepNum: {
     width: 24,
@@ -354,7 +371,12 @@ const styles = StyleSheet.create({
   stepBody: { flex: 1, gap: spacing.xxs },
   backup: { marginTop: spacing.xs, fontStyle: 'italic' },
   // spacing.md padding keeps tappable phone/website rows at >=44pt.
-  contactRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
   contactText: { flex: 1 },
   pressed: { opacity: 0.6 },
 });

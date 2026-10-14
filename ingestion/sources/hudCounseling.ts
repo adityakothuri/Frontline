@@ -113,7 +113,10 @@ function normalizeUrl(raw: string | null | undefined): string | null {
 }
 
 function buildAddress(a: HudAgency): string | null {
-  const street = [a.adr1, a.adr2].map((s) => s?.trim()).filter(Boolean).join(' ');
+  const street = [a.adr1, a.adr2]
+    .map((s) => s?.trim())
+    .filter(Boolean)
+    .join(' ');
   const region = [a.statecd?.trim(), a.zipcd?.trim()].filter(Boolean).join(' ');
   const cityRegion = [a.city?.trim(), region].filter(Boolean).join(', ');
   const full = [street, cityRegion].filter(Boolean).join(', ');
@@ -201,7 +204,9 @@ function normalize(agency: HudAgency, today: string): NormalizedResource | null 
 
 function buildUrl(baseUrl: string, query: IngestionQuery): string {
   if (typeof query.lat !== 'number' || typeof query.long !== 'number') {
-    throw new Error('HUD housing counseling needs a location: pass --lat and --long (with optional --radius).');
+    throw new Error(
+      'HUD housing counseling needs a location: pass --lat and --long (with optional --radius).',
+    );
   }
   const params = new URLSearchParams({
     Lat: String(query.lat),
@@ -218,14 +223,19 @@ async function fetchAgencies(url: string, maxRetries: number): Promise<HudAgency
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     let response: Response;
     try {
-      response = await fetch(url, { headers: { accept: 'application/json' }, signal: controller.signal });
+      response = await fetch(url, {
+        headers: { accept: 'application/json' },
+        signal: controller.signal,
+      });
     } finally {
       clearTimeout(timeout);
     }
 
     if (response.status === 429 && attempt < maxRetries) {
       const backoffMs = Math.min(30_000, 1000 * 2 ** attempt);
-      console.warn(`[ingest] hud 429 — backing off ${Math.round(backoffMs / 1000)}s (retry ${attempt + 1}/${maxRetries})`);
+      console.warn(
+        `[ingest] hud 429 — backing off ${Math.round(backoffMs / 1000)}s (retry ${attempt + 1}/${maxRetries})`,
+      );
       await sleep(backoffMs);
       continue;
     }

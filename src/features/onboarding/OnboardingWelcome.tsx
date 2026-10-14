@@ -1,72 +1,45 @@
-import { useEffect, useState } from 'react';
-import { View, Animated, Easing, AccessibilityInfo, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PrimaryButton } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { colors, durations, radii, rise, spacing, stagger, withAlpha } from '@/theme';
+import { riseIn } from '@/theme/motionPresets';
 
 // The first thing a new veteran sees: a warm, confident welcome that sets the
-// tone before the setup questions. One driver animates a staggered entrance.
+// tone before the setup questions. The mark lands first, then the words arrive
+// under it one beat apart. Reduce Motion resolves every one of these to its
+// finished frame, which the library does for us.
 export function OnboardingWelcome({ onStart }: { onStart: () => void }) {
-  const [t] = useState(() => new Animated.Value(0));
-
-  useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!active) return;
-      if (reduce) {
-        t.setValue(1);
-      } else {
-        Animated.timing(t, {
-          toValue: 1,
-          duration: 720,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }).start();
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [t]);
-
-  // Staggered reveal from a single 0→1 driver: each element eases over its own slice.
-  const slice = (from: number, to: number) => {
-    const opacity = t.interpolate({ inputRange: [from, to], outputRange: [0, 1], extrapolate: 'clamp' });
-    const translateY = t.interpolate({ inputRange: [from, to], outputRange: [18, 0], extrapolate: 'clamp' });
-    return { opacity, transform: [{ translateY }] };
-  };
-  const markStyle = {
-    opacity: t.interpolate({ inputRange: [0, 0.45], outputRange: [0, 1], extrapolate: 'clamp' }),
-    transform: [
-      { scale: t.interpolate({ inputRange: [0, 0.45], outputRange: [0.85, 1], extrapolate: 'clamp' }) },
-    ],
-  };
-
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.body}>
         <View style={styles.markWrap}>
           <View style={styles.halo} />
-          <Animated.View style={[styles.mark, markStyle]}>
+          <Animated.View
+            entering={ZoomIn.duration(durations.slow).withInitialValues({
+              transform: [{ scale: 0.85 }],
+            })}
+            style={styles.mark}
+          >
             <Ionicons name="compass" size={42} color={colors.textOnAccent} />
           </Animated.View>
         </View>
 
-        <Animated.View style={slice(0.15, 0.6)}>
+        <Animated.View entering={riseIn(stagger.step, rise.md)}>
           <AppText variant="displayLarge" style={styles.title}>
             Welcome to Frontline
           </AppText>
         </Animated.View>
 
-        <Animated.View style={slice(0.3, 0.75)}>
+        <Animated.View entering={riseIn(stagger.step * 2, rise.md)}>
           <AppText variant="body" color="textSecondary" style={styles.subtitle}>
             Find your next step — benefits, local resources, and a clear plan for what to do next.
           </AppText>
         </Animated.View>
       </View>
 
-      <Animated.View style={[styles.footer, slice(0.5, 1)]}>
+      <Animated.View entering={riseIn(stagger.step * 3, rise.md)} style={styles.footer}>
         <PrimaryButton label="Let's get started" onPress={onStart} />
         <View style={styles.reassure}>
           <Ionicons name="lock-closed-outline" size={13} color={colors.textMuted} />
@@ -101,5 +74,10 @@ const styles = StyleSheet.create({
   title: { textAlign: 'center', marginBottom: spacing.md },
   subtitle: { textAlign: 'center', maxWidth: 320 },
   footer: { paddingHorizontal: spacing.xl, gap: spacing.md },
-  reassure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  reassure: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
 });

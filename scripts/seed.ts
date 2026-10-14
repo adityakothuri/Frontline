@@ -56,6 +56,8 @@ const centroids = csv
 const BATCH = 2000;
 for (let i = 0; i < centroids.length; i += BATCH) {
   await upsert('zip_centroids', 'zip', centroids.slice(i, i + BATCH));
-  process.stdout.write(`\rzip_centroids: ${Math.min(i + BATCH, centroids.length)}/${centroids.length}`);
+  process.stdout.write(
+    `\rzip_centroids: ${Math.min(i + BATCH, centroids.length)}/${centroids.length}`,
+  );
 }
 console.log('\nDone.');

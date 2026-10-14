@@ -73,5 +73,31 @@ export function captureException(error: unknown): void {
   Sentry.captureException(error);
 }
 
-/** Wraps the root component so Sentry can instrument navigation and startup. */
-export const withCrashReporting = Sentry.wrap;
+/**
+ * Report a failed data load before the screen shows its error state.
+ *
+ * Every data-backed screen used to `.catch(() => setState({ status: 'error' }))`,
+ * discarding the error object — so a veteran hitting "Something went wrong" left
+ * no trace anywhere, in Sentry or in the Metro log, and the cause was
+ * unknowable. `where` names the screen so a report says which one broke.
+ *
+ * The console line is deliberate: in local development there is no Sentry DSN,
+ * and that is exactly when someone is trying to reproduce the failure.
+ */
+export function reportDataError(where: string, error: unknown): void {
+  const detail = error instanceof Error ? error.message : String(error);
+  console.warn(`[${where}] data load failed:`, detail);
+  captureException(error);
+}
+
+/**
+ * Wraps the root component so Sentry can instrument navigation and startup.
+ *
+ * Pass-through when no DSN is configured, which is every local dev run.
+ * `initCrashReporting` skips `Sentry.init` in that case, and wrapping anyway made
+ * every launch log "App Start Span could not be finished. `Sentry.wrap` was
+ * called before `Sentry.init`" — a warning that reads like a real ordering bug
+ * (the order is fine) and sends whoever is chasing a startup problem down the
+ * wrong path.
+ */
+export const withCrashReporting: typeof Sentry.wrap = dsn ? Sentry.wrap : (component) => component;

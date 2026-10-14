@@ -39,9 +39,12 @@ interface CacheRow {
 /** Normalized cache key: upper-cased, whitespace-collapsed street|city|state|zip5. */
 export function addressKey(parts: AddressParts): string {
   const norm = (s: string | null): string => (s ?? '').toUpperCase().replace(/\s+/g, ' ').trim();
-  return [norm(parts.street), norm(parts.city), norm(parts.state), norm(parts.zip).slice(0, 5)].join(
-    '|',
-  );
+  return [
+    norm(parts.street),
+    norm(parts.city),
+    norm(parts.state),
+    norm(parts.zip).slice(0, 5),
+  ].join('|');
 }
 
 /** A CSV field for the Census input file (always quoted; quotes doubled, newlines stripped). */
@@ -82,7 +85,7 @@ async function readCache(admin: AdminConfig): Promise<Map<string, CacheRow>> {
   // Advance by what actually came back and stop only on an empty page — the
   // server may return fewer rows than asked (max_rows), and trusting the ask
   // would silently truncate the cache and re-geocode thousands of addresses.
-  for (let offset = 0; ; ) {
+  for (let offset = 0; ;) {
     const response = await fetch(
       `${admin.url}/rest/v1/geocode_cache?select=address_key,latitude,longitude,matched&order=address_key`,
       {
@@ -128,7 +131,13 @@ async function censusBatch(
 ): Promise<Map<string, { latitude: number; longitude: number } | null>> {
   const csv = entries
     .map((e, i) =>
-      [String(i), csvField(e.parts.street), csvField(e.parts.city), csvField(e.parts.state), csvField(e.parts.zip)].join(','),
+      [
+        String(i),
+        csvField(e.parts.street),
+        csvField(e.parts.city),
+        csvField(e.parts.state),
+        csvField(e.parts.zip),
+      ].join(','),
     )
     .join('\n');
 
@@ -208,7 +217,9 @@ export async function geocodeResources(
         results = await censusBatch(chunk);
       } catch (err) {
         if (attempt >= BATCH_RETRIES) throw err;
-        console.warn(`[geocode] batch failed (${String(err).slice(0, 200)}) — retrying in ${BATCH_RETRY_DELAY_MS / 1000}s`);
+        console.warn(
+          `[geocode] batch failed (${String(err).slice(0, 200)}) — retrying in ${BATCH_RETRY_DELAY_MS / 1000}s`,
+        );
         await new Promise((r) => setTimeout(r, BATCH_RETRY_DELAY_MS));
       }
     }

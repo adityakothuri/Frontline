@@ -3,7 +3,9 @@ import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radii, shadows, spacing } from '@/theme';
 
 type CardProps = {
-  children: ReactNode;
+  /** Optional, so the surface can also be used empty — the Home review deck
+   *  draws the card behind the top one as a bare shell. */
+  children?: ReactNode;
   style?: StyleProp<ViewStyle>;
 };
 

@@ -40,7 +40,12 @@ export function SelectableOption({
       style={[styles.row, selected && styles.rowSelected]}
     >
       {icon ? (
-        <View style={[styles.iconWrap, { backgroundColor: withAlpha(iconColor, selected ? 0.18 : 0.12) }]}>
+        <View
+          style={[
+            styles.iconWrap,
+            { backgroundColor: withAlpha(iconColor, selected ? 0.18 : 0.12) },
+          ]}
+        >
           <IonIcon name={icon} size={20} color={iconColor} />
         </View>
       ) : null}

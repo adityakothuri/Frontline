@@ -127,10 +127,10 @@ function tidyName(raw: string): string {
 async function fetchAll<T>(url: string, label: string): Promise<T[]> {
   const out: T[] = [];
   for (let page = 0; page < MAX_PAGES; page++) {
-    const rows = await fetchJson<T[]>(
-      `${url}?$limit=${PAGE}&$offset=${page * PAGE}`,
-      { label, timeoutMs: 90_000 },
-    );
+    const rows = await fetchJson<T[]>(`${url}?$limit=${PAGE}&$offset=${page * PAGE}`, {
+      label,
+      timeoutMs: 90_000,
+    });
     out.push(...rows);
     if (rows.length < PAGE) break;
   }
@@ -216,7 +216,11 @@ function normalize(
     external_id: id,
     source_provider: PROVIDER,
     ingested_at: today,
-    raw: { ntdId: id, reporterType: agency.reporter_type, volunteerDrivers: agency.volunteer_drivers },
+    raw: {
+      ntdId: id,
+      reporterType: agency.reporter_type,
+      volunteerDrivers: agency.volunteer_drivers,
+    },
   };
 }
 
@@ -233,7 +237,9 @@ export const createNtdTransitAgenciesSource: SourceFactory = (
         // Schedules are a bonus: if this table moves, agencies still land without
         // hours rather than the whole source failing.
         fetchAll<ScheduleRow>(SCHEDULES_URL, 'NTD schedules').catch((err) => {
-          console.warn(`[ingest] fta-ntd: service schedules unavailable — ${String(err).slice(0, 90)}`);
+          console.warn(
+            `[ingest] fta-ntd: service schedules unavailable — ${String(err).slice(0, 90)}`,
+          );
           return [] as ScheduleRow[];
         }),
       ]);
@@ -263,7 +269,13 @@ export const createNtdTransitAgenciesSource: SourceFactory = (
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

@@ -46,12 +46,14 @@ describe('trustWarning', () => {
   });
 
   it('warns when unverified', () => {
-    expect(trustWarning(makeResource({ verification_status: 'needs_review', last_checked: today }))).toMatch(
-      /isn.t verified yet/,
-    );
+    expect(
+      trustWarning(makeResource({ verification_status: 'needs_review', last_checked: today })),
+    ).toMatch(/isn.t verified yet/);
   });
 
   it('warns when stale', () => {
-    expect(trustWarning(makeResource({ last_checked: '2020-01-01' }))).toMatch(/hasn.t been confirmed/);
+    expect(trustWarning(makeResource({ last_checked: '2020-01-01' }))).toMatch(
+      /hasn.t been confirmed/,
+    );
   });
 });

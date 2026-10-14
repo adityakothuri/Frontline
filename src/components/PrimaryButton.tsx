@@ -1,14 +1,7 @@
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  StyleSheet,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radii, spacing } from '@/theme';
 import { AppText } from './AppText';
+import { PressableScale } from './PressableScale';
 
 type PrimaryButtonProps = {
   label: string;
@@ -20,8 +13,9 @@ type PrimaryButtonProps = {
 };
 
 // One obvious primary action per screen. `secondary` is the quiet outline
-// variant. Presses get both a color shift and a slight spring-down, so every
-// CTA in the app feels tactile the same way cards do (PressableScale).
+// variant. Presses get both a color shift and a slight spring-down — the spring
+// now comes from PressableScale rather than a second copy of it here, so a CTA
+// and a card feel identical under the thumb.
 export function PrimaryButton({
   label,
   onPress,
@@ -32,29 +26,22 @@ export function PrimaryButton({
 }: PrimaryButtonProps) {
   const isSecondary = variant === 'secondary';
   const inactive = disabled || loading;
-  const [scale] = useState(() => new Animated.Value(1));
-
-  const spring = (toValue: number) =>
-    Animated.spring(scale, { toValue, useNativeDriver: true, speed: 40, bounciness: 5 }).start();
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ disabled: inactive }}
       disabled={inactive}
       onPress={onPress}
-      onPressIn={() => spring(0.97)}
-      onPressOut={() => spring(1)}
+      style={style}
     >
       {({ pressed }) => (
-        <Animated.View
+        <View
           style={[
             styles.base,
             isSecondary ? styles.secondary : styles.primary,
-            pressed && (isSecondary ? styles.secondaryPressed : styles.primaryPressed),
+            pressed && !inactive && (isSecondary ? styles.secondaryPressed : styles.primaryPressed),
             inactive && styles.disabled,
-            style,
-            { transform: [{ scale }] },
           ]}
         >
           {loading ? (
@@ -64,9 +51,9 @@ export function PrimaryButton({
               {label}
             </AppText>
           )}
-        </Animated.View>
+        </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 

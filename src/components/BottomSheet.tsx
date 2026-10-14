@@ -1,24 +1,36 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
-  AccessibilityInfo,
-  Animated,
-  Easing,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, radii, spacing } from '@/theme';
+import { colors, durations, radii, spacing, springs } from '@/theme';
+import { easings } from '@/theme/motionPresets';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { AppText } from './AppText';
+
+/** Past this fraction of its own height, a release dismisses instead of springing back. */
+const DISMISS_RATIO = 0.25;
+/** A downward fling this fast dismisses regardless of how far it travelled. */
+const DISMISS_VELOCITY = 800;
 
 type BottomSheetProps = {
   visible: boolean;
-  /** Request to close (backdrop tap, close button, Android back). The sheet
-   * animates out and unmounts itself once `visible` flips false. */
+  /** Request to close (backdrop tap, close button, Android back, drag down).
+   * The sheet animates out and unmounts itself once `visible` flips false. */
   onClose: () => void;
   title?: string;
   /** Portion of the window the sheet may grow to before its body scrolls. */
@@ -26,11 +38,11 @@ type BottomSheetProps = {
   children: ReactNode;
 };
 
-// A modal sheet that slides up from the bottom over a dimmed backdrop. Built on
-// RN Modal + Animated (no gesture/reanimated deps — same precedent as
-// PressableScale). Content taller than `maxHeightRatio` scrolls inside the
-// sheet. No text inputs live in sheets yet; add KeyboardAvoidingView here the
-// day one does.
+// A modal sheet that slides up from the bottom over a dimmed backdrop, and can
+// be dragged back down to dismiss. The drag is attached to the grabber and
+// header only, not the body — a pan over scrollable content has to scroll.
+// Content taller than `maxHeightRatio` scrolls inside the sheet. No text inputs
+// live in sheets yet; add KeyboardAvoidingView here the day one does.
 export function BottomSheet({
   visible,
   onClose,
@@ -40,56 +52,72 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [progress] = useState(() => new Animated.Value(0));
+  const reduced = useReducedMotion();
+  // How far the sheet sits below its resting place: `windowHeight` when fully
+  // offscreen, 0 when open. One value covers both the entrance and the drag, so
+  // a release mid-animation has a single source of truth to spring from.
+  const offset = useSharedValue(windowHeight);
+  const sheetHeight = useSharedValue(windowHeight);
   // Stays mounted through the exit animation, so closing never snaps.
   const [mounted, setMounted] = useState(false);
 
+  const unmount = useCallback(() => setMounted(false), []);
+
+  // Deliberately not keyed on `mounted`: setting it here would re-run this and
+  // restart the entrance a frame after it began. Closing while already closed
+  // is a no-op, so the exit branch is safe to run on first render.
   useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!active) return;
-      if (visible) {
-        setMounted(true);
-        if (reduce) {
-          progress.setValue(1);
-          return;
-        }
-        Animated.timing(progress, {
-          toValue: 1,
-          duration: 280,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }).start();
-      } else if (reduce) {
-        progress.setValue(0);
-        setMounted(false);
-      } else {
-        Animated.timing(progress, {
-          toValue: 0,
-          duration: 200,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }).start(({ finished }) => {
-          if (finished) setMounted(false);
-        });
+    if (visible) {
+      setMounted(true);
+      offset.set(reduced ? 0 : withTiming(0, { duration: durations.slow, easing: easings.out }));
+      return;
+    }
+    if (reduced) {
+      offset.set(windowHeight);
+      setMounted(false);
+      return;
+    }
+    offset.set(
+      withTiming(windowHeight, { duration: durations.fast, easing: easings.in }, (finished) => {
+        'worklet';
+        if (finished) runOnJS(unmount)();
+      }),
+    );
+  }, [visible, reduced, offset, windowHeight, unmount]);
+
+  const onSheetLayout = useCallback(
+    (e: LayoutChangeEvent) => sheetHeight.set(e.nativeEvent.layout.height),
+    [sheetHeight],
+  );
+
+  // Dragging is direct manipulation, not decoration, so it stays enabled under
+  // Reduce Motion — taking it away would remove a control, not calm one.
+  const dragToDismiss = Gesture.Pan()
+    .onUpdate((e) => {
+      // Never past the resting position: the sheet does not drag upward.
+      offset.set(Math.max(0, e.translationY));
+    })
+    .onEnd((e) => {
+      const far = e.translationY > sheetHeight.get() * DISMISS_RATIO;
+      if (far || e.velocityY > DISMISS_VELOCITY) {
+        runOnJS(onClose)();
+        return;
       }
+      offset.set(withSpring(0, springs.gesture));
     });
-    return () => {
-      active = false;
-    };
-  }, [visible, progress]);
+
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.get() }] }));
+  // The dim tracks the drag, so pulling the sheet down also lifts the overlay.
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: 1 - Math.min(1, offset.get() / sheetHeight.get()),
+  }));
 
   if (!mounted) return null;
-
-  const translateY = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [windowHeight, 0],
-  });
 
   return (
     <Modal visible transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
       <View style={styles.root}>
-        <Animated.View style={[styles.backdrop, { opacity: progress }]}>
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable
             accessibilityRole="button"
             // Distinct from the header "Close" button so a screen reader doesn't
@@ -101,35 +129,40 @@ export function BottomSheet({
         </Animated.View>
 
         <Animated.View
+          onLayout={onSheetLayout}
           style={[
             styles.sheet,
             {
               maxHeight: windowHeight * maxHeightRatio,
               paddingBottom: insets.bottom + spacing.lg,
-              transform: [{ translateY }],
             },
+            sheetStyle,
           ]}
         >
-          <View style={styles.grabber} />
-          <View style={styles.header}>
-            {title ? <AppText variant="title">{title}</AppText> : <View />}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              onPress={onClose}
-              hitSlop={8}
-              style={({ pressed }) => [styles.close, pressed && styles.closePressed]}
-            >
-              <Ionicons name="close" size={18} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-          <ScrollView
+          <GestureDetector gesture={dragToDismiss}>
+            <View>
+              <View style={styles.grabber} />
+              <View style={styles.header}>
+                {title ? <AppText variant="title">{title}</AppText> : <View />}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close"
+                  onPress={onClose}
+                  hitSlop={8}
+                  style={({ pressed }) => [styles.close, pressed && styles.closePressed]}
+                >
+                  <Ionicons name="close" size={18} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+            </View>
+          </GestureDetector>
+          <Animated.ScrollView
             bounces={false}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.body}
           >
             {children}
-          </ScrollView>
+          </Animated.ScrollView>
         </Animated.View>
       </View>
     </Modal>

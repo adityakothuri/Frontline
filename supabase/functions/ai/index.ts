@@ -113,7 +113,10 @@ function isTask(value: unknown): value is AiTask {
 /** Only free-text field a user controls; keep it a name, nothing more. */
 function sanitizeFirstName(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
-  const cleaned = value.slice(0, 40).replace(/[^\p{L}\p{N} '.-]/gu, '').trim();
+  const cleaned = value
+    .slice(0, 40)
+    .replace(/[^\p{L}\p{N} '.-]/gu, '')
+    .trim();
   return cleaned.length > 0 ? cleaned : undefined;
 }
 
@@ -121,22 +124,28 @@ async function checkRateLimit(request: Request): Promise<boolean> {
   // Fully fail-open: the limiter must never take AI down, including on
   // network errors reaching the database.
   try {
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientIp(request)));
+    const digest = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(clientIp(request)),
+    );
     const ipHash = Array.from(new Uint8Array(digest))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
 
     // Service-role env vars are auto-injected into deployed functions; the
     // rate_limits table/function are granted to service_role only.
-    const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/increment_rate_limit`, {
-      method: 'POST',
-      headers: {
-        apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-        Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''}`,
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/increment_rate_limit`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+          Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ p_ip_hash: ipHash }),
       },
-      body: JSON.stringify({ p_ip_hash: ipHash }),
-    });
+    );
     if (!response.ok) return true;
     const count = (await response.json()) as number;
     return count <= RATE_LIMIT_PER_HOUR;
@@ -201,7 +210,11 @@ Deno.serve(async (request) => {
 
   const { task, resource, need } = body;
   if (!isTask(task)) return json({ error: 'task must be plan | script | summary' }, 400);
-  if (typeof resource !== 'object' || resource === null || typeof (resource as { id?: unknown }).id !== 'string') {
+  if (
+    typeof resource !== 'object' ||
+    resource === null ||
+    typeof (resource as { id?: unknown }).id !== 'string'
+  ) {
     return json({ error: 'resource is required' }, 400);
   }
   if ((task === 'plan' || task === 'script') && (typeof need !== 'object' || need === null)) {

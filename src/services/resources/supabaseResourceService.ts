@@ -4,6 +4,7 @@ import type { Need, NeedCategory } from '@/types/need';
 import type { Resource, ResourceCategory } from '@/types/resource';
 import { supabaseRequest } from '../supabase/client';
 import { needToResourceCategories } from './needMapping';
+import { cachedRead } from './resourceCache';
 import {
   type ResourceQuery,
   type ResourceSearchResult,
@@ -152,6 +153,13 @@ const hasOrigin = (location: Need['location']): boolean =>
 
 class SupabaseResourceService implements ResourceService {
   async search(query: ResourceQuery): Promise<ResourceSearchResult[]> {
+    // Keyed on the whole need: category, location and modality all change the
+    // query, and the widening below can turn one search into several round
+    // trips — worth not repeating when a veteran goes back from a resource page.
+    return cachedRead(`search:${JSON.stringify(query.need)}`, () => this.runSearch(query));
+  }
+
+  private async runSearch(query: ResourceQuery): Promise<ResourceSearchResult[]> {
     const requested = query.need.location.radiusMiles;
     const runAt = async (radiusMiles: number): Promise<ResourceSearchResult[]> => {
       const rows = await supabaseRequest<SearchRow[]>('/rest/v1/rpc/search_resources', {
@@ -198,32 +206,40 @@ class SupabaseResourceService implements ResourceService {
     zip?: string,
     radiusMiles?: number,
   ): Promise<ResourceSearchResult[]> {
-    const rows = await supabaseRequest<SearchRow[]>('/rest/v1/rpc/search_resources', {
-      method: 'POST',
-      // Browse: no modality filter; distances from the profile ZIP when known.
-      // A radius keeps the tabs local (the RPC ignores it when the origin is
-      // unknown, and always lets null-coord resources through).
-      body: {
-        zip: zip ?? null,
-        radius_miles: radiusMiles ?? null,
-        categories: category ? needToResourceCategories(category) : null,
-        per_category_limit: BROWSE_PER_CATEGORY_LIMIT,
-        veteran_state: zip ? stateFromZip(zip) : null,
-      },
+    // Browse: no modality filter; distances from the profile ZIP when known.
+    // A radius keeps the tabs local (the RPC ignores it when the origin is
+    // unknown, and always lets null-coord resources through).
+    const body = {
+      zip: zip ?? null,
+      radius_miles: radiusMiles ?? null,
+      categories: category ? needToResourceCategories(category) : null,
+      per_category_limit: BROWSE_PER_CATEGORY_LIMIT,
+      veteran_state: zip ? stateFromZip(zip) : null,
+    };
+    // Discover and Map issue this exact query; the cache makes that one request.
+    return cachedRead(`browse:${JSON.stringify(body)}`, async () => {
+      const rows = await supabaseRequest<SearchRow[]>('/rest/v1/rpc/search_resources', {
+        method: 'POST',
+        body,
+      });
+      const now = new Date();
+      return capUncontactable(
+        capDenseGeneral(
+          rows.map((row) => toResult(row, now)).sort(compareByDistanceThenVerification),
+        ),
+      );
     });
-    const now = new Date();
-    return capUncontactable(
-      capDenseGeneral(
-        rows.map((row) => toResult(row, now)).sort(compareByDistanceThenVerification),
-      ),
-    );
   }
 
   async getById(id: string): Promise<Resource | null> {
-    const rows = await supabaseRequest<Resource[]>(
-      `/rest/v1/resources?id=eq.${encodeURIComponent(id)}&limit=1`,
-    );
-    return rows[0] ?? null;
+    // Saved resolves one request per saved id on every visit, and the detail page
+    // re-reads whatever the veteran just tapped — both worth deduping.
+    return cachedRead(`resource:${id}`, async () => {
+      const rows = await supabaseRequest<Resource[]>(
+        `/rest/v1/resources?id=eq.${encodeURIComponent(id)}&limit=1`,
+      );
+      return rows[0] ?? null;
+    });
   }
 }
 

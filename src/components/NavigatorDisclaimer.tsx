@@ -16,8 +16,8 @@ export function NavigatorDisclaimer({ style }: { style?: StyleProp<ViewStyle> })
         style={styles.icon}
       />
       <AppText variant="caption" color="textMuted" style={styles.text}>
-        Frontline helps you find resources. It is not the VA or a government agency. Always
-        confirm details with the official source.
+        Frontline helps you find resources. It is not the VA or a government agency. Always confirm
+        details with the official source.
       </AppText>
     </View>
   );

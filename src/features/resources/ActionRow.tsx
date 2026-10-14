@@ -1,10 +1,11 @@
 import { Share, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PressableScale } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { spacing } from '@/theme';
 import { useSaved } from '@/services/saved';
+import { useReminders } from '@/services/reminders';
 import type { Resource } from '@/types/resource';
+import { ActionPill } from './ActionPill';
+import { ReminderBell, confirmUnsaveWithReminder } from './ReminderBell';
 import { SeeInMapButton } from './SeeInMapButton';
 
 type ActionRowProps = {
@@ -24,7 +25,17 @@ type ActionRowProps = {
 export function ActionRow({ resource, onCall, onDirections, onGetScript }: ActionRowProps) {
   const router = useRouter();
   const { isSaved, toggleSave } = useSaved();
+  const { isReminded, clearReminder } = useReminders();
   const saved = isSaved(resource.id);
+
+  // Un-saving leaves the reminder alone unless the veteran says otherwise; the
+  // bell would otherwise vanish from Saved with its alerts still scheduled.
+  const onToggleSave = () => {
+    toggleSave(resource.id);
+    if (saved && isReminded(resource.id)) {
+      confirmUnsaveWithReminder(resource.name, () => clearReminder(resource.id));
+    }
+  };
 
   const share = () => {
     const lines = [resource.name, resource.address, resource.phone, resource.website].filter(
@@ -50,8 +61,11 @@ export function ActionRow({ resource, onCall, onDirections, onGetScript }: Actio
         icon={saved ? 'bookmark' : 'bookmark-outline'}
         label={saved ? 'Saved' : 'Save'}
         active={saved}
-        onPress={() => toggleSave(resource.id)}
+        selected={saved}
+        onPress={onToggleSave}
       />
+      {/* Renders nothing unless the hours are good enough to schedule against. */}
+      <ReminderBell resource={resource} shape="pill" />
       <ActionPill icon="share-outline" label="Share" onPress={share} />
       {onGetScript ? (
         <ActionPill icon="sparkles-outline" label="Call script" active onPress={onGetScript} />
@@ -60,52 +74,6 @@ export function ActionRow({ resource, onCall, onDirections, onGetScript }: Actio
   );
 }
 
-function ActionPill({
-  icon,
-  label,
-  onPress,
-  primary = false,
-  active = false,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  primary?: boolean;
-  active?: boolean;
-}) {
-  return (
-    <PressableScale
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      scaleTo={0.95}
-      style={[styles.pill, primary && styles.pillPrimary, active && styles.pillActive]}
-    >
-      <Ionicons
-        name={icon}
-        size={16}
-        color={primary ? colors.textOnAccent : colors.accent}
-      />
-      <AppText variant="label" color={primary ? 'textOnAccent' : 'accentPressed'}>
-        {label}
-      </AppText>
-    </PressableScale>
-  );
-}
-
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: 44,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  pillPrimary: { backgroundColor: colors.accent, borderColor: colors.accent },
-  pillActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
 });

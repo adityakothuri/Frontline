@@ -117,10 +117,12 @@ function describe(a: GiAttributes): string {
   // VA `type` is upper-case ("PUBLIC"/"PRIVATE"/"FOR PROFIT") — lower-case
   // before comparing, or every school reads as "private for-profit".
   const t = (a.type ?? '').toLowerCase();
-  const kind = t === 'public' ? 'public' : t === 'private' ? 'private nonprofit' : 'private for-profit';
+  const kind =
+    t === 'public' ? 'public' : t === 'private' ? 'private nonprofit' : 'private for-profit';
   // Every kept school clears isVeteranFocused(), so name the veteran feature.
   const features: string[] = [];
-  if (a.yr) features.push('the Yellow Ribbon program (extra tuition coverage beyond the GI Bill cap)');
+  if (a.yr)
+    features.push('the Yellow Ribbon program (extra tuition coverage beyond the GI Bill cap)');
   if (a.student_veteran) features.push('a student veteran group on campus');
   if (a.vet_tec_provider) features.push('VET TEC tech training');
   const feature = features.length > 0 ? ` Offers ${features.join(' and ')}.` : '';
@@ -147,7 +149,10 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
   const state = trimOrNull(a.physical_state) ?? trimOrNull(a.state);
   if (!street && !city) return null; // nothing the geocoder or a veteran can use
 
-  const address = [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
+  const address = [
+    street,
+    [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+  ]
     .filter(Boolean)
     .join(', ');
   const website = normalizeUrl(a.insturl);
@@ -213,13 +218,15 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
 /** Detail-endpoint fields we use; the response carries ~114 we don't. */
 interface GiDetail {
   cross?: string | null;
-  versioned_school_certifying_officials?: {
-    phone_area_code?: string | null;
-    phone_number?: string | null;
-    phone_extension?: string | null;
-    priority?: string | null;
-    title?: string | null;
-  }[] | null;
+  versioned_school_certifying_officials?:
+    | {
+        phone_area_code?: string | null;
+        phone_number?: string | null;
+        phone_extension?: string | null;
+        priority?: string | null;
+        title?: string | null;
+      }[]
+    | null;
 }
 
 interface Enrichment {
@@ -265,7 +272,10 @@ async function fetchEnrichment(baseUrl: string, codes: string[]): Promise<Map<st
             { label: 'GI Bill detail', timeoutMs: 30_000, maxRetries: 2 },
           );
           const attrs = body.data?.attributes ?? {};
-          return [code, { phone: certifyingOfficialPhone(attrs), cross: trimOrNull(attrs.cross) }] as const;
+          return [
+            code,
+            { phone: certifyingOfficialPhone(attrs), cross: trimOrNull(attrs.cross) },
+          ] as const;
         } catch {
           // One school failing to enrich is not worth failing the run; it keeps
           // the address it already had.
@@ -323,7 +333,9 @@ async function fetchScorecard(
         });
       }
     } catch (err) {
-      console.warn(`[ingest] gi-bill: Scorecard page failed, continuing — ${String(err).slice(0, 90)}`);
+      console.warn(
+        `[ingest] gi-bill: Scorecard page failed, continuing — ${String(err).slice(0, 90)}`,
+      );
     }
   }
   return out;
@@ -332,7 +344,11 @@ async function fetchScorecard(
 function buildUrl(baseUrl: string, perPage: number, page: number): string {
   // `category=school` filters server-side to the ~13.8k schools (excludes the
   // ~19k OJT/employer rows). The API hard-caps per_page at 10, so this pages a lot.
-  const params = new URLSearchParams({ category: 'school', per_page: String(perPage), page: String(page) });
+  const params = new URLSearchParams({
+    category: 'school',
+    per_page: String(perPage),
+    page: String(page),
+  });
   return `${baseUrl}?${params.toString()}`;
 }
 
@@ -350,7 +366,8 @@ async function fetchPage(url: string, maxRetries: number): Promise<GiResponse> {
         await sleep(Math.min(20_000, 500 * 2 ** attempt));
         continue;
       }
-      if (!response.ok) throw new Error(`VA GI Bill API ${response.status}: ${await response.text()}`);
+      if (!response.ok)
+        throw new Error(`VA GI Bill API ${response.status}: ${await response.text()}`);
       return (await response.json()) as GiResponse;
     } catch (err) {
       // Network error / timeout / abort — transient over a long run; retry.
@@ -365,7 +382,9 @@ async function fetchPage(url: string, maxRetries: number): Promise<GiResponse> {
   }
 }
 
-export const createVaGiBillSchoolsSource: SourceFactory = (config: SourceConfig): IngestionSource => {
+export const createVaGiBillSchoolsSource: SourceFactory = (
+  config: SourceConfig,
+): IngestionSource => {
   const maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
   const throttleMs = config.throttleMs ?? THROTTLE_MS;
 
@@ -407,10 +426,14 @@ export const createVaGiBillSchoolsSource: SourceFactory = (config: SourceConfig)
       // Without this every row ends with phone: null and website: null, which is
       // what made `education` measure zero usable rows.
       const codes = results.map((r) => r.external_id);
-      console.log(`[ingest] gi-bill: fetching certifying-official contacts for ${codes.length} schools…`);
+      console.log(
+        `[ingest] gi-bill: fetching certifying-official contacts for ${codes.length} schools…`,
+      );
       const enrichment = await fetchEnrichment(config.baseUrl, codes);
 
-      const unitIds = [...new Set([...enrichment.values()].map((e) => e.cross).filter((c): c is string => !!c))];
+      const unitIds = [
+        ...new Set([...enrichment.values()].map((e) => e.cross).filter((c): c is string => !!c)),
+      ];
       const scorecard = await fetchScorecard(config.apiKey || null, unitIds);
 
       let withPhone = 0;

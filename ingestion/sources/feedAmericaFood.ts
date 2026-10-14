@@ -197,7 +197,9 @@ async function fetchPage(url: string): Promise<FeedPage | null> {
       return (await response.json()) as FeedPage;
     } catch (err) {
       if (attempt >= MAX_RETRIES) {
-        console.warn(`[ingest] feed-america: skipping page after retries (${String(err).slice(0, 120)})`);
+        console.warn(
+          `[ingest] feed-america: skipping page after retries (${String(err).slice(0, 120)})`,
+        );
         return null;
       }
       await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
@@ -235,7 +237,8 @@ async function fetchTable(baseUrl: string, resource: string): Promise<FeedRow[]>
   }
   if (skipped > 0) {
     console.warn(`[ingest] feed-america ${resource}: skipped ${skipped}/${totalPages} pages`);
-    if (skipped / totalPages > 0.1) throw new Error(`Feed America: ${resource} lost ${skipped} pages`);
+    if (skipped / totalPages > 0.1)
+      throw new Error(`Feed America: ${resource} lost ${skipped} pages`);
   }
   return rows;
 }
@@ -263,7 +266,9 @@ function isSaneCoord(lat: number, lng: number): boolean {
  * which has the same problem for the same reason.
  */
 
-export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig): IngestionSource => {
+export const createFeedAmericaFoodSource: SourceFactory = (
+  config: SourceConfig,
+): IngestionSource => {
   return {
     provider: PROVIDER,
     async fetch(query: IngestionQuery): Promise<NormalizedResource[]> {
@@ -285,7 +290,9 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
           )
         : null;
 
-      console.log('[ingest] feed-america: downloading locations/addresses/phones/services/attributes/schedules…');
+      console.log(
+        '[ingest] feed-america: downloading locations/addresses/phones/services/attributes/schedules…',
+      );
       const [locations, addresses, phones, services, attributes, serviceAtLocation, schedules] =
         await Promise.all([
           fetchTable(config.baseUrl, 'locations'),
@@ -358,7 +365,8 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
         if (str(loc, 'location_type') !== 'physical') continue;
         const locId = str(loc, 'id');
         const addr = addressByLocation.get(locId);
-        const state = (addr ? trimOrNull(str(addr, 'state_province')) : null)?.toUpperCase() ?? null;
+        const state =
+          (addr ? trimOrNull(str(addr, 'state_province')) : null)?.toUpperCase() ?? null;
         if (!state) continue;
         if (stateFilter && !stateFilter.has(state)) continue;
 

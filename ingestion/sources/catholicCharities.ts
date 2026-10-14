@@ -83,7 +83,9 @@ const decodeEntities = (s: string): string =>
 
 /** The one embedded JSON island that holds the agency list. */
 function extractAgencies(html: string): Agency[] {
-  for (const match of html.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)) {
+  for (const match of html.matchAll(
+    /<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi,
+  )) {
     let parsed: unknown;
     try {
       parsed = JSON.parse(decodeEntities(match[1]));
@@ -112,7 +114,10 @@ function normalize(agency: Agency, today: string): NormalizedResource | null {
   const hasCoords = agency.latitude != null && agency.longitude != null && isSaneCoord(lat, lon);
 
   return {
-    id: `ccusa:${state}-${name.replace(/[^A-Za-z0-9]+/g, '-').toLowerCase().slice(0, 60)}`,
+    id: `ccusa:${state}-${name
+      .replace(/[^A-Za-z0-9]+/g, '-')
+      .toLowerCase()
+      .slice(0, 60)}`,
     name,
     category: 'community_support',
     description:
@@ -191,7 +196,13 @@ export const createCatholicCharitiesSource: SourceFactory = (
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

@@ -170,7 +170,9 @@ async function fetchExport(url: string): Promise<string> {
 /** Export HTML → one `Office` per organization × town, with its rep count. */
 function parseOffices(html: string): Office[] {
   const rows = [...html.matchAll(/<TR>(.*?)<\/TR>/gis)].map((m) =>
-    [...m[1].matchAll(/<TD>(.*?)<\/TD>/gis)].map((c) => decodeEntities(c[1].replace(/<[^>]+>/g, '')).trim()),
+    [...m[1].matchAll(/<TD>(.*?)<\/TD>/gis)].map((c) =>
+      decodeEntities(c[1].replace(/<[^>]+>/g, '')).trim(),
+    ),
   );
   if (rows.length === 0) return [];
 
@@ -247,7 +249,9 @@ function collapseByState(offices: Office[]): StateOrg[] {
     ...rest,
     // Busiest towns first: those are the ones most likely to be near a veteran,
     // and they read as evidence of real coverage rather than an arbitrary list.
-    towns: [...townReps.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([town]) => town),
+    towns: [...townReps.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([town]) => town),
   }));
 }
 
@@ -280,7 +284,10 @@ function normalize(org: StateOrg, today: string): NormalizedResource {
       ? `The number listed is ${org.organization}'s main line, not a local office; ask them to connect you with the representative nearest you.`
       : `Contact ${org.organization} to be connected with the representative nearest you.`;
 
-  const slug = org.organization.replace(/[^A-Za-z0-9]+/g, '-').toLowerCase().replace(/^-|-$/g, '');
+  const slug = org.organization
+    .replace(/[^A-Za-z0-9]+/g, '-')
+    .toLowerCase()
+    .replace(/^-|-$/g, '');
 
   return {
     id: `vsoorg:${org.state}-${slug}`,
@@ -353,7 +360,13 @@ export const createVsoOrganizationsSource: SourceFactory = (
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

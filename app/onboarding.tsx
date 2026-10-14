@@ -59,7 +59,10 @@ export default function OnboardingScreen() {
     } catch {
       // Saving is on-device, so this is rare — but the veteran must never be
       // stranded on a spinning button. Surface it and let them retry.
-      Alert.alert('Couldn’t finish setup', 'Something went wrong saving your details. Please try again.');
+      Alert.alert(
+        'Couldn’t finish setup',
+        'Something went wrong saving your details. Please try again.',
+      );
       setSaving(false);
     }
   };

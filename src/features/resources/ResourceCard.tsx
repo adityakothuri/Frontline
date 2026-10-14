@@ -1,13 +1,25 @@
+import { useEffect, useRef } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, Card, CategoryMedallion, PressableScale } from '@/components';
 import { formatDistance } from '@/lib/geo';
-import { colors, radii, spacing, surfaceTint } from '@/theme';
+import { colors, durations, radii, spacing, springs, surfaceTint } from '@/theme';
+import { easings } from '@/theme/motionPresets';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
 import { useSaved } from '@/services/saved';
+import { useReminders } from '@/services/reminders';
+import { ReminderBell, confirmUnsaveWithReminder } from './ReminderBell';
 import { callPhone, openDirections } from './resourceActions';
 import { openNowStatus } from './resourceStatus';
 import { SeeInMapButton } from './SeeInMapButton';
@@ -27,12 +39,70 @@ type ResourceCardProps = {
   onSeeInMap?: (id: string) => void;
 };
 
+/**
+ * The bookmark, and the small celebration for saving something.
+ *
+ * The glyph that changed is the thing that animates — it kicks up and settles,
+ * and one olive ring expands out of it and fades. Nothing is added to the card's
+ * resting state: the ring only exists for the ~240ms it is travelling. Removing
+ * a save gets no flourish, because undoing something is not an achievement.
+ *
+ * `burst` rests at 1 (the finished, invisible frame) and is knocked back to 0 to
+ * replay, which also means Reduce Motion — where Reanimated jumps straight to
+ * the target — correctly shows no ring at all.
+ */
+function SaveButton({ saved, onToggle }: { saved: boolean; onToggle: () => void }) {
+  const scale = useSharedValue(1);
+  const burst = useSharedValue(1);
+  const wasSaved = useRef(saved);
+
+  useEffect(() => {
+    if (saved && !wasSaved.current) {
+      scale.set(
+        withSequence(
+          withTiming(1.25, { duration: durations.micro }),
+          withSpring(1, springs.settle),
+        ),
+      );
+      burst.set(0);
+      burst.set(withTiming(1, { duration: durations.base, easing: easings.out }));
+    }
+    wasSaved.current = saved;
+  }, [saved, scale, burst]);
+
+  const glyphStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(burst.get(), [0, 1], [0.35, 0]),
+    transform: [{ scale: interpolate(burst.get(), [0, 1], [0.6, 1]) }],
+  }));
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
+      accessibilityState={{ selected: saved }}
+      onPress={onToggle}
+      style={({ pressed }) => [styles.bookmark, pressed && styles.bookmarkPressed]}
+    >
+      <Animated.View style={[styles.saveRing, ringStyle]} pointerEvents="none" />
+      <Animated.View style={glyphStyle}>
+        <Ionicons
+          name={saved ? 'bookmark' : 'bookmark-outline'}
+          size={18}
+          color={saved ? colors.accent : colors.textMuted}
+        />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 // The scannable unit of the results list: what it is, how close, whether it's
 // open, how trustworthy the info is, the two actions that matter most, and a tap
 // anywhere else to open the full detail page.
 export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardProps) {
   const router = useRouter();
   const { isSaved, toggleSave } = useSaved();
+  const { isReminded, clearReminder } = useReminders();
   const { resource, distanceMiles, isOpenNow } = result;
   const meta = RESOURCE_CATEGORY_META[resource.category];
   const open = openNowStatus(isOpenNow);
@@ -69,24 +139,31 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
         <View style={styles.header}>
           <CategoryMedallion icon={meta.icon} color={meta.color} size={44} />
           <View style={styles.headerMeta}>
-            <AppText variant="caption" color="textSecondary" numberOfLines={1} style={styles.category}>
+            <AppText
+              variant="caption"
+              color="textSecondary"
+              numberOfLines={1}
+              style={styles.category}
+            >
               {meta.label}
             </AppText>
             <VeteranBadge relevance={resource.veteran_relevance} />
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
-            onPress={() => toggleSave(resource.id)}
-            hitSlop={8}
-            style={({ pressed }) => pressed && styles.bookmarkPressed}
-          >
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={18}
-              color={saved ? colors.accent : colors.textMuted}
+          {/* The bell only joins the bookmark once the place is saved — that is
+              the moment the veteran has said they intend to come back to it,
+              and Saved is where every armed reminder is managed. */}
+          <View style={styles.headerActions}>
+            {saved ? <ReminderBell resource={resource} shape="icon" /> : null}
+            <SaveButton
+              saved={saved}
+              onToggle={() => {
+                toggleSave(resource.id);
+                if (saved && isReminded(resource.id)) {
+                  confirmUnsaveWithReminder(resource.name, () => clearReminder(resource.id));
+                }
+              }}
             />
-          </Pressable>
+          </View>
         </View>
 
         <AppText variant="subtitle" numberOfLines={2} style={styles.name}>
@@ -171,10 +248,28 @@ const styles = StyleSheet.create({
   category: { flexShrink: 1 },
   name: { marginTop: spacing.xs },
   subMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  // A real 44pt target. It used to be an 18pt glyph with hitSlop, which came to
+  // ~34pt — under the minimum every other control in the app meets.
+  // The two 44pt targets sit flush: both already carry their own internal
+  // padding, so a gap here would push the cluster into the title.
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
+  bookmark: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   bookmarkPressed: { opacity: 0.5 },
+  saveRing: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+  },
   desc: { marginTop: spacing.xxs },
   sourceRow: { marginTop: spacing.xxs },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginTop: spacing.xs },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginTop: spacing.xs,
+  },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -31,9 +31,7 @@ export async function loadActivity(): Promise<ActivityState> {
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<ActivityState>;
     return {
-      engagements: Array.isArray(parsed.engagements)
-        ? parsed.engagements.filter(isEngagement)
-        : [],
+      engagements: Array.isArray(parsed.engagements) ? parsed.engagements.filter(isEngagement) : [],
       ratings: normalizeRatings(parsed.ratings),
     };
   } catch {

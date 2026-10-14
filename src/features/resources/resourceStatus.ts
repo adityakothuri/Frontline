@@ -1,4 +1,5 @@
 import { colors } from '@/theme';
+import type { ReminderSnapshot } from '@/services/reminders';
 import type { Resource, SourceType } from '@/types/resource';
 
 /**
@@ -116,4 +117,25 @@ export function sourceStatus(resource: Resource): { label: string; tone: StatusT
   const label = credit ? `${dated} · ${credit}` : dated;
 
   return { label, tone: verified ? 'success' : 'warning' };
+}
+
+/**
+ * What a reminder needs to remember about a resource.
+ *
+ * It lives here, beside `sourceStatus`, so the trust line a notification carries
+ * is byte-for-byte the one the veteran read on the card — including the licence
+ * credit. Composing it here also keeps `@/services/reminders` free of any
+ * presentation import, which is the direction the layering runs.
+ *
+ * Captured rather than looked up live so the schedule can be rebuilt cold and
+ * offline; callers refresh it wherever a full `Resource` is already in hand.
+ */
+export function toReminderSnapshot(resource: Resource): ReminderSnapshot {
+  return {
+    name: resource.name,
+    hours: resource.hours,
+    category: resource.category,
+    sourceLabel: sourceStatus(resource).label,
+    capturedAt: new Date().toISOString(),
+  };
 }

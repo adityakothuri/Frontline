@@ -103,7 +103,11 @@ function externalLink(html: string): string | null {
 }
 
 /** "Sumter, SC 329153" → the parts the Census geocoder wants. */
-function splitCityStateZip(line: string): { city: string | null; state: string | null; zip: string | null } {
+function splitCityStateZip(line: string): {
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+} {
   const m = line.match(/^(.*?),\s*([A-Za-z]{2})\.?\s*(\d{5})?(?:-\d{4})?\s*$/);
   if (!m) return { city: trimOrNull(line), state: null, zip: null };
   return {

@@ -1,3 +1,4 @@
+import type { Rating } from '@/types/activity';
 import type { Urgency } from '@/types/need';
 import type { Resource, VerificationStatus, VeteranRelevance } from '@/types/resource';
 import type { ResourceSearchResult } from './ResourceService';
@@ -91,12 +92,54 @@ export function splitLocalsAndReferrals(
   return { locals, referrals, referralsLead: locals.length < THIN_LOCAL_RESULTS };
 }
 
+/**
+ * Places the veteran marked "Not helpful" sink below everything else, keeping
+ * their order relative to each other and leaving the rest of the list untouched.
+ *
+ * This is what makes the Home review card's *"we'll show this one lower in your
+ * results"* true. Until 2026-07-31 a vote was write-only — `submitVote`
+ * incremented a counter that only ever came back as one string on that
+ * resource's own detail page, and nothing in this module, the `search_resources`
+ * RPC or the schema read it. Promising otherwise would have been a claim the app
+ * had no machinery to keep.
+ *
+ * Deliberately **narrow**: it demotes the one place that was rated, not "places
+ * like it". There is no category or provider preference model here, and the copy
+ * is written to match exactly what this does.
+ *
+ * A stable partition rather than another key in `compareByDistanceThenVerification`
+ * — the existing ordering (nearest, then veteran-first, then most-verified) has to
+ * survive intact *within* each group, and a downvoted place must fall below even a
+ * distant unverified one or "lower" would not be visible on a short list.
+ *
+ * Takes a lookup rather than the ratings map because `getRating` is already
+ * `ActivityContext`'s public API; the raw map is not exported and does not need
+ * to be. Ratings are on-device only and never leave it.
+ */
+export function demoteDownvoted(
+  results: ResourceSearchResult[],
+  getRating: (resourceId: string) => Rating | undefined,
+): ResourceSearchResult[] {
+  const kept: ResourceSearchResult[] = [];
+  const sunk: ResourceSearchResult[] = [];
+  for (const result of results) {
+    (getRating(result.resource.id) === 'down' ? sunk : kept).push(result);
+  }
+  // Either partition being empty means the order is already correct, so skip the
+  // copy. Purely avoiding an allocation on the overwhelmingly common path — the
+  // returned identity is not load-bearing anywhere, since both call sites are
+  // inside a `useMemo` keyed on the state and the rating lookup.
+  if (sunk.length === 0 || kept.length === 0) return results;
+  return [...kept, ...sunk];
+}
+
 /** null distances (location-independent resources, e.g. a crisis line) sort last. */
 const distanceKey = (distance: number | null): number =>
   distance === null ? Number.POSITIVE_INFINITY : distance;
 
 /** Open now sorts before unknown, which sorts before closed. */
-const openNowKey = (isOpen: boolean | null): number => (isOpen === true ? 0 : isOpen === null ? 1 : 2);
+const openNowKey = (isOpen: boolean | null): number =>
+  isOpen === true ? 0 : isOpen === null ? 1 : 2;
 
 /** Nearest first, then veteran-first, then most-verified. Used for browse (Discover). */
 export const compareByDistanceThenVerification = (

@@ -1,36 +1,38 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Pressable, FlatList, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, FlatList, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AppText,
-  Card,
   EmptyState,
   ErrorState,
   Loading,
+  useLoadingGate,
   LocationButton,
-  PressableScale,
+  RefreshFailedBanner,
 } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+import { riseIn, stepDelay } from '@/theme/motionPresets';
+import { useStaggerGate } from '@/hooks/useStaggerGate';
 import {
+  demoteDownvoted,
+  invalidateResourceCache,
   resourceService,
   resourceToNeedCategory,
   splitLocalsAndReferrals,
   type ResourceSearchResult,
 } from '@/services/resources';
+import { useActivity } from '@/services/activity';
 import { stateFromZip } from '@/lib/zipState';
+import { reportDataError } from '@/services/monitoring';
 import { useProfile } from '@/services/profile';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { NeedCategoryCard } from '@/features/needs/NeedCategoryCard';
 import { CategoryShells, shellCategory, type ShellId } from '@/features/discover/CategoryShells';
 import { ReferralSection } from '@/features/resources/ReferralSection';
+import { resultsOf, type ResourceSearchState } from '@/features/resources/useResourceSearch';
 import { NEED_CATEGORIES, DEFAULT_RADIUS_MILES, type NeedCategory } from '@/types/need';
-
-type BrowseState =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'ready'; results: ResourceSearchResult[] };
 
 // On the "all" browse the results come back distance-sorted, so a dense category
 // (healthcare) fills the top of the list. Round-robin across categories instead,
@@ -62,36 +64,85 @@ function interleaveByCategory(results: ResourceSearchResult[]): ResourceSearchRe
 // category), with an "Other" shell that opens the full category list.
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { profile } = useProfile();
-  const [selected, setSelected] = useState<ShellId>('all');
-  const [miscOpen, setMiscOpen] = useState(false);
-  const [state, setState] = useState<BrowseState>({ status: 'loading' });
+  const { profile, isHydrated: isProfileHydrated } = useProfile();
+  // Home's start card arrives with `shell=other`, so it lands on the full
+  // category index rather than the `all` browse — it asks "What do you need help
+  // with?", and this is the screen that answers it. Any other entry into the tab
+  // starts where it always did.
+  const { shell } = useLocalSearchParams<{ shell?: ShellId }>();
+  const [selected, setSelected] = useState<ShellId>(shell || 'all');
+  const [state, setState] = useState<ResourceSearchState>({ status: 'loading', stale: [] });
+  const { getRating } = useActivity();
 
   // Bumped by the error state's Retry so the fetch effect re-runs on demand.
+  // Clearing the cache first keeps "Try again" honest — see resourceCache.
   const [reloadToken, setReloadToken] = useState(0);
-  const reload = () => setReloadToken((n) => n + 1);
+  const reload = useCallback(() => {
+    invalidateResourceCache();
+    setReloadToken((n) => n + 1);
+  }, []);
+  const stateStatus = state.status;
 
   const zip = profile?.zip;
   const radiusMiles = profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES;
+  const gate = useLoadingGate(state.status === 'loading', state.status === 'error');
+  // Only the first screenful of a shell gets a staggered entrance; past that,
+  // and on every row FlatList recycles as you scroll, rows mount static.
+  const staggered = useStaggerGate(selected);
+
+  // Drop the fallback when the shell changes: last time's food pantries are not
+  // a stale view of housing, they're the wrong answer. Runs before the fetch
+  // effect below, which then carries an empty `stale` forward.
+  useEffect(() => {
+    setState({ status: 'loading', stale: [] });
+  }, [selected]);
+
+  // Coming back to a failed tab is a retry in everything but name — the veteran
+  // has usually been off fixing their signal. Doing it for them saves a tap on
+  // the one screen where they've already been let down once.
+  useFocusEffect(
+    useCallback(() => {
+      if (stateStatus === 'error') reload();
+    }, [stateStatus, reload]),
+  );
+
+  // The tab stays mounted, so `shell` is applied on focus and then cleared —
+  // otherwise arriving from Home a second time with the same value would look
+  // like an unchanged prop and select nothing.
+  useFocusEffect(
+    useCallback(() => {
+      if (!shell) return;
+      setSelected(shell);
+      router.setParams({ shell: '' });
+    }, [shell, router]),
+  );
 
   useEffect(() => {
     if (selected === 'other') return;
+    // Wait for the profile. Before it hydrates `zip` is undefined, and a browse
+    // with no origin returns referrals only — so firing now would paint a nearly
+    // empty list and then refetch the moment the ZIP lands. Staying in `loading`
+    // reads as the one wait it actually is.
+    if (!isProfileHydrated) return;
     // `active` guards against out-of-order resolution: flipping between shells
     // faster than the network must not let an older response land last.
     let active = true;
-    setState({ status: 'loading' });
+    setState((prev) => ({ status: 'loading', stale: resultsOf(prev) }));
     resourceService
       .listResources(shellCategory(selected), zip, radiusMiles)
       .then((results) => {
         if (active) setState({ status: 'ready', results });
       })
-      .catch(() => {
-        if (active) setState({ status: 'error' });
+      .catch((error) => {
+        reportDataError('Discover', error);
+        // Carry the results on screen forward, so a failed refresh degrades to a
+        // banner rather than wiping a working list.
+        if (active) setState((prev) => ({ status: 'error', error, stale: resultsOf(prev) }));
       });
     return () => {
       active = false;
     };
-  }, [selected, zip, radiusMiles, reloadToken]);
+  }, [selected, zip, radiusMiles, reloadToken, isProfileHydrated]);
 
   // The multi-category "all" browse alternates categories; a single category
   // keeps its natural nearest-first order, with statewide/national veteran help
@@ -100,22 +151,41 @@ export default function DiscoverScreen() {
   // aren't out-of-state noise.
   const veteranState = stateFromZip(profile?.zip);
   const { referrals, displayResults, referralsLead } = useMemo(() => {
-    if (state.status !== 'ready') {
+    // On a failed refresh this is the last good list, so the screen keeps
+    // showing help while the banner explains the refresh didn't take.
+    const source = resultsOf(state);
+    if (source.length === 0) {
       return { referrals: [], displayResults: [], referralsLead: false };
     }
+    // Places the veteran marked "Not helpful" on Home sink to the bottom, which
+    // is what makes the review card's "we'll show this one lower" true here as
+    // well as on Results. Ratings live in `ActivityContext`, so this cannot
+    // happen in the service layer.
+    //
+    // It runs **last**, on the finished list, and that ordering is load-bearing:
+    // `interleaveByCategory` re-buckets by category and round-robins, so
+    // demoting beforehand only sank a row to the end of *its own bucket* and the
+    // round-robin pulled it straight back up by bucket index. For a category
+    // with one nearby result — routine outside a metro — a downvoted place moved
+    // down a single row, which reads as broken rather than as narrow.
     if (shellCategory(selected) === undefined) {
       return {
         referrals: [],
-        displayResults: interleaveByCategory(state.results),
+        displayResults: demoteDownvoted(interleaveByCategory(source), getRating),
         referralsLead: false,
       };
     }
-    const { locals, referrals: stateReferrals, referralsLead: lead } = splitLocalsAndReferrals(
-      state.results,
-      veteranState,
-    );
-    return { referrals: stateReferrals, displayResults: locals, referralsLead: lead };
-  }, [state, selected, veteranState]);
+    const {
+      locals,
+      referrals: stateReferrals,
+      referralsLead: lead,
+    } = splitLocalsAndReferrals(source, veteranState);
+    return {
+      referrals: stateReferrals,
+      displayResults: demoteDownvoted(locals, getRating),
+      referralsLead: lead,
+    };
+  }, [state, selected, veteranState, getRating]);
 
   const referralSection = (
     <ReferralSection
@@ -127,11 +197,6 @@ export default function DiscoverScreen() {
       }
     />
   );
-
-  const handleSelect = (id: ShellId) => {
-    setSelected(id);
-    setMiscOpen(false);
-  };
 
   const openCategory = (category: NeedCategory) =>
     router.push({ pathname: '/results', params: { category } });
@@ -149,46 +214,32 @@ export default function DiscoverScreen() {
         </AppText>
       </View>
 
-      <CategoryShells selected={selected} onSelect={handleSelect} />
+      <CategoryShells selected={selected} onSelect={setSelected} />
 
       <View style={styles.content}>
         {selected === 'other' ? (
-          miscOpen ? (
-            <View style={styles.misc}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Back to all categories"
-                onPress={() => setMiscOpen(false)}
-                hitSlop={6}
-                style={styles.backRow}
-              >
-                <Ionicons name="chevron-back" size={16} color={colors.accent} />
-                <AppText variant="label" color="textSecondary">
-                  All categories
-                </AppText>
-              </Pressable>
-              <EmptyState
-                icon="shapes-outline"
-                title="Nothing here yet"
-                message="Opportunities that don’t fit a category will show up here once we add them."
-              />
-            </View>
-          ) : (
-            <FlatList
-              data={NEED_CATEGORIES}
-              keyExtractor={(category) => category}
-              renderItem={({ item }) => (
+          // "Other" is the full category index — every need category, including
+          // the four with their own shell above. A veteran who doesn't find what
+          // they want on the shell row should see the whole list here, not a
+          // remainder that depends on which shells happen to be curated.
+          <FlatList
+            data={NEED_CATEGORIES}
+            keyExtractor={(category) => category}
+            renderItem={({ item, index }) => (
+              <Animated.View entering={staggered(index) ? riseIn(stepDelay(index)) : undefined}>
                 <NeedCategoryCard category={item} onPress={() => openCategory(item)} />
-              )}
-              ListFooterComponent={<MiscCard onPress={() => setMiscOpen(true)} />}
-              contentContainerStyle={styles.list}
-              showsVerticalScrollIndicator={false}
-            />
-          )
-        ) : state.status === 'loading' ? (
-          <Loading label="Loading opportunities…" />
-        ) : state.status === 'error' ? (
-          <ErrorState onRetry={reload} />
+              </Animated.View>
+            )}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : gate.holding ? (
+          gate.showShield ? (
+            <Loading label="Loading opportunities…" done={gate.done} onFinish={gate.finish} />
+          ) : null
+        ) : state.status === 'error' && displayResults.length === 0 && referrals.length === 0 ? (
+          // Nothing to fall back on — this is the one case worth the whole screen.
+          <ErrorState error={state.error} onRetry={reload} />
         ) : displayResults.length === 0 && referrals.length === 0 ? (
           <EmptyState
             icon="search-outline"
@@ -196,43 +247,36 @@ export default function DiscoverScreen() {
             message="We don’t have opportunities in this category yet. Try another, or check back soon."
           />
         ) : (
-          <FlatList
-            data={displayResults}
-            keyExtractor={(item) => item.resource.id}
-            renderItem={({ item }) => (
-              <ResourceCard
-                result={item}
-                needCategory={shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)}
-              />
-            )}
-            ListHeaderComponent={referralsLead ? referralSection : null}
-            ListFooterComponent={referralsLead ? null : referralSection}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
+          <>
+            {state.status === 'error' ? (
+              <RefreshFailedBanner error={state.error} onRetry={reload} />
+            ) : null}
+            <FlatList
+              // Keyed on the shell so switching filters remounts the list: the
+              // rows earn a fresh entrance, and the scroll position resets, which
+              // is what you want when the contents change entirely.
+              key={selected}
+              data={displayResults}
+              keyExtractor={(item) => item.resource.id}
+              renderItem={({ item, index }) => (
+                <Animated.View entering={staggered(index) ? riseIn(stepDelay(index)) : undefined}>
+                  <ResourceCard
+                    result={item}
+                    needCategory={
+                      shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)
+                    }
+                  />
+                </Animated.View>
+              )}
+              ListHeaderComponent={referralsLead ? referralSection : null}
+              ListFooterComponent={referralsLead ? null : referralSection}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
+          </>
         )}
       </View>
     </SafeAreaView>
-  );
-}
-
-// The "doesn't fit a rigid category" entry at the bottom of the Other list.
-function MiscCard({ onPress }: { onPress: () => void }) {
-  return (
-    <PressableScale accessibilityRole="button" accessibilityLabel="Miscellaneous" onPress={onPress}>
-      <Card style={styles.miscCard}>
-        <View style={styles.miscIcon}>
-          <Ionicons name="shapes-outline" size={24} color={colors.textSecondary} />
-        </View>
-        <View style={styles.miscText}>
-          <AppText variant="subtitle">Miscellaneous</AppText>
-          <AppText variant="caption" color="textSecondary">
-            Other opportunities that don’t fit a category
-          </AppText>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </Card>
-    </PressableScale>
   );
 }
 
@@ -248,25 +292,4 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: spacing.xl,
   },
-  misc: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  miscCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  miscIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-  },
-  miscText: { flex: 1, gap: spacing.xxs },
 });

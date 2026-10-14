@@ -103,9 +103,7 @@ export function buildUserMessage(input: {
   firstName?: string;
   tone?: string;
 }): string {
-  const parts = [
-    `<RESOURCE_DATA>\n${JSON.stringify(input.resource)}\n</RESOURCE_DATA>`,
-  ];
+  const parts = [`<RESOURCE_DATA>\n${JSON.stringify(input.resource)}\n</RESOURCE_DATA>`];
   if (input.need !== undefined) {
     parts.push(`<VETERAN_NEED>\n${JSON.stringify(input.need)}\n</VETERAN_NEED>`);
   }

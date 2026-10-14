@@ -96,9 +96,7 @@ function houseName(title: string): string {
   // existed here but was only ever applied to the manager phone.
   const decoded = decodeEntities(title);
   const withoutState = decoded.replace(/^[A-Za-z\s]+:\s*/, '').trim() || decoded.trim();
-  return /fisher house/i.test(withoutState)
-    ? withoutState
-    : `Fisher House — ${withoutState}`;
+  return /fisher house/i.test(withoutState) ? withoutState : `Fisher House — ${withoutState}`;
 }
 
 function normalize(house: House, today: string): NormalizedResource | null {
@@ -179,9 +177,7 @@ function crossListCommunity(base: NormalizedResource): NormalizedResource {
   };
 }
 
-export const createFisherHousesSource: SourceFactory = (
-  config: SourceConfig,
-): IngestionSource => {
+export const createFisherHousesSource: SourceFactory = (config: SourceConfig): IngestionSource => {
   return {
     provider: PROVIDER,
     async fetch(query: IngestionQuery): Promise<NormalizedResource[]> {
@@ -196,7 +192,13 @@ export const createFisherHousesSource: SourceFactory = (
       }
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];

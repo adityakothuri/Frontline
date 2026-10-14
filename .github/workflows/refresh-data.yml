@@ -1,7 +1,6 @@
 name: Refresh resource data
 
 # Keeps the live resource DB current and every `last_checked` date honest.
-#   • jobs   (USAJOBS) — churn fast, so weekly
 #   • places (VA facilities, GI Bill schools, VSO organizations, state veterans
 #             homes, Fisher Houses, SAMHSA veteran behavioral health, USAspending
 #             VA/DOL grantees, IRS veterans organizations, LSC legal aid, HUD
@@ -11,18 +10,21 @@ name: Refresh resource data
 # freshness gate below fails loudly when any source ages past its cadence.
 # Each source is reaped straight after its own run (ingestion/reap.ts) so rows
 # that vanish upstream are removed rather than lingering forever.
-# Manual runs: Actions tab → "Run workflow" (choose all | places | jobs).
+# Manual runs: Actions tab → "Run workflow" (choose all | places).
 #
 # NOTE: scheduled workflows only run from the DEFAULT branch — this file must
 # be on `main` (and the secrets set) before any cron fires.
 #
 # Requires these repo secrets (Settings → Secrets and variables → Actions):
 #   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-#   VA_API_KEY, USAJOBS_API_KEY, USAJOBS_USER_AGENT
+#   VA_API_KEY, and optionally DATA_GOV_API_KEY (College Scorecard enrichment)
 
 on:
   schedule:
-    - cron: '0 6 * * 1'   # weekly  — Mondays 06:00 UTC  → jobs
+    # Monthly only. The weekly slot existed for USAJOBS postings, which churned
+    # fast; that provider was retired on 2026-07-28 (migration 0033) and nothing
+    # left in the pipeline changes weekly. Running the full sweep weekly would
+    # just burn the 90-minute budget four times as often.
     - cron: '0 4 1 * *'   # monthly — 1st at 04:00 UTC   → places
   workflow_dispatch:
     inputs:
@@ -30,7 +32,7 @@ on:
         description: 'What to refresh'
         default: 'all'
         type: choice
-        options: [all, places, jobs]
+        options: [all, places]
 
 # Never let two refreshes write concurrently.
 concurrency:
@@ -55,8 +57,7 @@ jobs:
       # variable VA_FACILITIES_BASE_URL=https://api.va.gov/services/va_facilities/v1
       # (Settings → Secrets and variables → Actions → Variables) — no code change.
       VA_FACILITIES_BASE_URL: ${{ vars.VA_FACILITIES_BASE_URL || 'https://sandbox-api.va.gov/services/va_facilities/v1' }}
-      USAJOBS_API_KEY: ${{ secrets.USAJOBS_API_KEY }}
-      USAJOBS_USER_AGENT: ${{ secrets.USAJOBS_USER_AGENT }}
+      DATA_GOV_API_KEY: ${{ secrets.DATA_GOV_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -66,7 +67,6 @@ jobs:
         id: pick
         run: |
           case "${{ github.event.schedule }}" in
-            "0 6 * * 1") echo "mode=jobs"   >> "$GITHUB_OUTPUT" ;;
             "0 4 1 * *") echo "mode=places" >> "$GITHUB_OUTPUT" ;;
             *)           echo "mode=${{ github.event.inputs.mode || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac

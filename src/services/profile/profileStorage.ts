@@ -34,7 +34,8 @@ export function parseProfile(value: unknown): VeteranProfile | null {
     role: isRole(parsed.role) ? parsed.role : undefined,
     documentsOnHand: parseDocuments(parsed.documentsOnHand),
     preferredRadiusMiles:
-      typeof parsed.preferredRadiusMiles === 'number' && Number.isFinite(parsed.preferredRadiusMiles)
+      typeof parsed.preferredRadiusMiles === 'number' &&
+      Number.isFinite(parsed.preferredRadiusMiles)
         ? parsed.preferredRadiusMiles
         : undefined,
     onboardingComplete: parsed.onboardingComplete === true,

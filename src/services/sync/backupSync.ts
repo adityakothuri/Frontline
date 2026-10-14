@@ -39,6 +39,21 @@ function getSnapshot(): Promise<BackupSnapshot | null> {
 }
 
 /**
+ * Union two saved lists by id, keeping the earliest savedAt and ordering
+ * newest-first. Exported because hydration merges twice: once against the
+ * backup here, and again in SavedContext against whatever the veteran did while
+ * the backup was still in flight.
+ */
+export function unionSaved(a: SavedEntry[], b: SavedEntry[]): SavedEntry[] {
+  const byId = new Map<string, SavedEntry>();
+  for (const entry of [...a, ...b]) {
+    const existing = byId.get(entry.id);
+    if (!existing || entry.savedAt < existing.savedAt) byId.set(entry.id, entry);
+  }
+  return [...byId.values()].sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+/**
  * Merge the on-device saved list with the backup: a union by id preserving the
  * earliest savedAt, newest-first. Restores a reinstalled device's list and
  * folds in any ids saved before the backend was reachable. Returns the local
@@ -47,13 +62,7 @@ function getSnapshot(): Promise<BackupSnapshot | null> {
 export async function reconcileSaved(local: SavedEntry[]): Promise<SavedEntry[]> {
   const remote = (await getSnapshot())?.saved;
   if (!remote || remote.length === 0) return local;
-
-  const byId = new Map<string, SavedEntry>();
-  for (const entry of [...remote, ...local]) {
-    const existing = byId.get(entry.id);
-    if (!existing || entry.savedAt < existing.savedAt) byId.set(entry.id, entry);
-  }
-  return [...byId.values()].sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  return unionSaved(remote, local);
 }
 
 /**

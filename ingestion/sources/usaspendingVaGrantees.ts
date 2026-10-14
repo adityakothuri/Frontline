@@ -206,7 +206,12 @@ interface Grantee {
   zip: string | null;
 }
 
-async function fetchProgram(baseUrl: string, program: Program, start: string, end: string): Promise<AwardRow[]> {
+async function fetchProgram(
+  baseUrl: string,
+  program: Program,
+  start: string,
+  end: string,
+): Promise<AwardRow[]> {
   const rows: AwardRow[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
     const body = await postJson<AwardPage>(
@@ -246,12 +251,23 @@ function toGrantee(row: AwardRow, program: Program): Grantee | null {
   // Redacted recipients ("MULTIPLE RECIPIENTS", individuals) are not organizations.
   if (/^(multiple recipients|redacted|miscellaneous)/i.test(rawName)) return null;
 
-  return { name: titleCase(rawName), program, street, city: trimOrNull(loc.city_name), state, zip: trimOrNull(loc.zip5) };
+  return {
+    name: titleCase(rawName),
+    program,
+    street,
+    city: trimOrNull(loc.city_name),
+    state,
+    zip: trimOrNull(loc.zip5),
+  };
 }
 
 function normalize(grantee: Grantee, today: string): NormalizedResource {
   const { program } = grantee;
-  const key = stableKey(`${grantee.name} ${program.cfda}`, `${grantee.street} ${grantee.city ?? ''}`, grantee.state);
+  const key = stableKey(
+    `${grantee.name} ${program.cfda}`,
+    `${grantee.street} ${grantee.city ?? ''}`,
+    grantee.state,
+  );
 
   return {
     id: `usasp:${key}`,
@@ -263,7 +279,9 @@ function normalize(grantee: Grantee, today: string): NormalizedResource {
       `before travelling.`,
     address: [
       grantee.street,
-      [grantee.city, [grantee.state, grantee.zip].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+      [grantee.city, [grantee.state, grantee.zip].filter(Boolean).join(' ')]
+        .filter(Boolean)
+        .join(', '),
     ]
       .filter(Boolean)
       .join(', '),
@@ -316,7 +334,13 @@ export const createUsaspendingVaGranteesSource: SourceFactory = (
       const start = lookbackStart(now);
 
       const stateFilter = query.state
-        ? new Set(query.state.toUpperCase().split(',').map((s) => s.trim()).filter(Boolean))
+        ? new Set(
+            query.state
+              .toUpperCase()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
         : null;
 
       const results: NormalizedResource[] = [];
@@ -340,7 +364,9 @@ export const createUsaspendingVaGranteesSource: SourceFactory = (
           results.push(normalized);
           if (program.crossList) results.push(crossList(normalized, program.crossList));
         }
-        console.log(`[ingest]   ${program.cfda} ${program.label}: ${kept} organizations from ${rows.length} awards`);
+        console.log(
+          `[ingest]   ${program.cfda} ${program.label}: ${kept} organizations from ${rows.length} awards`,
+        );
       }
 
       if (!stateFilter && seen.size < MIN_ORGS) {
