@@ -48,7 +48,7 @@ export function medallionStyle(tint: string, size = 44): ViewStyle {
   return {
     width: size,
     height: size,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: tint,

@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   rowAfterReset: { paddingLeft: spacing.sm },
   // Each chip is a small card, built from the same materials as the resource
   // cards it sits above: paper, a hairline, and one small medallion carrying the
-  // hue. `radii.md`, not `radii.pill` — a fully round pill full of saturated
+  // hue. `radii.sm`, not `radii.sm` — a fully round pill full of saturated
   // colour is what made this row read as playful; a squarer chip with the colour
   // confined to its medallion reads as part of the same product as the cards.
   chip: {
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingLeft: spacing.xs,
     paddingRight: spacing.md,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },

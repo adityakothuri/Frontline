@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 64,
     height: 64,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.dangerSoft,

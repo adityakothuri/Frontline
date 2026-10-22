@@ -27,7 +27,7 @@ export function OnboardingWelcome({ onStart }: { onStart: () => void }) {
         </View>
 
         <Animated.View entering={riseIn(stagger.step, rise.md)}>
-          <AppText variant="displayLarge" style={styles.title}>
+          <AppText variant="display" style={styles.title}>
             Welcome to Frontline
           </AppText>
         </Animated.View>
@@ -61,13 +61,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 200,
     height: 200,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     backgroundColor: withAlpha(colors.accent, 0.12),
   },
   mark: {
     width: 88,
     height: 88,
-    borderRadius: radii.xl,
+    borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accent,

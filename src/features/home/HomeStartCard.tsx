@@ -2,7 +2,7 @@ import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AiMark, AiWash, AppText, PressableScale } from '@/components';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 import { ASK_PLACEHOLDER } from '@/features/ask/askStarters';
 
 /**
@@ -83,17 +83,16 @@ export function HomeStartCard() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.accent,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     padding: spacing.xl,
     gap: spacing.md,
     // `md`, not the `sm` every resting card uses. This is the one control on the
     // page rather than a surface holding content, and it has to sit above the
     // paper the way a button does.
-    ...shadows.md,
   },
   cardPressed: { backgroundColor: colors.accentPressed },
   // The wash clips itself to these, so the card keeps its shadow.
-  corners: { borderRadius: radii.lg },
+  corners: { borderRadius: radii.md },
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   // `Composer`'s pill, measure for measure: 48 tall, text inset `lg`, the disc
   // inset `xs` so it sits inside the pill's line.
@@ -106,14 +105,14 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.lg,
     paddingRight: spacing.xs,
     paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     backgroundColor: colors.surface,
   },
   placeholder: { flex: 1 },
   send: {
     width: 40,
     height: 40,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accent,

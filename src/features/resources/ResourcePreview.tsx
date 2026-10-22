@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, Card, CategoryMedallion, PressableScale } from '@/components';
 import { formatDistance } from '@/lib/geo';
-import { colors, pressScale, shadows, spacing, stagger, surfaceTint } from '@/theme';
+import { colors, pressScale, spacing, stagger, surfaceTint } from '@/theme';
 import { settleIn, sinkOut } from '@/theme/motionPresets';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
@@ -80,7 +80,7 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
       {/* `accessible={false}`, as on `ResourceCard`: the pills inside must stay
           individually reachable; the hint at the foot is the accessible target. */}
       <PressableScale accessible={false} onPress={openDetail}>
-        <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }, shadows.md]}>
+        <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }, styles.floating]}>
           <View style={styles.topRow}>
             <CategoryMedallion icon={meta.icon} color={meta.color} size={38} />
             <AppText
@@ -106,7 +106,7 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
 
           {/* Clamped: a long facility name would otherwise grow the floating card
               until it covered the map it is describing. */}
-          <AppText variant="cardTitle" numberOfLines={2}>
+          <AppText variant="itemTitle" numberOfLines={2}>
             {resource.name}
           </AppText>
 
@@ -168,6 +168,7 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
+  floating: { borderWidth: 1.5, borderColor: colors.textPrimary },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   category: { flex: 1 },
   // Negative margins so the 44pt target doesn't add 44pt of row height: the glyph

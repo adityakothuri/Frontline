@@ -5,12 +5,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
-import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
-import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
-import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
-import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
-import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
-import { Fraunces_700Bold } from '@expo-google-fonts/fraunces/700Bold';
+import { PublicSans_400Regular } from '@expo-google-fonts/public-sans/400Regular';
+import { PublicSans_500Medium } from '@expo-google-fonts/public-sans/500Medium';
+import { PublicSans_600SemiBold } from '@expo-google-fonts/public-sans/600SemiBold';
+import { BarlowCondensed_600SemiBold } from '@expo-google-fonts/barlow-condensed/600SemiBold';
+import { BarlowCondensed_700Bold } from '@expo-google-fonts/barlow-condensed/700Bold';
+import { IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono/500Medium';
 import { colors, fonts, textVariants, timings } from '@/theme';
 import { AppErrorBoundary, ShieldTrace } from '@/components';
 import { ProfileProvider } from '@/services/profile';
@@ -26,7 +26,7 @@ import {
 // Before the first render, so a crash during startup is still reported.
 initCrashReporting();
 
-// Keep the native splash up until Inter + Fraunces are ready, so the first frame
+// Keep the native splash up until the three families are ready, so the first frame
 // the user sees is already in the app's typefaces (no font swap / flash of
 // system font).
 SplashScreen.preventAutoHideAsync();
@@ -39,12 +39,12 @@ function RootLayout() {
   }, [navigationRef]);
 
   const [loaded, error] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Fraunces_600SemiBold,
-    Fraunces_700Bold,
+    PublicSans_400Regular,
+    PublicSans_500Medium,
+    PublicSans_600SemiBold,
+    BarlowCondensed_600SemiBold,
+    BarlowCondensed_700Bold,
+    IBMPlexMono_500Medium,
   });
 
   // The native splash holds until the fonts resolve; the shield then draws once
@@ -89,13 +89,10 @@ function RootLayout() {
     headerStyle: { backgroundColor: colors.background },
     headerShadowVisible: false,
     headerTintColor: colors.textPrimary,
-    // The serif, at the card-name size: a pushed screen is titled by the thing
-    // it is about (a category, a place, the conversation), and those are set in
-    // Fraunces everywhere else. The bar then reads as part of the product
-    // rather than a platform default over it.
+    // A pushed screen is titled by what it is about, in the display face.
     headerTitleStyle: {
-      fontFamily: fonts.serifSemibold,
-      fontSize: textVariants.cardTitle.fontSize,
+      fontFamily: fonts.displaySemibold,
+      fontSize: textVariants.itemTitle.fontSize,
       color: colors.textPrimary,
     },
     headerBackTitle: 'Back',

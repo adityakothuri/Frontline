@@ -98,7 +98,7 @@ export function ReviewPrompt({
             containerStyle={styles.questionSlot}
             style={styles.question}
           >
-            <AppText variant="subtitle" numberOfLines={2} style={styles.questionText}>
+            <AppText variant="heading" numberOfLines={2} style={styles.questionText}>
               How was {engagement.resourceName}?
             </AppText>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     // A real 44pt target, the minimum every other control in the app meets.
     minHeight: 44,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surfaceMuted,

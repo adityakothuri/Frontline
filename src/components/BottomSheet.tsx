@@ -180,21 +180,19 @@ const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   fill: { flex: 1 },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.overlay },
-  // `shadows.lg` is the tier the design system reserves for sheets and
-  // overlays, and this was the one sheet in the app not wearing it.
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
+    borderTopLeftRadius: radii.md,
+    borderTopRightRadius: radii.md,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
-    ...shadows.lg,
+    ...shadows.sheet,
   },
   grabber: {
     alignSelf: 'center',
     width: 36,
     height: 4,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     backgroundColor: colors.border,
     marginBottom: spacing.md,
   },
@@ -216,7 +214,7 @@ const styles = StyleSheet.create({
   close: {
     width: 32,
     height: 32,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,

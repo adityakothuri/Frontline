@@ -85,7 +85,7 @@ export function OnboardingComplete({ draft, onBack, onCreate, loading }: Onboard
         </View>
 
         <Animated.View entering={riseIn(stagger.step)}>
-          <AppText variant="displayLarge" style={styles.title}>
+          <AppText variant="display" style={styles.title}>
             You&apos;re ready, {draft.firstName.trim()}.
           </AppText>
         </Animated.View>
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surface,

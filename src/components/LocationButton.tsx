@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surface,

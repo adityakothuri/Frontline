@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     // A real 44pt target, the minimum every other control in the app meets.
     minHeight: 44,
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,

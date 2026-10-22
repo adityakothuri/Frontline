@@ -133,7 +133,7 @@ export function NearbyGlance({
             <AppText variant="caption" color="textSecondary">
               Near {zip}
             </AppText>
-            <AppText variant="subtitle">{label}</AppText>
+            <AppText variant="heading">{label}</AppText>
           </View>
           <View style={styles.mapHint}>
             <Ionicons name="map-outline" size={16} color={colors.textSecondary} />
@@ -247,7 +247,7 @@ function GlanceSkeleton() {
         <View style={styles.row}>
           {[0, 1, 2, 3].map((i) => (
             <View key={i} style={[styles.cell, styles.cellInner]}>
-              <Skeleton width={40} height={40} borderRadius={radii.md} delay={stagger.pulse * i} />
+              <Skeleton width={40} height={40} borderRadius={radii.sm} delay={stagger.pulse * i} />
               <Skeleton width={24} height={18} delay={stagger.pulse * i} />
               <Skeleton width={56} height={16} delay={stagger.pulse * i} />
             </View>

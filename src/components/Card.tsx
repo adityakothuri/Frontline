@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 
 type CardProps = {
   /** Optional, so the surface can also be used empty — the Home review deck
@@ -18,10 +18,9 @@ export function Card({ children, style }: CardProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     padding: spacing.lg,
-    ...shadows.sm,
   },
 });

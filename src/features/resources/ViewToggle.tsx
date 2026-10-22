@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     padding: spacing.xs,
     backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
   },
   // Sits behind the segments, in the same coordinate space their onLayout reports.
   pill: {

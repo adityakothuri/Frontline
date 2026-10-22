@@ -26,7 +26,7 @@ export function NeedCategoryCard({
       <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
         <CategoryMedallion icon={meta.icon} color={meta.color} size={48} />
         <View style={styles.cardText}>
-          <AppText variant="cardTitle">{meta.label}</AppText>
+          <AppText variant="itemTitle">{meta.label}</AppText>
           <AppText variant="caption" color="textSecondary">
             {meta.description}
           </AppText>

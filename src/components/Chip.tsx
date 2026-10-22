@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 44, // >= the 44pt minimum touch target
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
   },
   unselected: {

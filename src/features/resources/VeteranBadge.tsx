@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     backgroundColor: colors.accentSoft,
   },
   badgeGeneral: { backgroundColor: colors.surfaceMuted },

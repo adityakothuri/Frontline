@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   glyph: {
     width: 36,
     height: 36,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.dangerSoft,

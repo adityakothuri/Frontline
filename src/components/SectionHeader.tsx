@@ -12,7 +12,7 @@ type SectionHeaderProps = {
   caption?: string;
   /** `heading` for a page's own sections (the resource detail); `subtitle` for
    *  groups inside a form or a widget. */
-  size?: 'heading' | 'subtitle';
+  size?: 'heading' | 'label';
   style?: StyleProp<ViewStyle>;
 };
 

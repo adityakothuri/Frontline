@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     backgroundColor: colors.warningSoft,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: withAlpha(colors.warning, 0.35),

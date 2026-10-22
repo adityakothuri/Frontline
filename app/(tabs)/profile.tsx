@@ -424,7 +424,7 @@ function Section({
 }) {
   return (
     <View style={styles.section}>
-      <SectionHeader size="subtitle" icon={icon} title={title} />
+      <SectionHeader size="label" icon={icon} title={title} />
       {children}
     </View>
   );
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   headerButton: {
     width: 44,
     height: 44,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accentSoft,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   avatarRing: {
     padding: spacing.xxs,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     borderWidth: 2,
     borderColor: colors.accent,
     marginBottom: spacing.sm,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: withAlpha(colors.accent, 0.16),

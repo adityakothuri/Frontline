@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AiMark, AiWash, AppText } from '@/components';
-import { colors, radii, shadows, spacing, withAlpha } from '@/theme';
+import { colors, radii, spacing, withAlpha } from '@/theme';
 import { riseIn } from '@/theme/motionPresets';
 
 type MessageBubbleProps = {
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   userBubble: {
     maxWidth: '84%',
     backgroundColor: colors.accentSoft,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     // The one squared corner points at the person who said it.
     borderBottomRightRadius: radii.sm,
     paddingVertical: spacing.md,
@@ -71,14 +71,13 @@ const styles = StyleSheet.create({
     maxWidth: '92%',
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderBottomLeftRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     // The AI block's border tier (0.45), not the paper hairline.
     borderColor: withAlpha(colors.accent, 0.45),
     padding: spacing.lg,
-    ...shadows.sm,
   },
-  assistantCorners: { borderRadius: radii.lg, borderBottomLeftRadius: radii.sm },
+  assistantCorners: { borderRadius: radii.md, borderBottomLeftRadius: radii.sm },
   assistantHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });

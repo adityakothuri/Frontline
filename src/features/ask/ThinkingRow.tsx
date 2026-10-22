@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Platform, View, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AiMark, AiWash, AppText, PressableScale, Skeleton } from '@/components';
-import { colors, pressScale, radii, shadows, spacing, stagger, timings, withAlpha } from '@/theme';
+import { colors, pressScale, radii, spacing, stagger, timings, withAlpha } from '@/theme';
 import { fadeIn, riseIn } from '@/theme/motionPresets';
 
 /**
@@ -90,14 +90,13 @@ const styles = StyleSheet.create({
     width: '72%',
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderBottomLeftRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: withAlpha(colors.accent, 0.45),
     padding: spacing.lg,
-    ...shadows.sm,
   },
-  corners: { borderRadius: radii.lg, borderBottomLeftRadius: radii.sm },
+  corners: { borderRadius: radii.md, borderBottomLeftRadius: radii.sm },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 16 },
   retry: {
     gap: spacing.xs,
@@ -105,10 +104,9 @@ const styles = StyleSheet.create({
     maxWidth: '92%',
     padding: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderBottomLeftRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    ...shadows.sm,
   },
 });

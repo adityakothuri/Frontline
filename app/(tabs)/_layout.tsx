@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 48,
     height: 28,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     backgroundColor: colors.accentSoft,
   },
 });

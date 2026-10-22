@@ -47,7 +47,7 @@ export function PrimaryButton({
           {loading ? (
             <ActivityIndicator color={isSecondary ? colors.textPrimary : colors.textOnAccent} />
           ) : (
-            <AppText variant="subtitle" color={isSecondary ? 'textPrimary' : 'textOnAccent'}>
+            <AppText variant="heading" color={isSecondary ? 'textPrimary' : 'textOnAccent'}>
               {label}
             </AppText>
           )}
@@ -60,7 +60,7 @@ export function PrimaryButton({
 const styles = StyleSheet.create({
   base: {
     minHeight: 52,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',

@@ -83,7 +83,7 @@ export default function HomeScreen() {
           that did nothing — the ZIP is in the pill above, and the card below
           asks the page's one question. Removed 2026-10-14. */}
       <Animated.View entering={riseIn(stagger.step, rise.md)} style={styles.header}>
-        {/* `display`, not `displayLarge`. The larger step is reserved for the
+        {/* `display`, not `display`. The larger step is reserved for the
             onboarding hero (see `typography.ts`) and is set at ~1.17 leading for
             a single line; a greeting carrying a real first name wraps to two, and
             two lines of Fraunces at that leading read cramped. It also made a

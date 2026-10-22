@@ -5,7 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, EmptyState, PressableScale } from '@/components';
-import { colors, durations, pressScale, radii, shadows, spacing, springs, timings } from '@/theme';
+import { colors, durations, pressScale, radii, spacing, springs, timings } from '@/theme';
 import { fadeOut } from '@/theme/motionPresets';
 import { mapStyle, MAP_CHROME_EDGE, MAP_PAPER } from '@/theme/mapStyle';
 import { tapSelection } from '@/lib/haptics';
@@ -657,12 +657,11 @@ const styles = StyleSheet.create({
   // agreed on width, radius, border and elevation and still read as two objects
   // floating near each other.
   controlStack: {
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     backgroundColor: MAP_PAPER,
     borderWidth: 1,
     borderColor: MAP_CHROME_EDGE,
     overflow: 'hidden',
-    ...shadows.md,
   },
   controlCell: {
     width: CONTROL_CELL,
@@ -679,14 +678,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     backgroundColor: MAP_PAPER,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: MAP_CHROME_EDGE,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    // It floats over the map, so it earns an elevation like everything else that
-    // does. It had none.
-    ...shadows.sm,
   },
   noteText: { flexShrink: 1 },
   // spacing.lg, not md: at 12 the card visibly overhung the 24pt column the
@@ -707,11 +703,10 @@ const styles = StyleSheet.create({
   hint: {
     maxWidth: 220,
     backgroundColor: MAP_PAPER,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: MAP_CHROME_EDGE,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    ...shadows.sm,
   },
 });

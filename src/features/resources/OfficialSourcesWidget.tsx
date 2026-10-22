@@ -21,7 +21,7 @@ export function OfficialSourcesWidget({ category }: { category: NeedCategory }) 
   return (
     <View style={styles.wrap}>
       <SectionHeader
-        size="subtitle"
+        size="label"
         icon="shield-checkmark-outline"
         title="Official online sources"
         caption="Trusted backup — official forms, guidance, and next steps when local help isn’t enough."
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
   },
   title: { marginTop: spacing.xs },
   desc: { marginTop: spacing.xxs },

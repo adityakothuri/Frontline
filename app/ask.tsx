@@ -171,7 +171,7 @@ function AskHeaderTitle() {
   return (
     <View style={styles.headerTitle}>
       <AiMark size={18} />
-      <AppText variant="cardTitle">Ask Frontline</AppText>
+      <AppText variant="itemTitle">Ask Frontline</AppText>
     </View>
   );
 }

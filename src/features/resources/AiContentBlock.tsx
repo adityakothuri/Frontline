@@ -14,7 +14,6 @@ import {
   loops,
   pressScale,
   radii,
-  shadows,
   spacing,
   stagger,
   surfaceTint,
@@ -256,17 +255,16 @@ function RetryState({ title, onRetry }: { title?: string; onRetry?: () => void }
 
 const styles = StyleSheet.create({
   block: {
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     // A category-tinted fill + border set AI guidance apart as a distinct,
     // "intelligent" surface — not just another neutral card — and tie it to the
     // resource above it. Both colors are applied inline from the `color` prop.
     borderWidth: StyleSheet.hairlineWidth,
     padding: spacing.lg,
     gap: spacing.xs,
-    ...shadows.sm,
   },
   // The wash clips itself to the block's radius, so the block keeps its shadow.
-  corners: { borderRadius: radii.lg },
+  corners: { borderRadius: radii.md },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   title: { flexShrink: 1 },
   tag: { marginBottom: spacing.xs },

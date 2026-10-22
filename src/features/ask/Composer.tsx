@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     // 2 + 44 + 2: the send target fills the pill's height.
     paddingRight: spacing.xxs,
     paddingVertical: spacing.xxs,
-    borderRadius: radii.xl,
+    borderRadius: radii.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   send: {
     width: 40,
     height: 40,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accent,

@@ -11,7 +11,7 @@ import {
   ScreenContainer,
   Skeleton,
 } from '@/components';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 import { fadeIn, riseIn, stepDelay } from '@/theme/motionPresets';
 import { useStaggerGate } from '@/hooks/useStaggerGate';
 import { useProfile } from '@/services/profile';
@@ -267,20 +267,17 @@ const styles = StyleSheet.create({
   // Keeps the floating toggle anchored to the map, not the screen, so the
   // crisis banner above can't sit under it.
   mapWrap: { flex: 1 },
-  // Floats over cartography, so it earns the elevation tier the design system
-  // sets aside for exactly that ("floating controls / framed map").
   toggleFloat: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.md,
-    borderRadius: radii.md,
-    ...shadows.md,
+    borderRadius: radii.sm,
   },
   disclaimer: { marginTop: spacing.lg },
   skeletons: { gap: spacing.md },
   skeletonCard: {
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     padding: spacing.lg,

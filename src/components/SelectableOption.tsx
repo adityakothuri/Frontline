@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     minHeight: 60,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 40,
     height: 40,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.transparent,
   },
-  indicatorCircle: { borderRadius: radii.pill },
+  indicatorCircle: { borderRadius: radii.sm },
   indicatorBox: { borderRadius: radii.sm },
   indicatorOn: { backgroundColor: colors.accent, borderColor: colors.accent },
 });

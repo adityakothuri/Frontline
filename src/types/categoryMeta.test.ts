@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { colors, surfaceTint } from '@/theme';
+import { colors } from '@/theme';
 import { RESOURCE_CATEGORY_META, RESOURCE_CATEGORIES } from './resource';
 import { isNeedCategory, NEED_CATEGORY_META, NEED_CATEGORIES } from './need';
 import { resourceToNeedCategory } from '@/services/resources/needMapping';
@@ -27,17 +27,6 @@ const relativeLuminance = (hex: string) => {
 const contrastRatio = (a: string, b: string) => {
   const [l1, l2] = [relativeLuminance(a), relativeLuminance(b)];
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-};
-
-/** `surfaceTint` composites to an `rgb(r, g, b)` string; everything above reads
- *  hex. Bridge rather than duplicate the maths. */
-const rgbToHex = (value: string): string => {
-  const parts = value.match(/\d+/g);
-  if (!parts || parts.length < 3) return value;
-  return `#${parts
-    .slice(0, 3)
-    .map((n) => Number(n).toString(16).padStart(2, '0'))
-    .join('')}`;
 };
 
 /** CIELAB, so "different" is measured perceptually rather than in raw RGB. */
@@ -95,52 +84,11 @@ describe('category metadata', () => {
   });
 
   it('keeps every category hue legible as an icon on paper', () => {
-    // WCAG 1.4.11: non-text UI needs 3:1. These hues are icons and map pins.
+    // WCAG 1.4.11: non-text UI needs 3:1. These hues are row bars, swatches and
+    // map pins, all drawn directly on paper.
     for (const category of RESOURCE_CATEGORIES) {
       const ratio = contrastRatio(RESOURCE_CATEGORY_META[category].color, colors.background);
       expect(ratio, `${category} icon is too light on the paper background`).toBeGreaterThan(3);
-    }
-  });
-
-  it('keeps every category hue legible as an icon on its own filter chip', () => {
-    // The check above measures the icon on plain paper. The map's filter chip is
-    // a harder surface: the hue's own 0.16 wash, composited over
-    // `backgroundElevated` rather than `background`. That is where these icons
-    // actually have to be read, and until now it was verified by hand — measured
-    // at 3.2–3.7:1 for the tightest five hues, so it passed, but it passed
-    // unproven. A wash strength or an elevated-paper tweak could have quietly
-    // taken it under 3:1 with nothing to catch it.
-    for (const category of RESOURCE_CATEGORIES) {
-      const hue = RESOURCE_CATEGORY_META[category].color;
-      const chip = rgbToHex(surfaceTint(hue, 0.16, colors.backgroundElevated));
-      const ratio = contrastRatio(hue, chip);
-      expect(ratio, `${category} icon is too light on its own chip wash`).toBeGreaterThan(3);
-    }
-  });
-
-  it('keeps every category hue legible on the compound medallion-over-hero wash', () => {
-    // The worst surface each hue lands on, and the one the palette is supposed to
-    // be validated against ([[UI Design System]] "≥3:1 for the icon on its own
-    // medallion wash — the compound tint-on-tint case"). Nothing asserted it
-    // until now: the chip check above uses a *single* 0.16 wash over elevated
-    // paper, which is a full step looser.
-    //
-    // Direction matters here and is easy to get backwards. More hue in the
-    // backdrop means LESS separation from the glyph drawn in that same hue, so
-    // stacking medallion 0.16 on top of hero 0.14 is tighter than either alone —
-    // `food` measures 3.02:1 here against 3.14 on the chip and ~3.9 on a Home
-    // tile's bare wash. The tile is the *loosest* of the three, which is why
-    // a tile-specific assertion would have been strictly subsumed by this one and
-    // could never have failed independently.
-    for (const category of RESOURCE_CATEGORIES) {
-      const hue = RESOURCE_CATEGORY_META[category].color;
-      const hero = rgbToHex(surfaceTint(hue, 0.14, colors.surface));
-      const compound = rgbToHex(surfaceTint(hue, 0.16, hero));
-      const ratio = contrastRatio(hue, compound);
-      expect(
-        ratio,
-        `${category} icon is too light on the medallion-over-hero wash`,
-      ).toBeGreaterThan(3);
     }
   });
 

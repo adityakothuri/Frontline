@@ -19,5 +19,5 @@ export function StatusPill({ label, tone }: { label: string; tone: StatusTone })
 
 const styles = StyleSheet.create({
   pill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dot: { width: 7, height: 7, borderRadius: radii.pill },
+  dot: { width: 7, height: 7, borderRadius: radii.sm },
 });

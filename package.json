@@ -25,8 +25,11 @@
   },
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/barlow-condensed": "^0.4.1",
     "@expo-google-fonts/fraunces": "^0.4.1",
+    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
     "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/public-sans": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@sentry/react-native": "~7.11.0",

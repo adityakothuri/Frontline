@@ -29,7 +29,7 @@ export function DangerCallBanner({
     <View style={[styles.banner, style]}>
       <View style={styles.headerRow}>
         <Ionicons name="alert-circle" size={20} color={colors.danger} />
-        <AppText variant="subtitle" style={styles.title}>
+        <AppText variant="heading" style={styles.title}>
           {title}
         </AppText>
       </View>
@@ -44,7 +44,7 @@ export function DangerCallBanner({
         {({ pressed }) => (
           <View style={[styles.callButton, pressed && styles.callButtonPressed]}>
             <Ionicons name="call" size={18} color={colors.background} />
-            <AppText variant="subtitle" style={styles.callLabel}>
+            <AppText variant="heading" style={styles.callLabel}>
               {callLabel}
             </AppText>
           </View>
@@ -78,7 +78,7 @@ export function EmergencyCallBanner({ resource, onCall }: EmergencyCallBannerPro
 const styles = StyleSheet.create({
   banner: {
     backgroundColor: withAlpha(colors.danger, 0.1),
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: withAlpha(colors.danger, 0.4),
     padding: spacing.lg,
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     minHeight: 52,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     paddingHorizontal: spacing.xl,
     backgroundColor: colors.danger,
     marginTop: spacing.xs,

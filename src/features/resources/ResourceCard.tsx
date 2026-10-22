@@ -170,7 +170,7 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
           </View>
         </View>
 
-        <AppText variant="cardTitle" numberOfLines={2} style={styles.name}>
+        <AppText variant="itemTitle" numberOfLines={2} style={styles.name}>
           {resource.name}
         </AppText>
 
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 30,
     height: 30,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     borderWidth: 1.5,
     borderColor: colors.accent,
   },
