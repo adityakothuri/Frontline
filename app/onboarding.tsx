@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Alert } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, BackHandler } from 'react-native';
 import { useRouter } from 'expo-router';
 import { OptionGroup, TextField } from '@/components';
 import { onboardingAccents } from '@/theme';
 import { useProfile } from '@/services/profile';
+import { stateFromZip } from '@/lib/zipState';
 import { OnboardingWelcome } from '@/features/onboarding/OnboardingWelcome';
 import { OnboardingStep } from '@/features/onboarding/OnboardingStep';
 import { OnboardingComplete } from '@/features/onboarding/OnboardingComplete';
@@ -18,11 +19,11 @@ type Draft = {
   preferredRadiusMiles?: number;
 };
 
-// The 5 questions that carry a progress bar (welcome + create-account bookend it).
+// The 5 questions that carry a progress bar (welcome + finish bookend it).
 const PROMPTS = 5;
 
-// The full one-time account-creation flow: a welcome, one prompt per screen, then
-// "Create account" which saves the profile. Held in a draft, saved once at the end.
+// The full one-time setup flow: a welcome, one prompt per screen, then "Finish
+// setup" which saves the profile. Held in a draft, saved once at the end.
 export default function OnboardingScreen() {
   const router = useRouter();
   const { saveDetails } = useProfile();
@@ -43,6 +44,25 @@ export default function OnboardingScreen() {
   const next = () => go(step + 1);
   const back = () => go(step - 1);
   const prevIndex = prevStep - 1;
+
+  // The hardware back button steps back through the wizard instead of leaving
+  // the route — on the welcome screen it falls through to the OS.
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (step === 0) return false;
+      go(step - 1);
+      return true;
+    });
+    return () => subscription.remove();
+    // `go` reads `step` from this render; the listener is rebuilt per step.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Five digits is necessary, not sufficient: `00000` is five digits. The
+  // prefix table is the same one search uses to pick a veteran's state, so a ZIP
+  // it cannot place is a ZIP the backend cannot place either.
+  const zipComplete = draft.zip.length === 5;
+  const zipValid = zipComplete && stateFromZip(draft.zip) !== null;
 
   const create = async () => {
     if (saving) return;
@@ -111,7 +131,7 @@ export default function OnboardingScreen() {
           subtitle="Your ZIP code finds resources near you — used only for that."
           onBack={back}
           onContinue={next}
-          canContinue={draft.zip.length === 5}
+          canContinue={zipValid}
         >
           <TextField
             label="ZIP code"
@@ -121,8 +141,12 @@ export default function OnboardingScreen() {
             keyboardType="number-pad"
             maxLength={5}
             returnKeyType="next"
-            onSubmitEditing={() => draft.zip.length === 5 && next()}
-            hint="Required — so we can show help nearby."
+            onSubmitEditing={() => zipValid && next()}
+            hint={
+              zipComplete && !zipValid
+                ? 'That doesn’t look like a US ZIP code — check the digits.'
+                : 'Required — so we can show help nearby.'
+            }
           />
         </OnboardingStep>
       );
@@ -136,7 +160,7 @@ export default function OnboardingScreen() {
           icon="ribbon-outline"
           iconColor={onboardingAccents.role}
           title="Which best describes you?"
-          subtitle="Optional — helps us keep the tone right."
+          subtitle="Optional — so Frontline knows who it’s talking to."
           onBack={back}
           onSkip={next}
           onContinue={next}
@@ -160,7 +184,7 @@ export default function OnboardingScreen() {
           icon="documents-outline"
           iconColor={onboardingAccents.documents}
           title="Which of these do you have?"
-          subtitle="Optional — check any you already have, so we can tell you what to bring."
+          subtitle="Optional — tick what you already have, and each place’s checklist will show what’s left to find."
           onBack={back}
           onSkip={next}
           onContinue={next}

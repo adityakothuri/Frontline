@@ -9,7 +9,7 @@ import type { EngagementEntry, Rating } from '@/types/activity';
 import { ReviewPrompt } from './ReviewPrompt';
 
 /**
- * The Home review deck: the opportunity the veteran hasn't rated yet, with the
+ * The Home review deck: the place the veteran hasn't rated yet, with the
  * next one showing behind it — and, once there is nothing left to rate, nothing
  * at all.
  *
@@ -69,13 +69,13 @@ const ACK_HOLD = timings.reviewAck;
  * The deck's height, derived rather than measured-from-nothing.
  *
  * `ReviewPrompt` is fixed except for its question, which is clamped to two lines,
- * so the tallest card is knowable: card padding 32 + header 62 (a 44pt medallion
- * beside a 16pt label, 2pt gap and two 22pt lines) + gap 16 + votes 44 + gap 16 +
- * the details row 44. Seeding the real maximum means the common case never
- * corrects itself on screen; the measurement below is only a safety net for
- * Dynamic Type.
+ * so the tallest card is knowable: card padding 32 + header 44 (two 22pt lines
+ * beside a 36pt medallion) + gap 12 + votes 44. Seeding the real maximum means
+ * the common case never corrects itself on screen; the measurement below is
+ * only a safety net for Dynamic Type. It was 214 when the card carried a
+ * category caption and a separate "View details" row; the name is the link now.
  */
-const DECK_HEIGHT = 214;
+const DECK_HEIGHT = 132;
 
 type Vote = { id: string; choice: Rating };
 

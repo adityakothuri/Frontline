@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PressableScale } from '@/components';
 import { colors, pressScale, radii, spacing, springs } from '@/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { tapSelection } from '@/lib/haptics';
 import {
   NEED_CATEGORY_META,
   TOP_NEED_CATEGORIES,
@@ -43,6 +44,11 @@ function shellDisplay(shell: Shell): { label: string; icon: IconName; color: str
     return { label: meta.shortLabel ?? meta.label, icon: meta.icon, color: meta.color };
   }
   return { label: shell.label, icon: shell.icon, color: colors.textSecondary };
+}
+
+/** Whether a route param names a real shell. Anything else is ignored. */
+export function isShellId(value: unknown): value is ShellId {
+  return SHELLS.some((shell) => shell.id === value);
 }
 
 /** The need category a shell filters to, or undefined for `all`/`other`. */
@@ -160,7 +166,10 @@ export function CategoryShells({
           key={shell.id}
           shell={shell}
           selected={shell.id === selected}
-          onPress={() => onSelect(shell.id)}
+          onPress={() => {
+            if (shell.id !== selected) tapSelection();
+            onSelect(shell.id);
+          }}
           onFrame={(frame) => onFrame(shell.id, frame)}
         />
       ))}

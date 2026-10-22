@@ -123,6 +123,7 @@ export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
   },
   education_benefits: {
     label: 'Education benefits',
+    shortLabel: 'Education',
     icon: 'school-outline',
     description: 'GI Bill, tuition, and training',
     color: '#47708A',
@@ -142,12 +143,14 @@ export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
   },
   transportation: {
     label: 'Transportation',
+    shortLabel: 'Transport',
     icon: 'bus-outline',
     description: 'Rides to appointments and errands',
     color: '#6A5266',
   },
   family_caregiver: {
     label: 'Family / caregiver',
+    shortLabel: 'Family',
     icon: 'people-outline',
     description: 'Support for families and caregivers',
     color: '#9C606E',
@@ -159,6 +162,15 @@ export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
     color: '#B04A38',
   },
 };
+
+/** Whether a route param names a real need category. Deep links and stale
+ *  routes can carry anything; the screens validate before trusting it. */
+export function isNeedCategory(value: unknown): value is NeedCategory {
+  // Own keys only: `'toString' in {}` is true, and a route param can say anything.
+  return (
+    typeof value === 'string' && Object.prototype.hasOwnProperty.call(NEED_CATEGORY_META, value)
+  );
+}
 
 /** Stable display order for Discover's full category list. */
 export const NEED_CATEGORIES: NeedCategory[] = [

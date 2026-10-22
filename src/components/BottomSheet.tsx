@@ -7,7 +7,7 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -17,10 +17,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, durations, radii, spacing, springs } from '@/theme';
+import { colors, durations, pressScale, radii, shadows, spacing, springs } from '@/theme';
 import { easings } from '@/theme/motionPresets';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { AppText } from './AppText';
+import { PressableScale } from './PressableScale';
 
 /** Past this fraction of its own height, a release dismisses instead of springing back. */
 const DISMISS_RATIO = 0.25;
@@ -116,7 +117,10 @@ export function BottomSheet({
 
   return (
     <Modal visible transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
-      <View style={styles.root}>
+      {/* A `Modal` hosts its own native window, outside the app's gesture root.
+          On Android a `GestureDetector` inside it is inert without a root of its
+          own; iOS tolerates the omission, which is how it went unnoticed. */}
+      <GestureHandlerRootView style={styles.root}>
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable
             accessibilityRole="button"
@@ -144,15 +148,18 @@ export function BottomSheet({
               <View style={styles.grabber} />
               <View style={styles.header}>
                 {title ? <AppText variant="title">{title}</AppText> : <View />}
-                <Pressable
+                {/* A real 44pt target. The 32pt disc stays the visible control;
+                    the Pressable around it is the full square. */}
+                <PressableScale
                   accessibilityRole="button"
                   accessibilityLabel="Close"
                   onPress={onClose}
-                  hitSlop={8}
-                  style={({ pressed }) => [styles.close, pressed && styles.closePressed]}
+                  scaleTo={pressScale.control}
+                  containerStyle={styles.closeTarget}
+                  style={styles.close}
                 >
                   <Ionicons name="close" size={18} color={colors.textSecondary} />
-                </Pressable>
+                </PressableScale>
               </View>
             </View>
           </GestureDetector>
@@ -164,7 +171,7 @@ export function BottomSheet({
             {children}
           </Animated.ScrollView>
         </Animated.View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -173,12 +180,15 @@ const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   fill: { flex: 1 },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.overlay },
+  // `shadows.lg` is the tier the design system reserves for sheets and
+  // overlays, and this was the one sheet in the app not wearing it.
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
+    ...shadows.lg,
   },
   grabber: {
     alignSelf: 'center',
@@ -194,6 +204,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.md,
   },
+  // Negative margins keep the 44pt square from adding height to the header row.
+  closeTarget: {
+    width: 44,
+    height: 44,
+    marginVertical: -spacing.sm,
+    marginRight: -spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   close: {
     width: 32,
     height: 32,
@@ -202,6 +221,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
   },
-  closePressed: { opacity: 0.6 },
   body: { paddingBottom: spacing.sm },
 });

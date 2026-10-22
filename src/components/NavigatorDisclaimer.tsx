@@ -3,10 +3,22 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing } from '@/theme';
 import { AppText } from './AppText';
 
+const NAVIGATOR_TEXT =
+  'Frontline helps you find resources. It is not the VA or a government agency. Always confirm details with the official source.';
+
 // The product-wide navigator disclaimer required by Trust, Safety & Privacy.
 // One component owns the copy so Home, Results, and the detail page can never
 // drift apart. Quiet by design — informative, not alarmist.
-export function NavigatorDisclaimer({ style }: { style?: StyleProp<ViewStyle> }) {
+//
+// `text` lets the AI surfaces carry their own line (`AI_NOT_ADVICE_DISCLAIMER`)
+// in exactly this register, rather than inventing a second disclaimer treatment.
+export function NavigatorDisclaimer({
+  text = NAVIGATOR_TEXT,
+  style,
+}: {
+  text?: string;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
     <View style={[styles.row, style]}>
       <Ionicons
@@ -16,8 +28,7 @@ export function NavigatorDisclaimer({ style }: { style?: StyleProp<ViewStyle> })
         style={styles.icon}
       />
       <AppText variant="caption" color="textMuted" style={styles.text}>
-        Frontline helps you find resources. It is not the VA or a government agency. Always confirm
-        details with the official source.
+        {text}
       </AppText>
     </View>
   );

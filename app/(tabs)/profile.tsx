@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { View, Alert, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { View, Alert, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AppText,
@@ -9,13 +10,18 @@ import {
   Loading,
   useLoadingGate,
   OptionGroup,
+  PressableScale,
   PrimaryButton,
   ScreenContainer,
   ScreenHeader,
+  SectionHeader,
   TextField,
 } from '@/components';
 import { useProfile } from '@/services/profile';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { colors, pressScale, radii, rise, spacing, stagger, withAlpha } from '@/theme';
+import { riseIn } from '@/theme/motionPresets';
+import { tapImpact } from '@/lib/haptics';
+import { stateFromZip } from '@/lib/zipState';
 import {
   ROLE_OPTIONS,
   RADIUS_OPTIONS,
@@ -42,6 +48,12 @@ function documentsSummary(docs: VeteranDocument[]): string {
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile, isHydrated, saveDetails, resetProfile } = useProfile();
+  // `?edit=1` lands straight in the form. Results' and Discover's "Change ZIP or
+  // radius" send it, because a button that says "change" and drops you on a
+  // read-only card is one tap short of its promise. Applied on focus and then
+  // cleared, so a second arrival with the same value is seen as a new one — the
+  // same consumption pattern Discover uses for its `shell` param.
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(profile?.firstName ?? '');
@@ -57,15 +69,25 @@ export default function ProfileScreen() {
   // below is an early return, and hooks cannot live behind one.
   const gate = useLoadingGate(!isHydrated);
 
-  // Keep the form in sync when the stored profile changes (save, or re-setup).
+  // Keep the form in sync when the stored profile changes (save, or re-setup) —
+  // but never while the veteran is typing into it. A backup restore landing
+  // mid-edit used to overwrite the draft under their thumbs.
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || editing) return;
     setFirstName(profile.firstName);
     setZip(profile.zip ?? '');
     setRole(profile.role);
     setDocs(profile.documentsOnHand ?? []);
     setRadius(profile.preferredRadiusMiles);
-  }, [profile]);
+  }, [profile, editing]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (edit !== '1' || !profile) return;
+      setEditing(true);
+      router.setParams({ edit: '' });
+    }, [edit, profile, router]),
+  );
 
   // "No profile" is a real, permanent answer — it invites the veteran to set one
   // up. Not-yet-read-from-disk looks identical in `profile` but means nothing of
@@ -97,8 +119,8 @@ export default function ProfileScreen() {
         <ScreenHeader title="Profile" subtitle="Optional — never required" />
         <EmptyState
           icon="person-outline"
-          title="Your preferences will live here"
-          message="Set up Frontline to personalize your experience. Frontline never asks for sensitive information."
+          title="Set up Frontline in two minutes"
+          message="A first name and a ZIP code are all it takes to find help near you. No sign-in, and nothing sensitive — ever."
           actionLabel="Set up now"
           onAction={() => router.replace('/')}
         />
@@ -106,11 +128,16 @@ export default function ProfileScreen() {
     );
   }
 
-  const canSave = firstName.trim().length > 0 && zip.length === 5;
+  // The same rule onboarding applies: five digits the state table can place.
+  // `00000` used to save here and then fail every search.
+  const zipValid = zip.length === 5 && stateFromZip(zip) !== null;
+  const canSave = firstName.trim().length > 0 && zipValid;
   const initial = profile.firstName.trim().charAt(0).toUpperCase() || '·';
   const storedDocs = profile.documentsOnHand ?? [];
+  // Trimmed, like the save is: a trailing space is not a change worth a
+  // "Discard changes?" prompt.
   const dirty =
-    firstName !== profile.firstName ||
+    firstName.trim() !== profile.firstName ||
     zip !== (profile.zip ?? '') ||
     role !== profile.role ||
     radius !== profile.preferredRadiusMiles ||
@@ -168,8 +195,15 @@ export default function ProfileScreen() {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            await resetProfile();
-            router.replace('/');
+            try {
+              await resetProfile();
+              router.replace('/');
+            } catch {
+              Alert.alert(
+                'Couldn’t reset',
+                'Something went wrong clearing your details. Please try again.',
+              );
+            }
           },
         },
       ],
@@ -185,7 +219,7 @@ export default function ProfileScreen() {
         />
 
         <View style={styles.form}>
-          <Section icon="create-outline" label="Your details">
+          <Section icon="create-outline" title="Your details">
             <TextField
               label="First name"
               value={firstName}
@@ -202,27 +236,43 @@ export default function ProfileScreen() {
               placeholder="e.g. 90015"
               keyboardType="number-pad"
               maxLength={5}
-              hint="Used only to find nearby resources."
+              hint={
+                zip.length === 5 && !zipValid
+                  ? 'That doesn’t look like a US ZIP code — check the digits.'
+                  : 'Used only to find nearby resources.'
+              }
             />
           </Section>
 
-          <Section icon="medal-outline" label="I am a…">
+          <Section icon="medal-outline" title="I am a…">
             <OptionGroup options={ROLE_OPTIONS} value={role} onChange={setRole} />
           </Section>
 
-          <Section icon="folder-open-outline" label="Documents I have">
+          <Section icon="folder-open-outline" title="Documents I have">
             <OptionGroup multiple options={DOCUMENT_OPTIONS} value={docs} onChange={setDocs} />
           </Section>
 
-          <Section icon="navigate-outline" label="Search radius">
+          <Section icon="navigate-outline" title="Search radius">
             <OptionGroup options={RADIUS_OPTIONS} value={radius} onChange={setRadius} />
           </Section>
         </View>
 
-        <PrimaryButton label="Save changes" onPress={save} disabled={!canSave} loading={saving} />
+        <PrimaryButton
+          label="Save changes"
+          onPress={() => {
+            tapImpact();
+            save();
+          }}
+          disabled={!canSave}
+          loading={saving}
+        />
 
+        {/* Accurate about where the data goes. It used to say "it all stays on
+            this device" while `pushProfile` mirrored every save to the backup —
+            see `services/sync/backupSync.ts`. */}
         <AppText variant="caption" color="textMuted" style={styles.footNote}>
-          Everything here is optional except your name and ZIP, and it all stays on this device.
+          Only your name and ZIP are required. Everything is kept on this device, with a private
+          backup so a new phone can pick up where you left off — never sold or shared.
         </AppText>
       </ScreenContainer>
     );
@@ -231,16 +281,25 @@ export default function ProfileScreen() {
   return (
     // Scrollable so large accessibility text sizes overflow gracefully; flexGrow keeps
     // the reset link pinned to the bottom when everything fits on one screen.
+    // The same staggered arrival every other tab has; this was the one screen
+    // that snapped in.
     <ScreenContainer scroll contentStyle={styles.viewContent}>
-      <ScreenHeader
-        title="Profile"
-        subtitle="Your details, kept on this device"
-        action={
-          <HeaderButton icon="pencil" label="Edit profile" onPress={() => setEditing(true)} />
-        }
-      />
+      <Animated.View entering={riseIn(0, rise.md)}>
+        <ScreenHeader
+          title="Profile"
+          // Live, like every other masthead: the one fact this screen controls.
+          subtitle={
+            profile.zip
+              ? `Searching within ${profile.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES} miles of ${profile.zip}`
+              : 'Your details, and how Frontline searches for you'
+          }
+          action={
+            <HeaderButton icon="pencil" label="Edit profile" onPress={() => setEditing(true)} />
+          }
+        />
+      </Animated.View>
 
-      <View style={styles.hero}>
+      <Animated.View entering={riseIn(stagger.step, rise.md)} style={styles.hero}>
         <View style={styles.avatarRing}>
           <View style={styles.avatar}>
             <AppText variant="display" style={styles.avatarText}>
@@ -254,44 +313,51 @@ export default function ProfileScreen() {
             {VETERAN_ROLE_LABELS[profile.role]}
           </AppText>
         ) : null}
-      </View>
+      </Animated.View>
 
-      <Card style={styles.infoCard}>
-        <InfoRow icon="location-outline" label="ZIP code" value={profile.zip || 'Not set'} />
-        <InfoRow
-          icon="navigate-outline"
-          label="Search radius"
-          value={
-            profile.preferredRadiusMiles
-              ? `${profile.preferredRadiusMiles} miles`
-              : `${DEFAULT_RADIUS_MILES} miles (default)`
-          }
-        />
-        <InfoRow
-          icon="folder-open-outline"
-          label="Documents"
-          value={documentsSummary(storedDocs)}
-          last
-        />
-      </Card>
+      <Animated.View entering={riseIn(stagger.step * 2, rise.md)}>
+        <Card style={styles.infoCard}>
+          <InfoRow icon="location-outline" label="ZIP code" value={profile.zip || 'Not set'} />
+          <InfoRow
+            icon="navigate-outline"
+            label="Search radius"
+            value={
+              profile.preferredRadiusMiles
+                ? `${profile.preferredRadiusMiles} miles`
+                : `${DEFAULT_RADIUS_MILES} miles (default)`
+            }
+          />
+          <InfoRow
+            icon="folder-open-outline"
+            label="Documents"
+            value={documentsSummary(storedDocs)}
+            last
+          />
+        </Card>
+      </Animated.View>
 
       <View style={styles.spacer} />
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={confirmReset}
-        hitSlop={8}
-        style={({ pressed }) => [styles.reset, pressed && styles.resetPressed]}
-      >
-        <Ionicons name="refresh-outline" size={16} color={colors.danger} />
-        <AppText variant="label" style={styles.resetLabel}>
-          Reset setup
-        </AppText>
-      </Pressable>
+      <Animated.View entering={riseIn(stagger.step * 3)}>
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel="Reset setup"
+          onPress={confirmReset}
+          scaleTo={pressScale.chip}
+          containerStyle={styles.resetSlot}
+          style={styles.reset}
+        >
+          <Ionicons name="refresh-outline" size={16} color={colors.danger} />
+          <AppText variant="label" style={styles.resetLabel}>
+            Reset setup
+          </AppText>
+        </PressableScale>
 
-      <AppText variant="caption" color="textMuted" style={styles.footNote}>
-        Frontline never asks for sensitive information.
-      </AppText>
+        <AppText variant="caption" color="textMuted" style={styles.footNote}>
+          Frontline never asks for your Social Security number, VA login, bank details, or
+          diagnoses.
+        </AppText>
+      </Animated.View>
     </ScreenContainer>
   );
 }
@@ -307,19 +373,21 @@ function HeaderButton({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonPressed]}
+      scaleTo={pressScale.control}
+      style={styles.headerButton}
     >
       <Ionicons name={icon} size={18} color={colors.accent} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
-// One line of the at-a-glance card: olive icon chip, label, current value.
+// One line of the at-a-glance card: a quiet glyph, label, current value. The
+// glyph is bare and secondary-ink on purpose — these rows are facts, not
+// actions, and olive is reserved for things that do something when tapped.
 function InfoRow({
   icon,
   label,
@@ -333,9 +401,7 @@ function InfoRow({
 }) {
   return (
     <View style={[styles.infoRow, !last && styles.infoRowDivider]}>
-      <View style={styles.infoIcon}>
-        <Ionicons name={icon} size={15} color={colors.accent} />
-      </View>
+      <Ionicons name={icon} size={16} color={colors.textSecondary} />
       <AppText variant="body" color="textSecondary">
         {label}
       </AppText>
@@ -346,21 +412,19 @@ function InfoRow({
   );
 }
 
+// A form group: the shared section heading over its controls.
 function Section({
   icon,
-  label,
+  title,
   children,
 }: {
   icon: IconName;
-  label: string;
+  title: string;
   children: ReactNode;
 }) {
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Ionicons name={icon} size={16} color={colors.accent} />
-        <AppText variant="subtitle">{label}</AppText>
-      </View>
+      <SectionHeader size="subtitle" icon={icon} title={title} />
       {children}
     </View>
   );
@@ -368,15 +432,15 @@ function Section({
 
 const styles = StyleSheet.create({
   viewContent: { flexGrow: 1 },
+  // 44, the floor every other control meets; it was 40 plus hitSlop.
   headerButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accentSoft,
   },
-  headerButtonPressed: { opacity: 0.6 },
   hero: {
     alignItems: 'center',
     gap: spacing.xs,
@@ -409,28 +473,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  infoIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-  },
   infoValue: { flex: 1, textAlign: 'right' },
   form: { gap: spacing.xl, marginBottom: spacing.xl },
   section: { gap: spacing.sm },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   spacer: { flex: 1 },
+  resetSlot: { alignSelf: 'center' },
   reset: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.lg,
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     marginTop: spacing.sm,
   },
-  resetPressed: { opacity: 0.6 },
-  resetLabel: { color: colors.danger },
+  // The text-grade red, as `CrisisBanner` uses for the same job.
+  resetLabel: { color: colors.dangerText },
   footNote: { marginTop: spacing.sm, textAlign: 'center' },
 });

@@ -1,7 +1,9 @@
 import { View, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { NotConfiguredError, SupabaseRequestError } from '@/services/supabase/client';
-import { colors, spacing, radii } from '@/theme';
+import { colors, rise, spacing, radii } from '@/theme';
+import { riseIn } from '@/theme/motionPresets';
 import { AppText } from './AppText';
 import { PrimaryButton } from './PrimaryButton';
 
@@ -48,12 +50,15 @@ export function describeDataError(error: unknown): { title: string; message: str
       message: 'The connection timed out. Check your signal and try again.',
     };
   }
-  // React Native surfaces a failed connection as a TypeError.
+  // React Native surfaces a failed connection as a TypeError — which covers a
+  // phone with no signal *and* a service that is not answering. The copy used to
+  // assume the first ("You seem to be offline"), which told a veteran with full
+  // bars that their connection was the problem.
   if (error instanceof TypeError) {
     return {
-      title: 'You seem to be offline',
+      title: 'We couldn’t reach Frontline',
       message:
-        'Frontline needs a connection to find resources near you. Check your signal and try again.',
+        'Our service didn’t answer. Check your connection and try again in a moment — if your signal is fine, the problem is on our side.',
     };
   }
   return {
@@ -69,9 +74,9 @@ export function ErrorState({ title, message, error, onRetry }: ErrorStateProps) 
   const heading = title ?? described.title;
   const body = message ?? described.message;
   return (
-    <View style={styles.root}>
+    <Animated.View entering={riseIn(0, rise.md)} style={styles.root}>
       <View style={styles.iconWrap}>
-        <Ionicons name="alert-circle-outline" size={26} color={colors.danger} />
+        <Ionicons name="alert-circle-outline" size={28} color={colors.danger} />
       </View>
       <AppText variant="heading" style={styles.center}>
         {heading}
@@ -87,7 +92,7 @@ export function ErrorState({ title, message, error, onRetry }: ErrorStateProps) 
           style={styles.action}
         />
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -98,9 +103,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
   },
+  // 64, the same disc as `EmptyState`: the two states are siblings and were a
+  // different size for no reason anyone could name.
   iconWrap: {
-    width: 56,
-    height: 56,
+    width: 64,
+    height: 64,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',

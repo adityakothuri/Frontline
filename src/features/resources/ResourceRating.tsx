@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { AppText, PressableScale } from '@/components';
+import { colors, pressScale, radii, spacing } from '@/theme';
+import { tapSelection } from '@/lib/haptics';
 import { useActivity } from '@/services/activity';
 import { ratingsService, EMPTY_RATING, type RatingAggregate } from '@/services/ratings';
 import { getDeviceId } from '@/services/sync/deviceId';
@@ -87,37 +88,44 @@ function ThumbButton({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected }}
-      onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => [
-        styles.thumb,
-        selected && styles.thumbSelected,
-        pressed && styles.pressed,
-      ]}
+      onPress={() => {
+        tapSelection();
+        onPress();
+      }}
+      scaleTo={pressScale.control}
+      style={[styles.thumb, selected && styles.thumbSelected]}
     >
       <Ionicons
         name={selected ? icon : (`${icon}-outline` as const)}
         size={16}
         color={selected ? colors.accent : colors.textSecondary}
       />
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  votes: { flexDirection: 'row', gap: spacing.xs },
+  // 8pt between two adjacent 44pt targets, the same gap the Home review card
+  // keeps between its thumbs.
+  votes: { flexDirection: 'row', gap: spacing.sm },
+  // A real 44pt target. It was a 16pt glyph with 4pt of padding — 24pt, the
+  // smallest control in the app, topped up with hitSlop nobody can see.
   thumb: {
-    padding: spacing.xs,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radii.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surfaceMuted,
   },
-  thumbSelected: { borderColor: colors.accent, backgroundColor: colors.surface },
-  pressed: { opacity: 0.6 },
+  // The same selected treatment as the Home review card's thumbs: one control,
+  // one look.
+  thumbSelected: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
 });

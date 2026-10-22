@@ -1,18 +1,12 @@
 import { useEffect, type ReactNode } from 'react';
-import {
-  View,
-  ScrollView,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-} from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PrimaryButton } from '@/components';
-import { colors, durations, radii, rise, spacing, withAlpha } from '@/theme';
+import { AppText, PressableScale, PrimaryButton } from '@/components';
+import { colors, durations, pressScale, radii, rise, spacing, withAlpha } from '@/theme';
 import { easings, riseIn } from '@/theme/motionPresets';
+import { tapImpact } from '@/lib/haptics';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -84,15 +78,15 @@ export function OnboardingStep({
       >
         <View style={styles.topBar}>
           {onBack ? (
-            <Pressable
+            <PressableScale
               accessibilityRole="button"
               accessibilityLabel="Back"
               onPress={onBack}
-              hitSlop={10}
-              style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+              scaleTo={pressScale.control}
+              style={styles.backBtn}
             >
               <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-            </Pressable>
+            </PressableScale>
           ) : (
             <View style={styles.backBtn} />
           )}
@@ -133,21 +127,25 @@ export function OnboardingStep({
         <View style={styles.footer}>
           <PrimaryButton
             label={continueLabel}
-            onPress={onContinue}
+            onPress={() => {
+              tapImpact();
+              onContinue();
+            }}
             disabled={!canContinue}
             loading={loading}
           />
           {onSkip ? (
-            <Pressable
+            <PressableScale
               accessibilityRole="button"
               onPress={onSkip}
-              hitSlop={8}
-              style={({ pressed }) => [styles.skip, pressed && styles.pressed]}
+              scaleTo={pressScale.chip}
+              containerStyle={styles.skipSlot}
+              style={styles.skip}
             >
               <AppText variant="label" color="textMuted">
                 Skip for now
               </AppText>
-            </Pressable>
+            </PressableScale>
           ) : null}
         </View>
       </KeyboardAvoidingView>
@@ -166,7 +164,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     marginBottom: spacing.md,
   },
-  backBtn: { width: 32, height: 32, alignItems: 'flex-start', justifyContent: 'center' },
+  // A real 44pt target, glyph kept to the leading edge so it lines up with the
+  // content gutter below it.
+  backBtn: { width: 44, height: 44, alignItems: 'flex-start', justifyContent: 'center' },
   track: {
     height: 4,
     borderRadius: radii.pill,
@@ -187,7 +187,14 @@ const styles = StyleSheet.create({
   title: { marginBottom: spacing.sm },
   subtitle: { maxWidth: 380 },
   content: { marginTop: spacing.xl },
-  footer: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.sm },
-  skip: { alignSelf: 'center', paddingVertical: spacing.xs },
-  pressed: { opacity: 0.6 },
+  // `paddingBottom` for devices with no home-indicator inset, where the footer
+  // used to sit flush against the bottom bezel.
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  skipSlot: { alignSelf: 'center' },
+  skip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md },
 });

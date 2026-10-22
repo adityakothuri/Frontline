@@ -1,19 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, FlatList, ScrollView, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AppText,
+  EmptyState,
   ErrorState,
   RefreshFailedBanner,
   NavigatorDisclaimer,
-  PrimaryButton,
   ScreenContainer,
   Skeleton,
 } from '@/components';
-import { colors, radii, spacing } from '@/theme';
-import { fadeIn, fadeOut, riseIn, stepDelay } from '@/theme/motionPresets';
+import { colors, radii, shadows, spacing } from '@/theme';
+import { fadeIn, riseIn, stepDelay } from '@/theme/motionPresets';
 import { useStaggerGate } from '@/hooks/useStaggerGate';
 import { useProfile } from '@/services/profile';
 import { demoteDownvoted, splitLocalsAndReferrals } from '@/services/resources';
@@ -24,9 +23,10 @@ import { ResourceCard } from '@/features/resources/ResourceCard';
 import { ReferralSection } from '@/features/resources/ReferralSection';
 import { ResourceMap } from '@/features/resources/ResourceMap';
 import { OfficialSourcesWidget } from '@/features/resources/OfficialSourcesWidget';
+import { officialSourcesFor } from '@/data/officialSources';
 import { ViewToggle, type ResultsView } from '@/features/resources/ViewToggle';
 import { resultsOf, useResourceSearch } from '@/features/resources/useResourceSearch';
-import { defaultNeedForCategory, NEED_CATEGORY_META, type NeedCategory } from '@/types/need';
+import { defaultNeedForCategory, isNeedCategory, NEED_CATEGORY_META } from '@/types/need';
 
 // Results for a category, as a list or a map of the same nearby resources. The
 // local opportunity finder is the focus; an "Official online sources" widget sits
@@ -34,14 +34,22 @@ import { defaultNeedForCategory, NEED_CATEGORY_META, type NeedCategory } from '@
 export default function ResultsScreen() {
   const router = useRouter();
   const { profile, isHydrated: isProfileHydrated } = useProfile();
-  const params = useLocalSearchParams<{ category: NeedCategory }>();
+  const params = useLocalSearchParams<{ category?: string }>();
+  // Validated before anything trusts it. An unknown category used to reach the
+  // RPC as `categories: null` — every row in range, under a title of "Resources".
+  const category = isNeedCategory(params.category) ? params.category : null;
+  useEffect(() => {
+    if (category === null) router.replace('/discover');
+  }, [category, router]);
 
   const need = useMemo(
-    () => defaultNeedForCategory(params.category, profile?.zip, profile?.preferredRadiusMiles),
-    [params.category, profile?.zip, profile?.preferredRadiusMiles],
+    () =>
+      defaultNeedForCategory(category ?? 'essentials', profile?.zip, profile?.preferredRadiusMiles),
+    [category, profile?.zip, profile?.preferredRadiusMiles],
   );
 
-  const { state, reload } = useResourceSearch(need, isProfileHydrated);
+  // Disabled while the param is bad, so the placeholder need above never fetches.
+  const { state, reload } = useResourceSearch(need, isProfileHydrated && category !== null);
   const { getRating } = useActivity();
   const [view, setView] = useState<ResultsView>('list');
   // Only the first screenful of a fresh result set gets a staggered entrance.
@@ -98,7 +106,8 @@ export default function ResultsScreen() {
     />
   );
 
-  const categoryLabel = NEED_CATEGORY_META[need.category]?.label ?? 'Resources';
+  const categoryLabel = NEED_CATEGORY_META[need.category].label;
+  const radiusMiles = need.location.radiusMiles;
   // The Emergency path routes to real crisis lines before anything else — the
   // banner must survive every branch (list, map, empty), so it's decided once.
   const isEmergency = need.category === 'emergency';
@@ -111,7 +120,9 @@ export default function ResultsScreen() {
   // the map's off-map note instead of as a pin.
   if (locals.length > 0 && view === 'map') {
     return (
-      <Animated.View entering={fadeIn()} exiting={fadeOut()} style={styles.mapScreen}>
+      // Not an `Animated.View`: a native map mounted inside an entering animation
+      // can paint blank on first open. `ResourceMap` owns its own reveal.
+      <View style={styles.mapScreen}>
         <Stack.Screen options={{ title: categoryLabel }} />
         {isEmergency ? (
           <View style={styles.mapCrisis}>
@@ -139,12 +150,16 @@ export default function ResultsScreen() {
             <ViewToggle value={view} onChange={changeView} />
           </View>
         </View>
-      </Animated.View>
+      </View>
     );
   }
 
+  if (category === null) return null;
+
   return (
-    <ScreenContainer>
+    // Both edges: this is a pushed screen with no tab bar under it, so the last
+    // card and the disclaimer used to sit against the home indicator.
+    <ScreenContainer edges={['top', 'bottom']}>
       <Stack.Screen options={{ title: categoryLabel }} />
       {/* Crisis routing depends on nothing async — it must survive loading and
           error states too, not just results. */}
@@ -156,23 +171,18 @@ export default function ResultsScreen() {
         <ErrorState error={state.error} onRetry={reload} />
       ) : referrals.length + locals.length === 0 ? (
         <ScrollView contentContainerStyle={styles.emptyScroll} showsVerticalScrollIndicator={false}>
+          {/* The shared `EmptyState`, not a third hand-rolled disc. The label is
+              used verbatim — lower-casing it turned "Disability & VA benefits"
+              into "va benefits". "Change ZIP or radius" lands in edit mode:
+              "update" that drops you on a read-only card is one more tap than the
+              word promised. */}
           <View style={styles.emptyMsg}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="location-outline" size={26} color={colors.textSecondary} />
-            </View>
-            <AppText variant="heading" style={styles.center}>
-              No {categoryLabel.toLowerCase()} resources nearby
-            </AppText>
-            <AppText variant="body" color="textSecondary" style={styles.emptyText}>
-              We couldn&apos;t find local {categoryLabel.toLowerCase()} resources
-              {profile?.zip ? ` near ${profile.zip}` : ''}. Try updating your location — and the
-              official sources below can still help.
-            </AppText>
-            <PrimaryButton
-              label="Update location"
-              variant="secondary"
-              onPress={() => router.push('/profile')}
-              style={styles.emptyBtn}
+            <EmptyState
+              icon="location-outline"
+              title={`Nothing nearby for ${categoryLabel}`}
+              message={`We looked within ${radiusMiles} miles${profile?.zip ? ` of ${profile.zip}` : ''} and didn’t find a local match. A wider radius or a nearby ZIP usually finds more${officialSourcesFor(need.category).length > 0 ? ' — and the official sources below can help right now.' : '.'}`}
+              actionLabel="Change ZIP or radius"
+              onAction={() => router.push({ pathname: '/profile', params: { edit: '1' } })}
             />
           </View>
           <OfficialSourcesWidget category={need.category} />
@@ -186,7 +196,8 @@ export default function ResultsScreen() {
           <View style={styles.headerRow}>
             <AppText variant="body" color="textSecondary">
               {referrals.length + locals.length}{' '}
-              {referrals.length + locals.length === 1 ? 'resource' : 'resources'}
+              {referrals.length + locals.length === 1 ? 'place' : 'places'} that can help
+              {profile?.zip ? ` near ${profile.zip}` : ''}
             </AppText>
             {/* No toggle when nothing is mappable — a map of zero pins is a dead end. */}
             {locals.length > 0 ? <ViewToggle value={view} onChange={changeView} /> : null}
@@ -249,28 +260,22 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   list: { gap: spacing.md, paddingBottom: spacing.xl },
   emptyScroll: { paddingBottom: spacing.xl },
-  emptyMsg: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xxl },
-  emptyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-  },
-  center: { textAlign: 'center' },
-  emptyText: { textAlign: 'center', maxWidth: 320 },
-  emptyBtn: { marginTop: spacing.md, paddingHorizontal: spacing.xxl },
+  emptyMsg: { paddingVertical: spacing.xxl },
   mapScreen: { flex: 1, backgroundColor: colors.background },
   crisis: { marginBottom: spacing.lg },
   mapCrisis: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
   // Keeps the floating toggle anchored to the map, not the screen, so the
   // crisis banner above can't sit under it.
   mapWrap: { flex: 1 },
-  toggleFloat: { position: 'absolute', top: spacing.sm, right: spacing.md },
+  // Floats over cartography, so it earns the elevation tier the design system
+  // sets aside for exactly that ("floating controls / framed map").
+  toggleFloat: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.md,
+    borderRadius: radii.md,
+    ...shadows.md,
+  },
   disclaimer: { marginTop: spacing.lg },
   skeletons: { gap: spacing.md },
   skeletonCard: {

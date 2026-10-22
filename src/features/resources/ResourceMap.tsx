@@ -5,7 +5,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, EmptyState, PressableScale } from '@/components';
-import { colors, pressScale, radii, shadows, spacing, springs, timings } from '@/theme';
+import { colors, durations, pressScale, radii, shadows, spacing, springs, timings } from '@/theme';
+import { fadeOut } from '@/theme/motionPresets';
 import { mapStyle, MAP_CHROME_EDGE, MAP_PAPER } from '@/theme/mapStyle';
 import { tapSelection } from '@/lib/haptics';
 import { resourceToNeedCategory, type ResourceSearchResult } from '@/services/resources';
@@ -118,10 +119,25 @@ export function ResourceMap({
   const { status, locate, coordinates } = useUserLocation(profile?.zip, focused);
   const [hint, setHint] = useState<string | null>(null);
   const [recentering, setRecentering] = useState(false);
-  // Gate the focus animation: an animateToRegion issued before the native map is
-  // ready can be dropped (notably on Android), so we wait for onMapReady.
-  const [mapReady, setMapReady] = useState(false);
-  // The map's own height — what bounds how far the controls may lift.
+  // Two readiness signals, deliberately kept apart.
+  //
+  // `ready` is the native map saying so (`onMapReady`, or `onMapLoaded` where a
+  // provider emits it). Pins, the puck and every camera command wait for it, and
+  // that is not negotiable: on Android a `Marker` added before `onMapReady` hits a
+  // `markerCollection` that does not exist yet — a native crash — and
+  // `animateToRegion` / `fitToCoordinates` are silently dropped.
+  //
+  // `revealed` is whether the paper veil has lifted. It flips with `ready`, or
+  // when `timings.mapReadyBudget` runs out after the container has a size —
+  // whichever is first. On a slow connection or a cold tile cache the native map
+  // can take seconds to call itself ready; a veteran should see the map standing
+  // up underneath rather than a sheet of paper, and the pins arrive the moment the
+  // map can hold them. An earlier cut let the budget flip `ready` itself, which is
+  // exactly the Android crash above.
+  const [ready, setReady] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  // The map's own height — what bounds how far the controls may lift, and the
+  // signal that the reveal fallback and the first camera fit may run at all.
   const [mapHeight, setMapHeight] = useState(0);
   // How much pin the current zoom earns. This is the *only* piece of camera
   // state allowed to live in React, and it earns that by changing at most twice
@@ -181,7 +197,7 @@ export function ResourceMap({
       focusedRef.current = null;
       return;
     }
-    if (!mapReady || focusedRef.current === selectedId) return;
+    if (!ready || focusedRef.current === selectedId) return;
     const target = located.find((r) => r.resource.id === selectedId);
     if (!target) return;
     focusedRef.current = selectedId;
@@ -194,7 +210,7 @@ export function ResourceMap({
       },
       timings.mapFocus,
     );
-  }, [selectedId, located, mapReady]);
+  }, [selectedId, located, ready]);
 
   const fitToPins = ({ animated = false }: { animated?: boolean } = {}) => {
     // A pre-selected pin *that exists in this set* owns the camera (the focus
@@ -247,19 +263,49 @@ export function ResourceMap({
   };
 
   // Re-frame the camera when the screen says the *place* changed, not merely the
-  // pins. Skipped on the first run: `onMapReady` already fits, and doing it twice
-  // races the initial fit against itself.
+  // pins. Skipped on the first run: the first fit below already frames, and doing
+  // it twice races the initial fit against itself.
   const fitTokenRef = useRef(fitToken);
   useEffect(() => {
     if (fitTokenRef.current === fitToken) return;
     fitTokenRef.current = fitToken;
-    if (!mapReady) return;
+    if (!ready) return;
     fitToPins({ animated: true });
     // `fitToPins` is redefined every render and is intentionally not a
     // dependency; the token is the trigger, and it closes over the current
     // `located` because this effect re-runs after the results that changed it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitToken, mapReady]);
+  }, [fitToken, ready]);
+
+  // The reveal. Lifts with readiness, or on the budget once the container has a
+  // size — a timer started on mount would fire over a zero-height map on a slow
+  // first layout. It only ever lifts the veil; see the note on the two signals.
+  useEffect(() => {
+    if (revealed) return;
+    if (ready) {
+      setRevealed(true);
+      return;
+    }
+    if (mapHeight === 0) return;
+    const timer = setTimeout(() => setRevealed(true), timings.mapReadyBudget);
+    return () => clearTimeout(timer);
+  }, [ready, revealed, mapHeight]);
+
+  // The first framing, exactly once, and only when *both* conditions hold: the
+  // map is ready and the container has reported a height. This used to run
+  // inside `onMapReady`, which says nothing about layout — `fitToCoordinates`
+  // against a frame that has not been measured yet fits nothing, and the camera
+  // stayed on the first pin's 0.4° guess.
+  const framedRef = useRef(false);
+  useEffect(() => {
+    if (framedRef.current || !ready || mapHeight === 0) return;
+    framedRef.current = true;
+    fitToPins();
+    // `fitToPins` closes over the `located` that was current when readiness
+    // landed, which is the set worth framing. Not a dependency for the same
+    // reason as the token effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, mapHeight]);
 
   // Zoom by scaling the current region's span (factor < 1 zooms in), clamped.
   const zoomBy = (factor: number) => {
@@ -368,11 +414,11 @@ export function ResourceMap({
   // written to avoid, and it was arriving through a different branch.
   //
   // The empty state is still right the *first* time — a result set with no
-  // coordinates at all has no map to show and never will. `mapReady` is the test
-  // for "has one already": it can only be true if a `MapView` mounted and the
-  // native map finished standing up, and it survives every prop change short of
+  // coordinates at all has no map to show and never will. `ready` is the test
+  // for "has one already": it can only be true if a `MapView` mounted and either
+  // stood up or outlasted its budget, and it survives every prop change short of
   // this component unmounting.
-  if (located.length === 0 && !mapReady) {
+  if (located.length === 0 && !ready) {
     return (
       // No action here: on Results the list is one toggle away, and the Map tab
       // catches this case before it reaches us (`nothingMappable` in `map.tsx`),
@@ -410,10 +456,13 @@ export function ResourceMap({
           bottom: bottomInset + (selected ? previewHeight + spacing.md : 0),
           left: 0,
         }}
-        onMapReady={() => {
-          setMapReady(true);
-          fitToPins();
-        }}
+        // Either callback marks the map usable; the first fit runs from the
+        // effect above once layout is also known. `onMapLoaded` is the later,
+        // tiles-rendered signal — emitted by Google Maps on both platforms and
+        // not by Apple Maps, so on the iOS build it is a harmless no-op kept for
+        // the Android provider.
+        onMapReady={() => setReady(true)}
+        onMapLoaded={() => setReady(true)}
         // A ref assignment, and one comparison that almost never commits. No
         // other state changes here, so panning the map re-renders no markers.
         // See the note on `regionRef` above.
@@ -454,7 +503,7 @@ export function ResourceMap({
             tapping a dot flipped its key `…:dot` → `…:pin`, unmounting the marker
             from inside its own press handler. Red screen on every tap from any
             zoomed-out view. Read `pinKey.ts` before touching this line. */}
-        {mapReady
+        {ready
           ? located.map((result) => (
               <CategoryPin
                 key={pinKey(result, pinTier)}
@@ -466,8 +515,24 @@ export function ResourceMap({
             ))
           : null}
 
-        {mapReady && coordinates ? <UserPuck coordinate={coordinates} /> : null}
+        {ready && coordinates ? <UserPuck coordinate={coordinates} /> : null}
       </MapView>
+
+      {/* The reveal. A sheet of paper over the map that lifts once the map is
+          ready — or once the budget says the veteran has waited long enough to
+          be shown the map standing up — so the first thing they see is pins
+          arriving on a settled map rather than tiles popping in one by one under
+          an empty frame. It is an overlay *on* the map and not an entering
+          animation on the map's parent, because a native `MKMapView` mounted
+          inside a layout animation can paint blank on first open — the exact bug
+          this replaces. Reduce Motion resolves the exit straight to its end. */}
+      {revealed ? null : (
+        <Animated.View
+          exiting={fadeOut(durations.reveal)}
+          pointerEvents="none"
+          style={styles.veil}
+        />
+      )}
 
       {offMapCount > 0 ? (
         <View style={[styles.note, { top: topInset + spacing.sm }]}>
@@ -579,6 +644,14 @@ const styles = StyleSheet.create({
   // Fills whatever container the screen gives it (the whole screen on the Map
   // tab, the area under the header on Results).
   root: { flex: 1 },
+  veil: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.background,
+  },
   // Zoom and recenter as one continuous instrument: a single housing, three
   // 48pt cells, hairline dividers. They were previously two separate boxes that
   // agreed on width, radius, border and elevation and still read as two objects

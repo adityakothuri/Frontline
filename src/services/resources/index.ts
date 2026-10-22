@@ -11,6 +11,7 @@ export {
 } from './sortResults';
 export type { SplitResults } from './sortResults';
 export { invalidateResourceCache } from './resourceCache';
+export { browseCountCap } from './supabaseResourceService';
 
 /**
  * The app's resource service — the REAL Supabase backend, always. There is no

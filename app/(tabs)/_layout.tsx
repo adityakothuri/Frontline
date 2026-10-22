@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, durations, fonts, radii, springs } from '@/theme';
+import { colors, durations, fonts, radii, springs, textVariants } from '@/theme';
 import { easings } from '@/theme/motionPresets';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -94,13 +94,21 @@ export default function TabsLayout() {
         headerShown: false,
         // Cross-fade between tabs ('shift' shimmers against the native map view).
         animation: 'fade',
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textMuted,
+        // Measured, not styled: on `backgroundElevated` the 12pt labels failed
+        // AA in both states (accent 4.41:1, textMuted 4.32:1). On the page's own
+        // paper, with the text-grade olive, the active label is 6.52:1 and the
+        // resting one `textSecondary`. The pill behind the glyph keeps the
+        // brand olive. The bar also stops being a second shade under the app.
+        tabBarActiveTintColor: colors.accentPressed,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: colors.backgroundElevated,
+          backgroundColor: colors.background,
+          borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
         },
-        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 11 },
+        // On the type scale rather than a raw 11 — the one size in the app that
+        // was not a token.
+        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: textVariants.caption.fontSize },
       }}
     >
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tab('home') }} />

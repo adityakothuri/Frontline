@@ -82,6 +82,23 @@ describe('timings', () => {
     ).toBeGreaterThanOrEqual(finale);
   });
 
+  it('gives the map veil a fallback that outlasts its own reveal', () => {
+    // `ResourceMap` lifts its paper veil when the native map says it is ready *or*
+    // when this budget runs out after layout (the budget never gates the pins —
+    // those wait for the native map). Below the reveal fade, the fallback would
+    // fire inside the veil's own animation and the two would fight; past one
+    // shield lap, a veteran stares at paper longer than they waited for the data.
+    expect(timings.mapReadyBudget).toBeGreaterThan(durations.reveal);
+    expect(timings.mapReadyBudget).toBeLessThan(loops.shieldTrace);
+  });
+
+  it('lets a chat reply arrive before the thinking label changes', () => {
+    // The label change exists to cover a long wait; a quick reply should land
+    // on the first label, after a whole entrance has had time to finish.
+    expect(timings.askPatience).toBeGreaterThan(durations.entrance);
+    expect(timings.askPatience).toBeGreaterThan(loops.pulseLeg * 2);
+  });
+
   it('holds the launch intro for less than one lap of the shield', () => {
     // The waiting arc never resolves, so there is no frame the intro could be
     // waiting *for* — but holding past a full lap means watching the same sweep

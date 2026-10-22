@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -12,13 +12,15 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, Card, CategoryMedallion, PressableScale } from '@/components';
 import { formatDistance } from '@/lib/geo';
-import { colors, durations, radii, spacing, springs, surfaceTint } from '@/theme';
+import { colors, durations, pressScale, radii, spacing, springs, surfaceTint } from '@/theme';
 import { easings } from '@/theme/motionPresets';
+import { tapSelection } from '@/lib/haptics';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
 import { useSaved } from '@/services/saved';
 import { useReminders } from '@/services/reminders';
+import { ActionPill } from './ActionPill';
 import { ReminderBell, confirmUnsaveWithReminder } from './ReminderBell';
 import { callPhone, openDirections } from './resourceActions';
 import { openNowStatus } from './resourceStatus';
@@ -26,8 +28,6 @@ import { SeeInMapButton } from './SeeInMapButton';
 import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
 import { VeteranBadge } from './VeteranBadge';
-
-type IoniconName = keyof typeof Ionicons.glyphMap;
 
 type ResourceCardProps = {
   result: ResourceSearchResult;
@@ -77,12 +77,16 @@ function SaveButton({ saved, onToggle }: { saved: boolean; onToggle: () => void 
   }));
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
       accessibilityState={{ selected: saved }}
-      onPress={onToggle}
-      style={({ pressed }) => [styles.bookmark, pressed && styles.bookmarkPressed]}
+      onPress={() => {
+        tapSelection();
+        onToggle();
+      }}
+      scaleTo={pressScale.control}
+      style={styles.bookmark}
     >
       <Animated.View style={[styles.saveRing, ringStyle]} pointerEvents="none" />
       <Animated.View style={glyphStyle}>
@@ -92,7 +96,7 @@ function SaveButton({ saved, onToggle }: { saved: boolean; onToggle: () => void 
           color={saved ? colors.accent : colors.textMuted}
         />
       </Animated.View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -130,11 +134,11 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
   };
 
   return (
-    <PressableScale
-      accessibilityRole="button"
-      accessibilityLabel={`View details for ${resource.name}`}
-      onPress={openDetail}
-    >
+    // `accessible={false}` on the outer target: a `Pressable` is accessible by
+    // default and collapses its subtree into one VoiceOver element, which made
+    // Call, Directions, See in map and the bookmark unreachable individually.
+    // The "View details" hint below is the card's own accessible target instead.
+    <PressableScale accessible={false} onPress={openDetail}>
       <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
         <View style={styles.header}>
           <CategoryMedallion icon={meta.icon} color={meta.color} size={44} />
@@ -166,7 +170,7 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
           </View>
         </View>
 
-        <AppText variant="subtitle" numberOfLines={2} style={styles.name}>
+        <AppText variant="cardTitle" numberOfLines={2} style={styles.name}>
           {resource.name}
         </AppText>
 
@@ -186,23 +190,34 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
 
         <View style={styles.divider} />
 
+        {/* The same `ActionPill` the detail page and the map preview use. The
+            card had its own 34pt rectangle version — under the 44pt floor, and a
+            second shape for the same action. Quiet rather than `primary` here on
+            purpose: a filled olive Call on every card in a list is a column of
+            primary actions; the detail page, which is about one place, gets the
+            filled one. */}
         <View style={styles.actions}>
           {resource.phone ? (
-            <ActionButton
+            <ActionPill
               icon="call-outline"
               label="Call"
               onPress={() => callPhone(resource.phone as string)}
             />
           ) : null}
           {hasDirections ? (
-            <ActionButton
+            <ActionPill
               icon="navigate-outline"
               label="Directions"
               onPress={() => openDirections(resource)}
             />
           ) : null}
           <SeeInMapButton resource={resource} variant="card" onPress={seeInMap} />
-          <View style={styles.detailHint}>
+          <View
+            style={styles.detailHint}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`View details for ${resource.name}`}
+          >
             <AppText variant="label" color="textSecondary">
               View details
             </AppText>
@@ -211,27 +226,6 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
         </View>
       </Card>
     </PressableScale>
-  );
-}
-
-function ActionButton({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: IoniconName;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-    >
-      <Ionicons name={icon} size={16} color={colors.accent} />
-      <AppText variant="label">{label}</AppText>
-    </Pressable>
   );
 }
 
@@ -254,7 +248,6 @@ const styles = StyleSheet.create({
   // padding, so a gap here would push the cluster into the title.
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   bookmark: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  bookmarkPressed: { opacity: 0.5 },
   saveRing: {
     position: 'absolute',
     width: 30,
@@ -277,18 +270,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceMuted,
-  },
-  actionPressed: { opacity: 0.7 },
   detailHint: {
     flexDirection: 'row',
     alignItems: 'center',

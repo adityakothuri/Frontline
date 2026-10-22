@@ -1,18 +1,25 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, {
   cancelAnimation,
-  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Skeleton } from '@/components';
+import { AiMark, AiWash, AppText, PressableScale, Skeleton } from '@/components';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { colors, loops, radii, shadows, spacing, stagger, surfaceTint, withAlpha } from '@/theme';
+import {
+  colors,
+  loops,
+  pressScale,
+  radii,
+  shadows,
+  spacing,
+  stagger,
+  surfaceTint,
+  withAlpha,
+} from '@/theme';
 import { easings, riseIn } from '@/theme/motionPresets';
 
 type AiContentBlockProps = {
@@ -38,19 +45,20 @@ type AiContentBlockProps = {
 // "AI-generated" tag is the block's one label; the longer not-advice disclaimer
 // is deliberately not repeated per block.
 //
-// The surface is washed with the category hue so the guidance belongs to the
-// resource it sits under — but deliberately at HALF the detail hero's strength
+// The surface is tinted with the category hue so the guidance belongs to the
+// resource it sits under — deliberately at HALF the detail hero's strength
 // (0.07 vs 0.14), because at equal strength the block became indistinguishable
 // from the hero and "is this the source or the model?" stopped being visible.
-// The sparkles glyph and the shadow stay constant across categories: they, not
-// the hue, are what says "this is AI".
+// Over that tint lies the AI wash, and in the header sits the AI mark: those two
+// and the border stay constant across categories, and they, not the hue, are
+// what says "this is AI" — the same three tells as a reply bubble in Ask.
 //
 // Two AI blocks sit on a resource page and resolve on their own schedules, so
-// the block owns the whole wait: the sparkle breathes while the model works,
-// the skeleton bars ripple instead of blinking in unison, and content fades and
-// rises in on arrival — which is what stops one block filling in beside a still-
-// empty neighbour from reading as a layout glitch. All of it degrades to a
-// static state under reduce-motion.
+// the block owns the whole wait: the mark breathes and the wash drifts while
+// the model works, the skeleton bars ripple instead of blinking in unison, and
+// content fades and rises in on arrival — which is what stops one block filling
+// in beside a still-empty neighbour from reading as a layout glitch. All of it
+// degrades to a static state under reduce-motion.
 export function AiContentBlock({
   title,
   color = colors.accent,
@@ -60,43 +68,14 @@ export function AiContentBlock({
   onRetry,
   children,
 }: AiContentBlockProps) {
-  const reduced = useReducedMotion();
   // Callers derive `loading` from "no data yet", which stays true after a
   // failure — so the retry state, not the skeletons, decides when we're waiting.
   const busy = loading && !failed;
-
-  // The sparkle is already the block's "this is AI" mark — breathing that glyph
-  // says the model is working without adding new furniture to the card.
-  const breath = useSharedValue(0);
-  useEffect(() => {
-    // A loop has no finished frame to snap to, so Reduce Motion is handled here
-    // by hand rather than by the library default.
-    if (!busy || reduced) {
-      cancelAnimation(breath);
-      breath.set(0);
-      return;
-    }
-    breath.set(
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: loops.breathLeg }),
-          withTiming(0, { duration: loops.breathLeg }),
-        ),
-        -1,
-      ),
-    );
-    // A loop keeps running on the UI thread unless it is cancelled.
-    return () => cancelAnimation(breath);
-  }, [breath, busy, reduced]);
 
   // 0.34, not the 0.28 this started at: the bars pulse down to 45% opacity, and
   // at the old strength the trough was faint enough on the tinted surface that
   // the block read as empty rather than working.
   const barColor = withAlpha(color, 0.34);
-  const breathStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(breath.get(), [0, 1], [1, 0.5]),
-    transform: [{ scale: interpolate(breath.get(), [0, 1], [1, 1.12]) }],
-  }));
 
   return (
     <View
@@ -104,15 +83,16 @@ export function AiContentBlock({
         styles.block,
         {
           backgroundColor: surfaceTint(color, 0.07, colors.background),
-          borderColor: withAlpha(color, 0.45),
+          // Olive, not the category hue: the border is one of the three AI
+          // tells shared with the Ask bubbles, and the hue already has the tint.
+          borderColor: withAlpha(colors.accent, 0.45),
         },
       ]}
     >
+      <AiWash tone="paper" live={busy} style={styles.corners} />
       {title ? (
         <View style={styles.header}>
-          <Animated.View style={breathStyle}>
-            <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
-          </Animated.View>
+          <AiMark size={18} breathing={busy} />
           <AppText variant="heading" style={styles.title}>
             {title}
           </AppText>
@@ -134,7 +114,8 @@ export function AiContentBlock({
           accessibilityRole="progressbar"
           accessibilityLabel={loadingLabel}
         >
-          <AppText variant="caption" color="textMuted">
+          {/* `textSecondary`: muted falls under AA on the wash. */}
+          <AppText variant="caption" color="textSecondary">
             {loadingLabel}
           </AppText>
           <SweepLine color={color} />
@@ -239,9 +220,9 @@ function SweepLine({ color }: { color: string }) {
 function RetryState({ title, onRetry }: { title?: string; onRetry?: () => void }) {
   const message = (
     <>
-      <AppText variant="body" color="danger">
-        Couldn’t load this.
-      </AppText>
+      {/* Ink, not red: red is for emergencies, a dropped request is not one,
+          and `danger` falls under AA on the washed tint anyway. */}
+      <AppText variant="body">Couldn’t load this.</AppText>
       {onRetry ? (
         <AppText variant="label" color="accentPressed">
           Tap to try again
@@ -260,14 +241,15 @@ function RetryState({ title, onRetry }: { title?: string; onRetry?: () => void }
 
   return (
     <Animated.View entering={riseIn()}>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={title ? `Try loading ${title} again` : 'Try loading this again'}
         onPress={onRetry}
-        style={({ pressed }) => [styles.retry, pressed && styles.pressed]}
+        scaleTo={pressScale.subtle}
+        style={styles.retry}
       >
         {message}
-      </Pressable>
+      </PressableScale>
     </Animated.View>
   );
 }
@@ -283,6 +265,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     ...shadows.sm,
   },
+  // The wash clips itself to the block's radius, so the block keeps its shadow.
+  corners: { borderRadius: radii.lg },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   title: { flexShrink: 1 },
   tag: { marginBottom: spacing.xs },
@@ -301,6 +285,5 @@ const styles = StyleSheet.create({
   body: { gap: spacing.sm, marginTop: spacing.xs },
   // Sits inside the block, so a failed call keeps its title and AI surface
   // rather than collapsing the card to a bare error row.
-  retry: { gap: spacing.xxs, paddingVertical: spacing.sm, marginTop: spacing.xs },
-  pressed: { opacity: 0.6 },
+  retry: { gap: spacing.xxs, minHeight: 44, paddingVertical: spacing.sm, marginTop: spacing.xs },
 });

@@ -1,6 +1,8 @@
 import { View, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radii } from '@/theme';
+import { colors, rise, spacing, radii } from '@/theme';
+import { riseIn } from '@/theme/motionPresets';
 import { AppText } from './AppText';
 import { PrimaryButton } from './PrimaryButton';
 
@@ -13,12 +15,14 @@ type EmptyStateProps = {
 };
 
 // A polished, reassuring empty state — not a blank screen. Orients the user and
-// says what will appear here once the feature is live.
+// says what will appear here once the feature is live. It arrives the way
+// content does (`riseIn`), because it *is* the content of a screen with nothing
+// to list — snapping in beside lists that rise read as a glitch.
 export function EmptyState({ icon, title, message, actionLabel, onAction }: EmptyStateProps) {
   return (
-    <View style={styles.root}>
+    <Animated.View entering={riseIn(0, rise.md)} style={styles.root}>
       <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={30} color={colors.accent} />
+        <Ionicons name={icon} size={28} color={colors.accent} />
       </View>
       <AppText variant="heading" style={styles.center}>
         {title}
@@ -34,7 +38,7 @@ export function EmptyState({ icon, title, message, actionLabel, onAction }: Empt
           style={styles.action}
         />
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

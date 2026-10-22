@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { colors, surfaceTint } from '@/theme';
 import { RESOURCE_CATEGORY_META, RESOURCE_CATEGORIES } from './resource';
-import { NEED_CATEGORY_META, NEED_CATEGORIES } from './need';
+import { isNeedCategory, NEED_CATEGORY_META, NEED_CATEGORIES } from './need';
 import { resourceToNeedCategory } from '@/services/resources/needMapping';
 
 /**
@@ -155,6 +155,27 @@ describe('category metadata', () => {
         const distance = deltaE(RESOURCE_CATEGORY_META[category].color, token);
         expect(distance, `${category} is too close to the "${name}" token`).toBeGreaterThan(12);
       }
+    }
+  });
+});
+
+describe('isNeedCategory', () => {
+  it('accepts every real category', () => {
+    for (const category of NEED_CATEGORIES) expect(isNeedCategory(category)).toBe(true);
+  });
+
+  it('rejects everything a route param could otherwise smuggle in', () => {
+    for (const bad of [
+      undefined,
+      null,
+      '',
+      'FOOD',
+      ['housing'],
+      'toString',
+      '__proto__',
+      'constructor',
+    ]) {
+      expect(isNeedCategory(bad)).toBe(false);
     }
   });
 });

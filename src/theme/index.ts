@@ -15,7 +15,7 @@ export {
   MIN_DAMPING_RATIO,
 } from './motion';
 export type { DurationToken, SpringToken } from './motion';
-export { withAlpha, onboardingAccents } from './colors';
+export { aiWash, withAlpha, onboardingAccents } from './colors';
 export { categoryVisual, medallionStyle, surfaceTint } from './categoryVisual';
 export type { ColorToken } from './colors';
 export type { SpacingToken, ShadowToken } from './spacing';

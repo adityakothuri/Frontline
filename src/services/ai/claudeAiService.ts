@@ -2,12 +2,16 @@ import type { Need } from '@/types/need';
 import type { Resource } from '@/types/resource';
 import { supabaseRequest } from '../supabase/client';
 import { aiCacheKey, readAiCache, writeAiCache } from './aiCache';
+import { sanitizeChatReply } from './chatActions';
 import {
   AI_NOT_ADVICE_DISCLAIMER,
   type AiService,
   type BenefitSummary,
   type CallScript,
   type CallScriptTone,
+  type ChatContext,
+  type ChatReply,
+  type ChatTurn,
   type NextStepPlan,
 } from './AiService';
 
@@ -89,6 +93,22 @@ class ClaudeAiService implements AiService {
         resource: input.resource,
       }),
     );
+  }
+
+  /**
+   * Never cached: every turn is a new question, and a replayed answer to a
+   * different one would be wrong. The wire shape is validated here rather than
+   * trusted — see `chatActions.ts`.
+   */
+  async chat(input: { messages: ChatTurn[]; context: ChatContext }): Promise<ChatReply> {
+    const raw = await this.callFunction<unknown>({
+      task: 'chat',
+      messages: input.messages,
+      context: input.context,
+    });
+    const reply = sanitizeChatReply(raw);
+    if (!reply) throw new Error('Malformed chat reply');
+    return { ...reply, disclaimer: AI_NOT_ADVICE_DISCLAIMER };
   }
 }
 

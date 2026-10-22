@@ -17,9 +17,16 @@ import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { EngagementEntry, Rating } from '@/types/activity';
 
 // "How was ___?" — one card in the Home review deck. Purely the card: it renders
-// an opportunity and reports which way the veteran voted. Recording the vote and
+// a place and reports which way the veteran voted. Recording the vote and
 // clearing the card away are the deck's job (`ReviewDeck`), because the vote must
 // not land until the card has finished leaving.
+//
+// Two rows, 132pt: the question beside its medallion, then the two thumbs. It
+// was 214 with a category caption and a separate "View details" row; on Home
+// a transient question is worth less than a standing fact, and the extra chrome
+// was most of what made the page feel crowded. The name is the link now. One
+// row was measured and rejected: beside a medallion and two 44pt thumbs the
+// text column is ~131pt, which clips real names on the card asking about them.
 /**
  * What the card says back. Short on purpose: the deck holds the card for
  * `timings.reviewAck` and then throws it, so a sentence that cannot be finished
@@ -62,26 +69,41 @@ export function ReviewPrompt({
 
   return (
     <Card style={styles.card}>
-      {/* The identity mark sits *beside* the label, the way every other card in
-          the app carries its category — never as a tile above a heading, which
-          is a named slop signal. */}
+      {/* The identity mark sits *beside* the question, the way every other card
+          in the app carries its category — never as a tile above a heading. The
+          medallion is 36, the detail hero's size, so the card and the page it
+          opens share one mark. */}
       <View style={styles.header}>
-        <CategoryMedallion icon={meta.icon} color={meta.color} size={44} style={styles.medallion} />
-        <View style={styles.headerText}>
-          <AppText variant="caption" color="textSecondary">
-            {meta.label}
-          </AppText>
-          {/* `subtitle`, the register every card in this app uses for its own
-              subject. It was briefly `heading` to outrank the section title
-              below — which it cannot do at the same variant, and which cost 20pt
-              of line width: at 20/26 in the column the medallion leaves, real
-              names ("Michael E. DeBakey VA Medical Center") ran past two lines
-              and the clamp ate the name of the place being asked about. The card
-              carries its prominence with a surface and a medallion instead. */}
-          <AppText variant="subtitle" numberOfLines={2}>
-            How was {engagement.resourceName}?
-          </AppText>
-        </View>
+        <CategoryMedallion icon={meta.icon} color={meta.color} size={36} />
+        {/* One slot, two states. The question is the way into the place it asks
+            about — a real 44pt target that hugs the text, with the muted chevron
+            as its affordance. Once a thumb is pressed the acknowledgement takes
+            the question's place: the thumbs stay where they are to fill and pop,
+            and `ReviewDeck` sizes itself from a measured height that only ever
+            grows, so the swap has to cost no height. Both states hold 44. */}
+        {confirmed ? (
+          <View style={styles.ackSlot}>
+            {/* `accessibilityLiveRegion` is **Android only**; the iOS half is the
+                announcement above, since the pressed thumb keeps VoiceOver focus. */}
+            <AppText variant="label" color="textSecondary" accessibilityLiveRegion="polite">
+              {ackMessage(confirmed)}
+            </AppText>
+          </View>
+        ) : (
+          <PressableScale
+            accessibilityRole="link"
+            accessibilityLabel={`View details for ${engagement.resourceName}`}
+            onPress={openDetail}
+            scaleTo={pressScale.subtle}
+            containerStyle={styles.questionSlot}
+            style={styles.question}
+          >
+            <AppText variant="subtitle" numberOfLines={2} style={styles.questionText}>
+              How was {engagement.resourceName}?
+            </AppText>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </PressableScale>
+        )}
       </View>
 
       <View style={styles.votes}>
@@ -100,44 +122,6 @@ export function ReviewPrompt({
           onPress={() => onVote('down')}
         />
       </View>
-
-      {/* One slot, two states. The acknowledgement *replaces* the link rather
-          than joining it, because `ReviewDeck` sizes itself from a measured
-          height that only ever grows — a card that got taller after a vote would
-          shove the page down mid-acknowledgement. Both states hold `minHeight:
-          44`, so the swap costs no height. The link is also dead weight at that
-          moment: the card is already on its way out. */}
-      {confirmed ? (
-        <View style={styles.ackSlot}>
-          {/* `accessibilityLiveRegion` is **Android only** (it is declared on
-              `AccessibilityPropsAndroid` in React Native's own types), and
-              `role="alert"` sets a trait on iOS rather than announcing. The
-              thumb the veteran pressed keeps VoiceOver focus and is now
-              `disabled`, so on iOS this line would never be read — the one
-              moment the feature exists to communicate. `announceAck` below
-              covers that half. */}
-          <AppText variant="label" color="textSecondary" accessibilityLiveRegion="polite">
-            {ackMessage(confirmed)}
-          </AppText>
-        </View>
-      ) : (
-        /* Hugs its content and sits left. It used to be a full-width 44pt row: a
-           `Card` stretches its children, so an invisible navigate-away target ran
-           the whole width of the card 16pt under "Not helpful" — a low miss on
-           the thumb took you off the screen. */
-        <PressableScale
-          accessibilityRole="button"
-          accessibilityLabel={`View details for ${engagement.resourceName}`}
-          onPress={openDetail}
-          containerStyle={styles.detailSlot}
-          style={styles.detailLink}
-        >
-          <AppText variant="label" color="textSecondary">
-            View details
-          </AppText>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </PressableScale>
-      )}
     </Card>
   );
 }
@@ -146,8 +130,8 @@ export function ReviewPrompt({
  * A thumbs button that acknowledges the vote before the card leaves. Three
  * channels carry "you picked this", never colour alone: the glyph fills
  * (outline → solid), the button takes the olive selection wash, and it pops
- * once. Olive on both thumbs — `success` green means *verified* in this app and
- * would read as a claim about the opportunity rather than the veteran's answer.
+ * once. Olive on both thumbs — `success` green means *verified* in this
+ * app and would read as a claim about the place rather than the veteran's answer.
  */
 function VoteButton({
   icon,
@@ -208,9 +192,7 @@ function VoteButton({
         />
         {/* accentPressed, not accent: at 13pt on the olive selection wash the
             brand accent measures 4.16:1, under AA — and this is the *selected*
-            state, the one that has to be readable. Same reason `dangerText` and
-            `warningText` exist. The icon stays on `accent`, where the 3:1
-            non-text floor applies. */}
+            state, the one that has to be readable. */}
         <AppText variant="label" color={active ? 'accentPressed' : 'textPrimary'}>
           {label}
         </AppText>
@@ -220,15 +202,12 @@ function VoteButton({
 }
 
 const styles = StyleSheet.create({
-  // The card has a subject, so its rows are not all equidistant: the label and
-  // the question are one block, then a real gap, then the answer.
-  card: { gap: spacing.lg },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  // The medallion's box top *is* its visual top, while a 12pt caption sits a few
-  // points below its own line box. This is the optical nudge `xxs`-scale spacing
-  // exists for — without it the mark rides high against the label it belongs to.
-  medallion: { marginTop: spacing.xs },
-  headerText: { flex: 1, gap: spacing.xxs },
+  // Two rows, one gap: the question is the subject and the thumbs are the answer.
+  card: { gap: spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  questionSlot: { flex: 1 },
+  question: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 },
+  questionText: { flex: 1 },
   votes: { flexDirection: 'row', gap: spacing.sm },
   voteSlot: { flex: 1 },
   vote: {
@@ -236,8 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    // A real 44pt target. `paddingVertical: sm` around an 18pt glyph came to
-    // about 34 — under the minimum every other control in the app meets.
+    // A real 44pt target, the minimum every other control in the app meets.
     minHeight: 44,
     paddingHorizontal: spacing.md,
     borderRadius: radii.md,
@@ -246,20 +224,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   voteActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
-  // The two thumbs are the answer; this is the way out of it. A real 44pt target
-  // that hugs its label instead of spanning the card.
-  detailSlot: { alignSelf: 'flex-start' },
-  // Matches the link's 44pt so swapping one for the other costs no height. The
-  // message is kept short enough to sit on one line at default type; two lines
-  // (36pt) still fit under the floor, so the card only grows at accessibility
-  // sizes — and `ReviewDeck`'s measurement only ever grows, so a long line would
-  // reserve that height for every later card in the session.
-  ackSlot: { minHeight: 44, justifyContent: 'center' },
-  detailLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    minHeight: 44,
-    paddingRight: spacing.sm,
-  },
+  // Matches the question link's 44pt so swapping one for the other costs no
+  // height; the message is short enough for one line at default type.
+  ackSlot: { flex: 1, minHeight: 44, justifyContent: 'center' },
 });

@@ -4,17 +4,17 @@ import Animated from 'react-native-reanimated';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  AppText,
   EmptyState,
   ErrorState,
   Loading,
   useLoadingGate,
-  LocationButton,
   RefreshFailedBanner,
+  ScreenHeader,
 } from '@/components';
 import { colors, spacing } from '@/theme';
 import { riseIn, stepDelay } from '@/theme/motionPresets';
 import { useStaggerGate } from '@/hooks/useStaggerGate';
+import { useRetryOnReturn } from '@/hooks/useRetryOnReturn';
 import {
   demoteDownvoted,
   invalidateResourceCache,
@@ -29,7 +29,12 @@ import { reportDataError } from '@/services/monitoring';
 import { useProfile } from '@/services/profile';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { NeedCategoryCard } from '@/features/needs/NeedCategoryCard';
-import { CategoryShells, shellCategory, type ShellId } from '@/features/discover/CategoryShells';
+import {
+  CategoryShells,
+  isShellId,
+  shellCategory,
+  type ShellId,
+} from '@/features/discover/CategoryShells';
 import { ReferralSection } from '@/features/resources/ReferralSection';
 import { resultsOf, type ResourceSearchState } from '@/features/resources/useResourceSearch';
 import { NEED_CATEGORIES, DEFAULT_RADIUS_MILES, type NeedCategory } from '@/types/need';
@@ -60,8 +65,8 @@ function interleaveByCategory(results: ResourceSearchResult[]): ResourceSearchRe
   return out;
 }
 
-// Browse opportunities: a curated shell row over all opportunities (or one
-// category), with an "Other" shell that opens the full category list.
+// Browse nearby help: a curated shell row over every place near the veteran (or
+// one category), with an "Other" shell that opens the full category list.
 export default function DiscoverScreen() {
   const router = useRouter();
   const { profile, isHydrated: isProfileHydrated } = useProfile();
@@ -69,8 +74,12 @@ export default function DiscoverScreen() {
   // category index rather than the `all` browse — it asks "What do you need help
   // with?", and this is the screen that answers it. Any other entry into the tab
   // starts where it always did.
-  const { shell } = useLocalSearchParams<{ shell?: ShellId }>();
-  const [selected, setSelected] = useState<ShellId>(shell || 'all');
+  // Validated: a deep link or a stale route can carry any string, and an
+  // unknown shell used to become `selected` — a list that looked like "All"
+  // with no chip lit.
+  const { shell: shellParam } = useLocalSearchParams<{ shell?: string }>();
+  const shell = isShellId(shellParam) ? shellParam : undefined;
+  const [selected, setSelected] = useState<ShellId>(shell ?? 'all');
   const [state, setState] = useState<ResourceSearchState>({ status: 'loading', stale: [] });
   const { getRating } = useActivity();
 
@@ -85,7 +94,13 @@ export default function DiscoverScreen() {
 
   const zip = profile?.zip;
   const radiusMiles = profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES;
-  const gate = useLoadingGate(state.status === 'loading', state.status === 'error');
+  // Holds only when there is nothing to show under it — the same rule the Map
+  // tab uses. A refresh with stale rows keeps the list on screen; the masthead
+  // used to count those rows while the shield covered them.
+  const gate = useLoadingGate(
+    state.status === 'loading' && resultsOf(state).length === 0,
+    state.status === 'error',
+  );
   // Only the first screenful of a shell gets a staggered entrance; past that,
   // and on every row FlatList recycles as you scroll, rows mount static.
   const staggered = useStaggerGate(selected);
@@ -97,14 +112,9 @@ export default function DiscoverScreen() {
     setState({ status: 'loading', stale: [] });
   }, [selected]);
 
-  // Coming back to a failed tab is a retry in everything but name — the veteran
-  // has usually been off fixing their signal. Doing it for them saves a tap on
-  // the one screen where they've already been let down once.
-  useFocusEffect(
-    useCallback(() => {
-      if (stateStatus === 'error') reload();
-    }, [stateStatus, reload]),
-  );
+  // Coming back to a failed tab retries for the veteran. See the hook for why
+  // this is not a `useFocusEffect` — the previous version looped.
+  useRetryOnReturn(stateStatus === 'error', reload);
 
   // The tab stays mounted, so `shell` is applied on focus and then cleared —
   // otherwise arriving from Home a second time with the same value would look
@@ -201,18 +211,26 @@ export default function DiscoverScreen() {
   const openCategory = (category: NeedCategory) =>
     router.push({ pathname: '/results', params: { category } });
 
+  const shown = displayResults.length + referrals.length;
+  const subtitle = useMemo(() => {
+    if (selected === 'other') return 'Every kind of help Frontline can find for you.';
+    if (gate.holding || (state.status === 'loading' && shown === 0)) return 'Finding help near you…';
+    if (shown === 0) return 'Places that can help, near you.';
+    const where = zip ? ` near ${zip}` : ' near you';
+    return `${shown} ${shown === 1 ? 'place' : 'places'} that can help${where}.`;
+  }, [selected, state.status, shown, zip, gate.holding]);
+
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <View style={styles.topBar}>
-        <LocationButton zip={profile?.zip} onPress={() => router.navigate('/profile')} />
-      </View>
-
-      <View style={styles.header}>
-        <AppText variant="title">Discover</AppText>
-        <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-          Browse opportunities for veterans near you.
-        </AppText>
-      </View>
+      {/* The masthead every tab wears. The subtitle is live: it says how many
+          places are actually here instead of restating the tab's name. */}
+      <ScreenHeader
+        style={styles.masthead}
+        location={{ zip: profile?.zip, onPress: () => router.navigate('/profile') }}
+        title="Find help nearby"
+        subtitle={subtitle}
+        subtitleKey={subtitle}
+      />
 
       <CategoryShells selected={selected} onSelect={setSelected} />
 
@@ -235,21 +253,31 @@ export default function DiscoverScreen() {
           />
         ) : gate.holding ? (
           gate.showShield ? (
-            <Loading label="Loading opportunities…" done={gate.done} onFinish={gate.finish} />
+            <Loading label="Finding help near you…" done={gate.done} onFinish={gate.finish} />
           ) : null
         ) : state.status === 'error' && displayResults.length === 0 && referrals.length === 0 ? (
           // Nothing to fall back on — this is the one case worth the whole screen.
           <ErrorState error={state.error} onRetry={reload} />
         ) : displayResults.length === 0 && referrals.length === 0 ? (
+          // Almost always "nothing within your radius", not "we have nothing" —
+          // so it offers the two things that actually change the answer.
           <EmptyState
             icon="search-outline"
-            title="Nothing here yet"
-            message="We don’t have opportunities in this category yet. Try another, or check back soon."
+            title={
+              profile?.zip
+                ? `Nothing nearby for this near ${profile.zip}`
+                : 'Nothing nearby for this yet'
+            }
+            message={`We looked within ${radiusMiles} miles. A wider search radius or a nearby ZIP usually finds more.`}
+            actionLabel="Change ZIP or radius"
+            onAction={() => router.push({ pathname: '/profile', params: { edit: '1' } })}
           />
         ) : (
           <>
             {state.status === 'error' ? (
-              <RefreshFailedBanner error={state.error} onRetry={reload} />
+              <View style={styles.banner}>
+                <RefreshFailedBanner error={state.error} onRetry={reload} />
+              </View>
             ) : null}
             <FlatList
               // Keyed on the shell so switching filters remounts the list: the
@@ -282,10 +310,11 @@ export default function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  topBar: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md },
-  header: { paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
-  subtitle: { marginTop: spacing.sm },
+  // `sm` under the title block, not the header's default `xl`: the chip row
+  // directly below is part of the same reading unit.
+  masthead: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, marginBottom: spacing.sm },
   content: { flex: 1 },
+  banner: { paddingHorizontal: spacing.xl },
   list: {
     gap: spacing.md,
     paddingHorizontal: spacing.xl,

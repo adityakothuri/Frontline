@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PrimaryButton, ShieldTrace } from '@/components';
-import { colors, radii, rise, spacing, stagger, timings } from '@/theme';
+import { AppText, PressableScale, PrimaryButton, ShieldTrace } from '@/components';
+import { colors, pressScale, radii, rise, spacing, stagger, timings } from '@/theme';
+import { tapImpact } from '@/lib/haptics';
 import { riseIn, stepDelay } from '@/theme/motionPresets';
 import { VETERAN_ROLE_LABELS, type VeteranRole } from '@/types/profile';
 import type { VeteranDocument } from '@/types/need';
@@ -24,8 +25,10 @@ type OnboardingCompleteProps = {
   loading: boolean;
 };
 
-// The finale of setup: a warm confirmation + a recap, then "Create account" —
-// which saves the profile on-device. The celebratory moment of the flow.
+// The finale of setup: a warm confirmation + a recap, then "Finish setup" —
+// which saves the profile on-device. The celebratory moment of the flow. It
+// used to say "Create account", which was false in two directions: there is no
+// account, and the line underneath promised "no sign-in".
 export function OnboardingComplete({ draft, onBack, onCreate, loading }: OnboardingCompleteProps) {
   // The one genuine milestone in the app, so it gets the one genuine
   // celebration: the shield traces its outline once, then the star draws, blooms
@@ -60,15 +63,15 @@ export function OnboardingComplete({ draft, onBack, onCreate, loading }: Onboard
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Back"
           onPress={onBack}
-          hitSlop={10}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+          scaleTo={pressScale.control}
+          style={styles.backBtn}
         >
           <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-        </Pressable>
+        </PressableScale>
       </View>
 
       <View style={styles.body}>
@@ -88,14 +91,15 @@ export function OnboardingComplete({ draft, onBack, onCreate, loading }: Onboard
         </Animated.View>
         <Animated.View entering={riseIn(stagger.step * 2)}>
           <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-            Here&apos;s your setup — create your account to save it and get your personalized help.
+            Here&apos;s what you told us. Finish setup and we&apos;ll start finding help near{' '}
+            {draft.zip}.
           </AppText>
         </Animated.View>
 
         <View style={styles.recap}>
           {recap.map((r, i) => (
             <Animated.View
-              key={r.text}
+              key={r.icon}
               entering={riseIn(stepDelay(i + 3))}
               style={styles.recapChip}
             >
@@ -109,7 +113,14 @@ export function OnboardingComplete({ draft, onBack, onCreate, loading }: Onboard
       </View>
 
       <Animated.View entering={riseIn(stagger.max, rise.md)} style={styles.footer}>
-        <PrimaryButton label="Create account" onPress={onCreate} loading={loading} />
+        <PrimaryButton
+          label="Finish setup"
+          onPress={() => {
+            tapImpact();
+            onCreate();
+          }}
+          loading={loading}
+        />
         <View style={styles.reassure}>
           <Ionicons name="phone-portrait-outline" size={13} color={colors.textMuted} />
           <AppText variant="caption" color="textMuted">
@@ -129,7 +140,7 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
   },
-  backBtn: { width: 32, height: 32, alignItems: 'flex-start', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'flex-start', justifyContent: 'center' },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
   // No tinted disc behind the mark: the shield draws its own silhouette, and a
   // circle behind it would be the rounded icon tile the design rules ban.
@@ -148,12 +159,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  footer: { paddingHorizontal: spacing.xl, gap: spacing.md },
+  footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.md },
   reassure: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
   },
-  pressed: { opacity: 0.6 },
 });

@@ -8,33 +8,37 @@ import { useActivity } from '@/services/activity';
 import { ratingsService } from '@/services/ratings';
 import { getDeviceId } from '@/services/sync/deviceId';
 import { timeGreeting } from '@/lib/greeting';
-import { dailyHomeMessage } from '@/lib/homeMessages';
 import { durations, rise, spacing, stagger } from '@/theme';
 import { fadeIn, riseIn, settleIn } from '@/theme/motionPresets';
 import { ReviewDeck } from '@/features/home/ReviewDeck';
 import { HomeStartCard } from '@/features/home/HomeStartCard';
+import { NearbyGlance } from '@/features/home/NearbyGlance';
+import { DEFAULT_RADIUS_MILES } from '@/types/need';
 import type { EngagementEntry, Rating } from '@/types/activity';
 
 // The front door: a warm, personal landing. The greeting is the page title — on
-// paper, not in a panel — then the one way in, then whatever the veteran is being
-// asked to do (rate the last opportunity they tried).
+// paper, not in a panel — then the one way in (Ask Frontline), then what is
+// actually near this veteran, then whatever they are being asked to do (rate
+// the last place they tried).
 //
-// Three blocks, and it used to be five. The 2×2 need grid that sat at the bottom
-// is gone — see `HomeStartCard` for why — and the review deck now draws nothing
-// when there is nothing to rate, instead of a note apologising for the fact.
-// Together that means a veteran on their first launch meets a greeting and a
-// single olive card, which is the whole of what they need from this screen.
+// The 2×2 need grid that used to sit under the start card is gone — see
+// `HomeStartCard` for why: four fixed tiles carried no information a veteran
+// could act on. `NearbyGlance` is held to that same test. It is live, it names
+// the categories that exist near their ZIP with real counts, and a tap lands on
+// results. It also pre-warms the browse Discover and Map share, which is what
+// makes those tabs paint instantly on first open.
 //
-// The order flipped with that change. It was deck-then-needs, on the argument
-// that a transient question a veteran can answer in one tap outranks a standing
-// shortcut worth the same whenever it is read. That argument was about a
-// *shortcut*. What sits there now is the page's only primary action, and a
-// primary action does not go underneath a chore — so the card leads and the deck
-// follows it.
+// The order is deliberate. The card leads because it is the page's only primary
+// action and a primary action does not go underneath anything. The glance
+// follows because it is the card's answer in miniature. The deck follows that
+// because a transient question is worth less than a standing fact, and it is
+// kept small for the same reason. The Veterans Crisis Line used to close the
+// page; it left on 2026-10-14 because four blocks and a crisis row read as
+// congestion, and it is one tap away in Ask and on the Emergency results path.
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { profile } = useProfile();
+  const { profile, isHydrated: isProfileHydrated } = useProfile();
   const { pendingReviews, isHydrated, rate } = useActivity();
 
   const greeting = profile?.firstName ? `${timeGreeting()}, ${profile.firstName}` : timeGreeting();
@@ -71,8 +75,13 @@ export default function HomeScreen() {
         <LocationButton zip={profile?.zip} onPress={() => router.navigate('/profile')} />
       </Animated.View>
 
-      {/* The ZIP is already stated by the LocationButton directly above. Saying
-          it again here was the page's own copy competing with its own control. */}
+      {/* Home is the one tab that does not use `ScreenHeader`: its title is the
+          greeting at `display`, a step above the masthead's `title`, with the
+          pill gap widened to match. It is also the one masthead with no line
+          under its title. A rotating daily pleasantry used to sit there ("Let's
+          see what's near you today."), and it was the only sentence on the page
+          that did nothing — the ZIP is in the pill above, and the card below
+          asks the page's one question. Removed 2026-10-14. */}
       <Animated.View entering={riseIn(stagger.step, rise.md)} style={styles.header}>
         {/* `display`, not `displayLarge`. The larger step is reserved for the
             onboarding hero (see `typography.ts`) and is set at ~1.17 leading for
@@ -80,9 +89,8 @@ export default function HomeScreen() {
             two lines of Fraunces at that leading read cramped. It also made a
             pleasantry the largest thing on a page whose entire point is one
             action. */}
-        <AppText variant="display">{greeting}</AppText>
-        <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-          {dailyHomeMessage()}
+        <AppText variant="display" accessibilityRole="header">
+          {greeting}
         </AppText>
       </Animated.View>
 
@@ -94,6 +102,16 @@ export default function HomeScreen() {
       <Animated.View entering={settleIn(rise.md).delay(stagger.step * 2)} style={styles.start}>
         <HomeStartCard />
       </Animated.View>
+
+      {/* Data-gated, so it reveals on its own when the browse lands rather than
+          taking a beat in the sequence above — the same reasoning as the deck.
+          It owns its own entrance, its own section gap and its own silence: on a
+          failure or an empty ZIP it draws nothing, and the page simply closes up. */}
+      <NearbyGlance
+        zip={profile?.zip}
+        radiusMiles={profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES}
+        enabled={isProfileHydrated}
+      />
 
       {/* Rendered whenever the store has hydrated, *not* only when there is
           something to rate — `ReviewDeck` draws nothing on an empty list, and it
@@ -120,15 +138,14 @@ export default function HomeScreen() {
         </Animated.View>
       ) : null}
 
-      {/* Bottom-anchored by `marginTop: 'auto'`, which is what turns the empty
-          lower half into deliberate space between two fixed points. It also
-          closes a real gap: Results and the resource detail page both carry this
-          line, and the app's own front door — the screen most likely to be a
-          veteran's first impression of what Frontline is — did not say anywhere
-          that it is not the VA. Trust signals are meant to be visible, not
-          buried one tap in. It fades rather than rises, and takes the entrance's
-          last beat — 180ms + 240 closes at 420, inside `durations.entrance`. */}
-      <Animated.View entering={fadeIn(stagger.step * 3)} style={styles.disclaimer}>
+      {/* Results and the resource detail page both carry this line, and the
+          app's own front door — the screen most likely to be a veteran's first
+          impression of what Frontline is — did not say anywhere that it is not
+          the VA. Trust signals are meant to be visible, not buried one tap in.
+          Bottom-anchored by `marginTop: 'auto'`, which is what turns the empty
+          lower half into deliberate space between two fixed points. It fades
+          rather than rises, and takes the entrance's last beat. */}
+      <Animated.View entering={fadeIn(stagger.step * 3)} style={styles.foot}>
         <NavigatorDisclaimer />
       </Animated.View>
     </ScreenContainer>
@@ -144,12 +161,11 @@ const styles = StyleSheet.create({
   // absorbed it. Against a bare 32pt serif line it reads cramped.
   topBar: { marginBottom: spacing.lg },
   header: { marginBottom: spacing.xl },
-  subtitle: { marginTop: spacing.sm },
   // The one real section boundary on the page, and it is Home's to set rather
   // than either component's — neither should carry the space to whatever a page
   // happens to put after it.
-  start: { marginBottom: spacing.xxl },
+  start: { marginBottom: spacing.xl },
   // `auto` collects every spare point on the page, so the blank space sits
-  // *between* the card and this line rather than trailing off below everything.
-  disclaimer: { marginTop: 'auto', paddingTop: spacing.xxl },
+  // *between* the content and the foot rather than trailing off below everything.
+  foot: { marginTop: 'auto', paddingTop: spacing.xxl },
 });

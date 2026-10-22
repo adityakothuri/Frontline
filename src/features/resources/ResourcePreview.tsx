@@ -1,10 +1,10 @@
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, Card, CategoryMedallion, PressableScale } from '@/components';
 import { formatDistance } from '@/lib/geo';
-import { colors, shadows, spacing, stagger, surfaceTint } from '@/theme';
+import { colors, pressScale, shadows, spacing, stagger, surfaceTint } from '@/theme';
 import { settleIn, sinkOut } from '@/theme/motionPresets';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
@@ -77,11 +77,9 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
           in the card — heavier than Call — which inverted the hierarchy on a
           screen where calling and driving are the jobs and browsing is not. Same
           pattern as ResourceCard. */}
-      <PressableScale
-        accessibilityRole="button"
-        accessibilityLabel={`View details for ${resource.name}`}
-        onPress={openDetail}
-      >
+      {/* `accessible={false}`, as on `ResourceCard`: the pills inside must stay
+          individually reachable; the hint at the foot is the accessible target. */}
+      <PressableScale accessible={false} onPress={openDetail}>
         <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }, shadows.md]}>
           <View style={styles.topRow}>
             <CategoryMedallion icon={meta.icon} color={meta.color} size={38} />
@@ -95,19 +93,20 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
             </AppText>
             {/* Real 44x44 geometry, no hitSlop — a 20pt glyph with hitSlop came to
                 ~36pt, under the minimum every other control in the app meets. */}
-            <Pressable
+            <PressableScale
               accessibilityRole="button"
               accessibilityLabel="Close preview"
               onPress={onClose}
-              style={styles.close}
+              scaleTo={pressScale.control}
+              containerStyle={styles.close}
             >
               <Ionicons name="close" size={20} color={colors.textSecondary} />
-            </Pressable>
+            </PressableScale>
           </View>
 
           {/* Clamped: a long facility name would otherwise grow the floating card
               until it covered the map it is describing. */}
-          <AppText variant="subtitle" numberOfLines={2}>
+          <AppText variant="cardTitle" numberOfLines={2}>
             {resource.name}
           </AppText>
 
@@ -150,7 +149,12 @@ export function ResourcePreview({ result, needCategory, onClose }: ResourcePrevi
 
           {/* Not a button: the card itself is the target. This is the affordance
               that says so. */}
-          <View style={styles.detailHint}>
+          <View
+            style={styles.detailHint}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`View details for ${resource.name}`}
+          >
             <AppText variant="label" color="textSecondary">
               View details
             </AppText>

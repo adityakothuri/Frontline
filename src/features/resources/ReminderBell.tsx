@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -8,7 +8,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, durations, radii, springs } from '@/theme';
+import { PressableScale } from '@/components';
+import { colors, durations, pressScale, radii, springs } from '@/theme';
 import { isRemindable, useReminders } from '@/services/reminders';
 import type { Resource } from '@/types/resource';
 import { ActionPill } from './ActionPill';
@@ -92,17 +93,18 @@ export function ReminderBell({ resource, shape }: ReminderBellProps) {
           onPress={() => setSheetOpen(true)}
         />
       ) : (
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel={label}
           accessibilityState={{ selected: armed }}
           onPress={() => setSheetOpen(true)}
-          style={({ pressed }) => [styles.bell, pressed && styles.bellPressed]}
+          scaleTo={pressScale.control}
+          style={styles.bell}
         >
           <Animated.View style={glyphStyle}>
             <Ionicons name={icon} size={18} color={armed ? colors.accent : colors.textMuted} />
           </Animated.View>
-        </Pressable>
+        </PressableScale>
       )}
 
       <ReminderSheet resource={resource} visible={sheetOpen} onClose={() => setSheetOpen(false)} />
@@ -119,5 +121,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radii.pill,
   },
-  bellPressed: { opacity: 0.5 },
 });

@@ -8,6 +8,11 @@ export type {
   CallScript,
   CallScriptTone,
   BenefitSummary,
+  ChatAction,
+  ChatContext,
+  ChatReply,
+  ChatRole,
+  ChatTurn,
 } from './AiService';
 export { AI_NOT_ADVICE_DISCLAIMER } from './AiService';
 

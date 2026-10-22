@@ -1,19 +1,30 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { View, ScrollView, Pressable, Linking, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, CategoryMedallion, NavigatorDisclaimer } from '@/components';
-import { colors, radii, rise, spacing, stagger, surfaceTint } from '@/theme';
+import {
+  AppText,
+  CategoryMedallion,
+  NavigatorDisclaimer,
+  PressableScale,
+  SectionHeader,
+} from '@/components';
+import { colors, pressScale, radii, rise, spacing, stagger, surfaceTint } from '@/theme';
 import { heroMedallionIn, riseIn } from '@/theme/motionPresets';
 import { isOpenNow } from '@/lib/hours';
 import { useProfile } from '@/services/profile';
 import { useActivity } from '@/services/activity';
 import { useReminders } from '@/services/reminders';
-import { aiService, type BenefitSummary, type NextStepPlan } from '@/services/ai';
+import {
+  aiService,
+  AI_NOT_ADVICE_DISCLAIMER,
+  type BenefitSummary,
+  type NextStepPlan,
+} from '@/services/ai';
 import { RESOURCE_CATEGORY_META, type Resource } from '@/types/resource';
 import { defaultNeedForCategory, type NeedCategory } from '@/types/need';
-import { callPhone, openDirections } from './resourceActions';
+import { callPhone, openDirections, openWebsite } from './resourceActions';
 import { openNowStatus, toReminderSnapshot, trustWarning } from './resourceStatus';
 import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
@@ -198,8 +209,9 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
         >
           {plan.data ? (
             <>
+              {/* Index-qualified: the model can legitimately repeat a title. */}
               {plan.data.steps.map((step, i) => (
-                <View key={step.title} style={styles.step}>
+                <View key={`${i}-${step.title}`} style={styles.step}>
                   <View style={styles.stepNum}>
                     <AppText variant="label" color="textOnAccent">
                       {i + 1}
@@ -222,25 +234,40 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
           ) : null}
         </AiContentBlock>
 
-        {/* What to bring */}
+        {/* The one place the not-advice line is said on this page, under both AI
+            blocks rather than inside each: the blocks carry the short
+            "AI-generated" tag, this carries the whole sentence. It was defined
+            in `AiService.ts` as "attached to every AI surface" and rendered
+            nowhere. */}
+        <NavigatorDisclaimer text={AI_NOT_ADVICE_DISCLAIMER} />
+
+        {/* What to bring — the listing's own documents, the plan's suggestions,
+            and the veteran's answer from onboarding, in one list. */}
         <Section title="What should I bring?">
-          <DocumentChecklist documents={resource.documents_needed} />
+          <DocumentChecklist
+            documents={resource.documents_needed}
+            suggested={plan.data?.whatToBring}
+            onHand={profile?.documentsOnHand}
+          />
         </Section>
 
         {/* How to reach it */}
         <Section title="Contact">
           {resource.phone ? (
+            // Recorded like the Call pill is: a call placed from here is the same
+            // engagement, and it used to be the one call that never reached the
+            // Home review prompt.
             <ContactRow
               icon="call-outline"
               text={resource.phone}
-              onPress={() => callPhone(resource.phone as string)}
+              onPress={recordAnd('called', () => callPhone(resource.phone as string))}
             />
           ) : null}
           {resource.website ? (
             <ContactRow
               icon="globe-outline"
               text={resource.website}
-              onPress={() => Linking.openURL(resource.website as string)}
+              onPress={() => openWebsite(resource.website as string)}
             />
           ) : null}
           {resource.address ? <ContactRow icon="location-outline" text={resource.address} /> : null}
@@ -257,11 +284,18 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
               {warning}
             </AppText>
           ) : null}
+          {/* The model's own read on how far to trust the source — generated for
+              exactly this section and, until now, dropped on the floor. */}
+          {summary.data?.verificationNote ? (
+            <AppText variant="body" color="textSecondary">
+              {summary.data.verificationNote}
+            </AppText>
+          ) : null}
           {resource.source_url ? (
             <ContactRow
               icon="open-outline"
               text="View the source"
-              onPress={() => Linking.openURL(resource.source_url as string)}
+              onPress={() => openWebsite(resource.source_url as string)}
             />
           ) : null}
         </Section>
@@ -285,7 +319,7 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View style={styles.section}>
-      <AppText variant="heading">{title}</AppText>
+      <SectionHeader title={title} />
       {children}
     </View>
   );
@@ -327,13 +361,14 @@ function ContactRow({
   );
   if (!onPress) return content;
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="link"
+      accessibilityLabel={text}
       onPress={onPress}
-      style={({ pressed }) => pressed && styles.pressed}
+      scaleTo={pressScale.subtle}
     >
       {content}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -378,5 +413,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   contactText: { flex: 1 },
-  pressed: { opacity: 0.6 },
 });

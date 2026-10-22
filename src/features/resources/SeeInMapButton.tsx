@@ -1,15 +1,16 @@
 import { View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PressableScale } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { colors, pressScale, radii, spacing } from '@/theme';
 import type { Resource } from '@/types/resource';
 
 // "See in map" — the one control that ties every opportunity back to the map.
 // A resource is "on the map" only when it has real coordinates; address-only or
 // referral rows (national hotlines, county-wide SSVF) are NOT pinnable, so the
 // button shows a struck-through map glyph and is disabled rather than hidden —
-// the veteran still learns *why* it isn't there. Two variants match the two
-// button layouts it lives in: bordered rect on the card, pill on the detail page.
+// the veteran still learns *why* it isn't there. Both variants are the
+// `ActionPill` shape every other resource action uses, in the same olive ink —
+// the card used to print this one label in black beside two olive ones.
 type SeeInMapButtonProps = {
   resource: Resource;
   variant: 'card' | 'pill';
@@ -34,10 +35,7 @@ export function SeeInMapButton({ resource, variant, onPress }: SeeInMapButtonPro
   const content = (
     <>
       <MapGlyph color={tint} struck={!onMap} />
-      <AppText
-        variant="label"
-        color={onMap ? (variant === 'pill' ? 'accentPressed' : 'textPrimary') : 'textSecondary'}
-      >
+      <AppText variant="label" color={onMap ? 'accentPressed' : 'textSecondary'}>
         {onMap ? 'See in map' : 'Not on map'}
       </AppText>
     </>
@@ -62,7 +60,7 @@ export function SeeInMapButton({ resource, variant, onPress }: SeeInMapButtonPro
       accessibilityRole="button"
       accessibilityLabel={`See ${resource.name} on the map`}
       onPress={() => onPress(resource.id)}
-      scaleTo={0.95}
+      scaleTo={pressScale.chip}
       style={containerStyle}
     >
       {content}
@@ -84,16 +82,18 @@ function MapGlyph({ color, struck }: { color: string; struck: boolean }) {
 }
 
 const styles = StyleSheet.create({
+  // Same 44pt pill as `ActionPill`, so Call, Directions and this read as one row
+  // of the same control. It was a 34pt bordered rectangle beside two others.
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.sm,
+    minHeight: 44,
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surface,
   },
   pill: {
     flexDirection: 'row',

@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Animated from 'react-native-reanimated';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  AppText,
   EmptyState,
   ErrorState,
   Loading,
   useLoadingGate,
-  LocationButton,
   RefreshFailedBanner,
+  ScreenHeader,
 } from '@/components';
-import { colors, durations, spacing } from '@/theme';
-import { fadeIn } from '@/theme/motionPresets';
+import { colors, spacing } from '@/theme';
 import { tapSelection } from '@/lib/haptics';
+import { useRetryOnReturn } from '@/hooks/useRetryOnReturn';
 import { invalidateResourceCache, resourceService } from '@/services/resources';
 import { useProfile } from '@/services/profile';
 import { reportDataError } from '@/services/monitoring';
@@ -97,12 +95,9 @@ export default function MapScreen() {
   }, []);
   const stateStatus = state.status;
 
-  // Returning to a failed tab retries for the veteran — see discover.tsx.
-  useFocusEffect(
-    useCallback(() => {
-      if (stateStatus === 'error') reload();
-    }, [stateStatus, reload]),
-  );
+  // Returning to a failed tab retries for the veteran — see the hook for why it
+  // is not a `useFocusEffect`.
+  useRetryOnReturn(stateStatus === 'error', reload);
 
   const zip = profile?.zip;
   const radiusMiles = profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES;
@@ -275,28 +270,18 @@ export default function MapScreen() {
           running under it, so nothing here needs measuring, `pointerEvents`
           juggling, or an inset handed down to the camera. */}
       <View style={styles.header}>
-        <View style={styles.topBar}>
-          <LocationButton zip={zip} onPress={() => router.navigate('/profile')} />
-        </View>
-
-        {/* The hero. The screen had none — just a pill and a row of chips over a
-            wall of cartography — which is what made it read as unfinished next to
-            Discover and Home, both of which lead with a serif title and a line of
-            plain English. "Map" is deliberately not the title: it would be a
-            display-serif restatement of the word already on the tab bar below. */}
-        <View style={styles.heading}>
-          <AppText variant="title">Nearby help</AppText>
-          {/* Keyed on the sentence, so a new one arrives rather than the old one
-              being overwritten in place. This line is the screen's only running
-              commentary — it is how the veteran learns a chip did anything — and
-              a count that swaps between frames is the one change on the screen
-              small enough to miss entirely. */}
-          <Animated.View key={subtitle} entering={fadeIn(0, durations.fast)}>
-            <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-              {subtitle}
-            </AppText>
-          </Animated.View>
-        </View>
+        {/* The masthead every tab wears. "Map" is deliberately not the title: it
+            would be a display-serif restatement of the word already on the tab
+            bar below. The subtitle is keyed so a new count arrives rather than
+            being overwritten in place — it is how the veteran learns a chip did
+            anything. */}
+        <ScreenHeader
+          style={styles.masthead}
+          location={{ zip, onPress: () => router.navigate('/profile') }}
+          title="Nearby help"
+          subtitle={subtitle}
+          subtitleKey={subtitle}
+        />
 
         {showFilter ? (
           <MapCategoryFilter
@@ -363,14 +348,19 @@ export default function MapScreen() {
         ) : results.length > 0 ? (
           // Includes a failed refresh that still has pins: a map of real places
           // beats an error card, and the banner above says the refresh didn't land.
-          <Animated.View entering={fadeIn(0, durations.reveal)} style={styles.fill}>
+          //
+          // A plain View, deliberately. This used to be an `Animated.View` with an
+          // `entering` fade, and a native `MapView` mounted inside a layout
+          // animation can paint blank on first open — the reveal now lives inside
+          // `ResourceMap`, as a veil over the map rather than an animation on it.
+          <View style={styles.fill}>
             <ResourceMap
               results={visibleResults}
               selectedId={selectedId}
               onSelect={setSelectedId}
               fitToken={fitToken}
             />
-          </Animated.View>
+          </View>
         ) : state.status === 'error' ? (
           <View style={styles.overlayContent}>
             <ErrorState error={state.error} onRetry={reload} />
@@ -392,11 +382,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  // Matches Discover and Home exactly, with the count added on the trailing edge
-  // — the same `spacing.xl` gutter and the same `lg / md` vertical rhythm.
-  topBar: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md },
-  heading: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
-  subtitle: { marginTop: spacing.sm },
+  // The same gutter, top rhythm and 16pt to the chip row as Discover (which
+  // gets there as 8 + the shell row's own 8); the filter row here carries none.
+  masthead: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, marginBottom: spacing.lg },
   banner: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   // Everything below the header. The map fills it; the loading, empty and error
   // states sit inside it rather than over the whole screen.

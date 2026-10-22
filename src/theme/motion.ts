@@ -2,7 +2,7 @@
 // environment, and `react-native-reanimated` cannot load there, so keeping this
 // module pure is what lets `motion.test.ts` assert on it and what keeps the
 // theme barrel importable from a test. The easing curves, which do need
-// Reanimated, live next door in `easings.ts` and are not re-exported here.
+// Reanimated, live next door in `motionPresets.ts` and are not re-exported here.
 
 // One duration scale, six steps, each roughly x1.33. The step you reach for is a
 // statement about how far the thing travels: more distance earns more time.
@@ -39,6 +39,13 @@ export const loops = {
    * idiom, where the 1200 this started at read as strobing beside it.
    */
   aiSweep: 2000,
+  /**
+   * One leg of the AI wash's drift while a model is working — the blooms slide a
+   * few points and swell, then settle back. Slow enough that nobody catches it
+   * moving, only that it has moved: at the sweep line's tempo the same wash read
+   * as a screensaver behind the text.
+   */
+  aiDrift: 2800,
 } as const;
 
 // Not animations. Decisions about time — how long to wait before animating at
@@ -70,6 +77,31 @@ export const timings = {
    * `durations`.
    */
   reviewAck: 1400,
+  /**
+   * How long a laid-out map may go without saying it is ready before the paper
+   * veil over it lifts anyway.
+   *
+   * `onMapReady` waits on the native map's own load, which on a slow connection —
+   * or a cold tile cache — can be seconds. Behind a veil that whole wait is a
+   * blank sheet; past this budget the veteran is shown the map standing up
+   * underneath, and the pins and camera fit follow the moment the native map can
+   * take them. The budget never gates markers or camera commands: on Android a
+   * marker added before `onMapReady` is a native crash. Longer than
+   * `durations.reveal` so a genuinely quick `onMapReady` still wins the race and
+   * the veil fade stays one gesture.
+   */
+  mapReadyBudget: 800,
+  /**
+   * How long Ask Frontline's thinking bubble says "Thinking…" before its label
+   * changes to say what it is doing.
+   *
+   * A chat reply takes 3–8 s and nothing streams, so the wait is carried by a
+   * skeleton sweep and one label that changes once. The change is what says
+   * "still working, not stuck": a static label past ~4 s reads as a hang, and
+   * a label that flickers every second reads as nervous. Past twice this the
+   * bubble says "Almost there…" and stops changing.
+   */
+  askPatience: 4000,
   /** MapKit camera glide to a focused pin. */
   mapFocus: 350,
   /** MapKit camera glide for one zoom step. */
@@ -130,6 +162,9 @@ export const pressScale = {
   chip: 0.96,
   /** Small square controls (map zoom, recenter) where more travel reads better. */
   control: 0.9,
+  /** Wide, full-width rows (a selectable option, a link card) where the base
+   *  travel reads as the whole row lurching. */
+  subtle: 0.985,
 } as const;
 
 export type DurationToken = keyof typeof durations;

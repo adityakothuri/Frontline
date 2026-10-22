@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PressableScale } from '@/components';
 import { colors, pressScale, radii, spacing } from '@/theme';
+import { tapSelection } from '@/lib/haptics';
 
 type ActionPillProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -42,7 +43,12 @@ export function ActionPill({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={selected === undefined ? undefined : { selected }}
-      onPress={onPress}
+      // One tick for every resource action, from one place — Call, Directions,
+      // Save and Share used to be silent while the map pins and chips ticked.
+      onPress={() => {
+        tapSelection();
+        onPress();
+      }}
       scaleTo={pressScale.chip}
       style={[styles.pill, primary && styles.pillPrimary, active && styles.pillActive]}
     >

@@ -1,10 +1,13 @@
 export { AppText } from './AppText';
+export { AiMark } from './AiMark';
+export { AiWash } from './AiWash';
 export { AppErrorBoundary } from './AppErrorBoundary';
 export { BottomSheet } from './BottomSheet';
 export { Card } from './Card';
 export { CategoryMedallion } from './CategoryMedallion';
 export { ScreenContainer } from './ScreenContainer';
 export { ScreenHeader } from './ScreenHeader';
+export { SectionHeader } from './SectionHeader';
 export { PrimaryButton } from './PrimaryButton';
 export { Chip } from './Chip';
 export { OptionGroup } from './OptionGroup';

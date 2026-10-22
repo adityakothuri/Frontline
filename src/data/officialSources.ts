@@ -27,13 +27,22 @@ export const SOURCE_TRUST_LABELS: Record<SourceTrust, string> = {
   nonprofit: 'Verified Nonprofit',
 };
 
-/** Tint per trust type (reuses the app's category color hues). */
+/**
+ * Hue per trust type, for the badge's glyph and wash only — never its text.
+ *
+ * Every value is already in the measured palette: `va` is the verified emerald
+ * (`colors.success`), the rest are category hues from `RESOURCE_CATEGORY_META`
+ * (benefits indigo, education blue, legal pine, jobs ochre). The previous set
+ * (`#3D8BC7`, `#5567C7`, `#3AA0B5`, `#C99A33`) was four bright blues and a gold
+ * that existed nowhere else in the app and were drawn as 12px text, where none
+ * of them cleared AA.
+ */
 export const SOURCE_TRUST_COLORS: Record<SourceTrust, string> = {
   va: '#2E7D32',
-  federal: '#3D8BC7',
-  state: '#5567C7',
-  county: '#3AA0B5',
-  nonprofit: '#C99A33',
+  federal: '#4A5580',
+  state: '#47708A',
+  county: '#2F5550',
+  nonprofit: '#8A6B1C',
 };
 
 const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {

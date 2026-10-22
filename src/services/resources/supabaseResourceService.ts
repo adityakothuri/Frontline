@@ -69,6 +69,17 @@ const DENSE_GENERAL_CAPS: Partial<Record<ResourceCategory, number>> = {
   clothing: 20,
 };
 
+/**
+ * The smallest number of rows a browse may stop at for a category — the
+ * dense-general cap where one applies, else the per-category limit. A surface
+ * that shows browse counts (Home's nearby strip) treats a count at or past this
+ * as a floor and says "20+", never "20": the cap must not be dressed up as a
+ * count.
+ */
+export function browseCountCap(category: ResourceCategory): number {
+  return Math.min(DENSE_GENERAL_CAPS[category] ?? Infinity, BROWSE_PER_CATEGORY_LIMIT);
+}
+
 // How many rows a veteran cannot contact at all may appear per category.
 //
 // Measured 2026-07-28: 72,286 rows (35% of the catalogue) have NO phone and NO

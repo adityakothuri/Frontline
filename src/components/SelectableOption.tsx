@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import type Ionicons from '@expo/vector-icons/Ionicons';
 import IonIcon from '@expo/vector-icons/Ionicons';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { colors, pressScale, radii, spacing, withAlpha } from '@/theme';
 import { AppText } from './AppText';
 import { PressableScale } from './PressableScale';
 
@@ -36,7 +36,7 @@ export function SelectableOption({
       accessibilityState={{ selected }}
       accessibilityLabel={label}
       onPress={onPress}
-      scaleTo={0.985}
+      scaleTo={pressScale.subtle}
       style={[styles.row, selected && styles.rowSelected]}
     >
       {icon ? (

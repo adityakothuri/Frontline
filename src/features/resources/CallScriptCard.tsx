@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
-import { AppText } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { AppText, PressableScale } from '@/components';
+import { colors, pressScale, radii, spacing } from '@/theme';
+import { tapImpact } from '@/lib/haptics';
 import { aiService } from '@/services/ai';
 import { reportDataError } from '@/services/monitoring';
 import type { CallScript, CallScriptTone } from '@/services/ai';
@@ -33,20 +34,28 @@ export function CallScriptCard({
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Which request is the one whose answer still matters. The sheet can be closed
+  // mid-generation and Retry can be tapped twice; without this, a response
+  // landing late set state on an unmounted card, or an older one overwrote the
+  // newer. Bumped on every generate and on unmount.
+  const request = useRef(0);
 
   const generate = useCallback(async () => {
+    const mine = ++request.current;
     setLoading(true);
     setFailed(false);
     try {
       const result = await aiService.buildCallScript({ need, resource, tone, firstName });
+      if (mine !== request.current) return;
       setScript(result);
     } catch (error) {
+      if (mine !== request.current) return;
       // Reported, not just shown — see useAiGuidance: a silent AI failure is
       // invisible in monitoring while every resource read is not.
       reportDataError('Call script', error);
       setFailed(true);
     } finally {
-      setLoading(false);
+      if (mine === request.current) setLoading(false);
     }
   }, [need, resource, tone, firstName]);
 
@@ -54,9 +63,11 @@ export function CallScriptCard({
     generate();
   }, [generate]);
 
-  // Clear any pending "Copied" reset on unmount (the sheet can be closed).
+  // On unmount (the sheet can be closed): retire any in-flight request and clear
+  // a pending "Copied" reset.
   useEffect(
     () => () => {
+      request.current += 1;
       if (copyTimer.current) clearTimeout(copyTimer.current);
     },
     [],
@@ -64,7 +75,14 @@ export function CallScriptCard({
 
   const copy = async () => {
     if (!script) return;
-    await Clipboard.setStringAsync(script.script);
+    try {
+      await Clipboard.setStringAsync(script.script);
+    } catch {
+      // No clipboard (web permissions, a stripped build) — the script is still
+      // on screen to read from; a failed copy is not worth an alert.
+      return;
+    }
+    tapImpact();
     setCopied(true);
     if (copyTimer.current) clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(false), 1800);
@@ -72,19 +90,18 @@ export function CallScriptCard({
 
   if (failed) {
     return (
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
-        accessibilityLabel="Try generating the script again"
+        accessibilityLabel="Try writing the script again"
         onPress={generate}
-        style={({ pressed }) => [styles.retry, pressed && styles.retryPressed]}
+        scaleTo={pressScale.subtle}
+        style={styles.retry}
       >
-        <AppText variant="body" color="danger">
-          Couldn’t put the script together.
-        </AppText>
+        <AppText variant="body">Couldn’t write the script just now.</AppText>
         <AppText variant="label" color="accentPressed">
           Tap to try again
         </AppText>
-      </Pressable>
+      </PressableScale>
     );
   }
 
@@ -103,12 +120,13 @@ export function CallScriptCard({
         <>
           <View style={styles.scriptBlock}>
             <AppText variant="body">{script.script}</AppText>
-            <Pressable
+            <PressableScale
               accessibilityRole="button"
               accessibilityLabel={copied ? 'Script copied' : 'Copy script'}
               onPress={copy}
-              hitSlop={8}
-              style={({ pressed }) => [styles.copy, pressed && styles.copyPressed]}
+              scaleTo={pressScale.chip}
+              containerStyle={styles.copySlot}
+              style={styles.copy}
             >
               <Ionicons
                 name={copied ? 'checkmark' : 'copy-outline'}
@@ -118,10 +136,11 @@ export function CallScriptCard({
               <AppText variant="label" color={copied ? 'success' : 'textSecondary'}>
                 {copied ? 'Copied' : 'Copy'}
               </AppText>
-            </Pressable>
+            </PressableScale>
           </View>
-          {script.tips.map((tip) => (
-            <View key={tip} style={styles.tipRow}>
+          {/* Index-qualified: the model can repeat a tip verbatim. */}
+          {script.tips.map((tip, i) => (
+            <View key={`${i}-${tip}`} style={styles.tipRow}>
               <AppText variant="body" color="textSecondary">
                 •
               </AppText>
@@ -139,24 +158,26 @@ export function CallScriptCard({
 const styles = StyleSheet.create({
   retry: {
     gap: spacing.xs,
+    minHeight: 44,
     padding: spacing.md,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
   },
-  retryPressed: { opacity: 0.6 },
   scriptBlock: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.sm,
   },
+  copySlot: { alignSelf: 'flex-end' },
+  // A real 44pt target that hugs its label; it was an 18pt line with hitSlop.
   copy: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    alignSelf: 'flex-end',
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
   },
-  copyPressed: { opacity: 0.6 },
   tipRow: { flexDirection: 'row', gap: spacing.xs },
   tipText: { flex: 1 },
 });

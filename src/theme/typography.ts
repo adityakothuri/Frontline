@@ -20,6 +20,14 @@ export const textVariants = {
   displayLarge: { fontFamily: fonts.serifBold, fontSize: 36, lineHeight: 42 },
   display: { fontFamily: fonts.serifBold, fontSize: 32, lineHeight: 40 },
   title: { fontFamily: fonts.serifBold, fontSize: 24, lineHeight: 32 },
+  /**
+   * The name of a thing on a card — a place, a category — and the stack header's
+   * title, which names the thing the pushed screen is about. The third and last
+   * serif step (32 / 24 / 18): it is what makes a resource card read as an entry
+   * in a directory rather than a template row, and it stops here. A section
+   * heading is not the name of a thing; it stays Inter.
+   */
+  cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, lineHeight: 24 },
   heading: { fontFamily: fonts.semibold, fontSize: 20, lineHeight: 26 },
   subtitle: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22 },
   body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },

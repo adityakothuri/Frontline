@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { EmptyState, ErrorState, Loading, useLoadingGate, ScreenContainer } from '@/components';
-import { invalidateResourceCache, resourceService } from '@/services/resources';
+import {
+  invalidateResourceCache,
+  resourceService,
+  resourceToNeedCategory,
+} from '@/services/resources';
 import { reportDataError } from '@/services/monitoring';
 import { ResourceDetail } from '@/features/resources/ResourceDetail';
-import type { Resource } from '@/types/resource';
-import type { NeedCategory } from '@/types/need';
+import { RESOURCE_CATEGORY_META, type Resource } from '@/types/resource';
+import { isNeedCategory } from '@/types/need';
 
 type LoadState =
   | { status: 'loading' }
@@ -21,8 +25,14 @@ type LoadState =
 // param carries the veteran's original need so the AI guidance keeps its context.
 // Save lives in the page's action row, not the header.
 export default function ResourceDetailScreen() {
-  const { id, category } = useLocalSearchParams<{ id: string; category?: NeedCategory }>();
-  const needCategory: NeedCategory = category ?? 'va_benefits';
+  const router = useRouter();
+  const params = useLocalSearchParams<{ id?: string | string[]; category?: string }>();
+  // A route can hand us an array or nothing; neither is a resource.
+  const id = typeof params.id === 'string' && params.id.length > 0 ? params.id : null;
+  // The need the veteran was searching, when the route carries a valid one.
+  // Otherwise it is derived from the resource itself once loaded — never a
+  // fixed default, which used to hand a food pantry a VA-benefits plan.
+  const routeCategory = isNeedCategory(params.category) ? params.category : null;
 
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   // Bumped by the retry so the effect re-runs; keeping the fetch inside the
@@ -31,6 +41,10 @@ export default function ResourceDetailScreen() {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    if (id === null) {
+      setState({ status: 'notFound' });
+      return;
+    }
     let active = true;
     setState({ status: 'loading' });
     resourceService
@@ -54,7 +68,12 @@ export default function ResourceDetailScreen() {
   }, []);
 
   const gate = useLoadingGate(state.status === 'loading', state.status === 'error');
-  const title = state.status === 'ready' ? state.resource.name : 'Resource';
+  // The category, not the name: the hero below the header already carries the
+  // name in serif, and the same string twice in 60pt of vertical space read as a
+  // mistake. The category also tells a veteran arriving from a deep link where
+  // in the app they are.
+  const title =
+    state.status === 'ready' ? RESOURCE_CATEGORY_META[state.resource.category].label : '';
 
   // `holding` keeps the shield up through its finale, so the page does not cut
   // in over the celebration the moment the resource lands.
@@ -62,7 +81,10 @@ export default function ResourceDetailScreen() {
     return (
       <>
         <Stack.Screen options={{ title }} />
-        <ResourceDetail resource={state.resource} needCategory={needCategory} />
+        <ResourceDetail
+          resource={state.resource}
+          needCategory={routeCategory ?? resourceToNeedCategory(state.resource.category)}
+        />
       </>
     );
   }
@@ -79,8 +101,10 @@ export default function ResourceDetailScreen() {
       ) : (
         <EmptyState
           icon="help-circle-outline"
-          title="Resource not found"
-          message="We couldn’t find this resource. It may have been removed."
+          title="This place isn’t listed any more"
+          message="It may have closed or been removed from our sources. Nearby help is one step back."
+          actionLabel="Go back"
+          onAction={() => (router.canGoBack() ? router.back() : router.replace('/discover'))}
         />
       )}
     </ScreenContainer>

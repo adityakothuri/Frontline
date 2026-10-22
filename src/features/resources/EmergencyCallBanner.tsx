@@ -1,6 +1,6 @@
-import { View, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText } from '@/components';
+import { AppText, PressableScale } from '@/components';
 import { colors, radii, spacing, withAlpha } from '@/theme';
 import type { Resource } from '@/types/resource';
 
@@ -36,17 +36,20 @@ export function DangerCallBanner({
       <AppText variant="body" color="textSecondary">
         {message}
       </AppText>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         onPress={onCall}
-        style={({ pressed }) => [styles.callButton, pressed && styles.callButtonPressed]}
       >
-        <Ionicons name="call" size={18} color={colors.background} />
-        <AppText variant="subtitle" style={styles.callLabel}>
-          {callLabel}
-        </AppText>
-      </Pressable>
+        {({ pressed }) => (
+          <View style={[styles.callButton, pressed && styles.callButtonPressed]}>
+            <Ionicons name="call" size={18} color={colors.background} />
+            <AppText variant="subtitle" style={styles.callLabel}>
+              {callLabel}
+            </AppText>
+          </View>
+        )}
+      </PressableScale>
     </View>
   );
 }
@@ -94,6 +97,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
     marginTop: spacing.xs,
   },
-  callButtonPressed: { opacity: 0.85 },
+  // A darker red on press, the way `PrimaryButton` darkens its olive — a colour
+  // shift rather than a dim, so the button never looks disabled mid-tap.
+  callButtonPressed: { backgroundColor: colors.dangerText },
   callLabel: { color: colors.background },
 });

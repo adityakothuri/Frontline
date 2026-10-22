@@ -54,11 +54,13 @@ const styles = StyleSheet.create({
   // Amber, not red: nothing is broken for the veteran — the list below is still
   // usable — so this sits in the same "check the source" register the
   // verification chips use.
+  // No horizontal margin: the screen insets this. It used to carry `spacing.xl`
+  // itself, which on Results — already padded by `ScreenContainer` — sat the
+  // strip a full gutter narrower than the cards under it.
   root: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginHorizontal: spacing.xl,
     marginBottom: spacing.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,

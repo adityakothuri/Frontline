@@ -34,7 +34,8 @@ export function OnboardingWelcome({ onStart }: { onStart: () => void }) {
 
         <Animated.View entering={riseIn(stagger.step * 2, rise.md)}>
           <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-            Find your next step — benefits, local resources, and a clear plan for what to do next.
+            Benefits, local help, and a clear next step — found for you, explained in plain English.
+            You served; this part should be simpler.
           </AppText>
         </Animated.View>
       </View>
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
   },
   title: { textAlign: 'center', marginBottom: spacing.md },
   subtitle: { textAlign: 'center', maxWidth: 320 },
-  footer: { paddingHorizontal: spacing.xl, gap: spacing.md },
+  footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.md },
   reassure: {
     flexDirection: 'row',
     alignItems: 'center',

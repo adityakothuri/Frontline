@@ -11,7 +11,7 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
 import { Fraunces_700Bold } from '@expo-google-fonts/fraunces/700Bold';
-import { colors, fonts, timings } from '@/theme';
+import { colors, fonts, textVariants, timings } from '@/theme';
 import { AppErrorBoundary, ShieldTrace } from '@/components';
 import { ProfileProvider } from '@/services/profile';
 import { ActivityProvider } from '@/services/activity';
@@ -89,7 +89,15 @@ function RootLayout() {
     headerStyle: { backgroundColor: colors.background },
     headerShadowVisible: false,
     headerTintColor: colors.textPrimary,
-    headerTitleStyle: { fontFamily: fonts.semibold, color: colors.textPrimary },
+    // The serif, at the card-name size: a pushed screen is titled by the thing
+    // it is about (a category, a place, the conversation), and those are set in
+    // Fraunces everywhere else. The bar then reads as part of the product
+    // rather than a platform default over it.
+    headerTitleStyle: {
+      fontFamily: fonts.serifSemibold,
+      fontSize: textVariants.cardTitle.fontSize,
+      color: colors.textPrimary,
+    },
     headerBackTitle: 'Back',
     animation: 'ios_from_right',
     fullScreenGestureEnabled: true,
@@ -122,6 +130,8 @@ function RootLayout() {
                   {/* Results and the resource detail push on top of the tabs with a themed header. */}
                   <Stack.Screen name="results" options={themedHeader} />
                   <Stack.Screen name="resource/[id]" options={themedHeader} />
+                  {/* Ask Frontline pushes from Home's card, like Results does from a category. */}
+                  <Stack.Screen name="ask" options={themedHeader} />
                 </Stack>
               </RemindersProvider>
             </SavedProvider>

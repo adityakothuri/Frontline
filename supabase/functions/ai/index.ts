@@ -4,6 +4,8 @@
  * POST { task: 'plan'|'script'|'summary', resource, need?, firstName?, tone? }
  * -> the exact NextStepPlan / CallScript / BenefitSummary shape from
  *    src/services/ai/AiService.ts (client re-stamps the disclaimer).
+ * POST { task: 'chat', messages, context }
+ * -> the ChatReply shape from the same file (see chatRequest.ts for the rules).
  *
  * Errors: 400 malformed, 401 unauthorized, 405 method, 413 payload too large,
  * 429 rate-limited/over-budget, 502 upstream/shape failure — the client surfaces
@@ -11,14 +13,24 @@
  */
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import {
+  buildChatContextBlock,
   buildSystemPrompt,
   buildUserMessage,
+  CHAT_SYSTEM_CORE,
   NOT_ADVICE_DISCLAIMER,
   TASK_SCHEMAS,
   type AiTask,
+  type ResourceTask,
 } from './prompts.ts';
+import { parseChatRequest, sanitizeFirstName } from './chatRequest.ts';
 
 const RATE_LIMIT_PER_HOUR = 30;
+// The chat gets its own hourly bucket. A resource page fires two calls per
+// open; one ten-turn conversation would otherwise spend a third of the shared
+// allowance and a veteran who chats and then browses five places would hit 429
+// on a resource page. Separate buckets mean neither surface can starve the
+// other. The client also caps a session at 12 turns.
+const CHAT_RATE_LIMIT_PER_HOUR = 20;
 
 // Upper bound on caller-supplied prompt input (resource + need, serialized).
 // A real resource is ~1 KB and a need ~0.5 KB; 20k chars is generous headroom
@@ -54,7 +66,10 @@ function clientIp(request: Request): string {
 
 // Per-task model selection to control cost. Summaries auto-load on every
 // resource open, so they run on cheap Haiku; plans and call scripts are richer,
-// user-triggered guidance and run on Opus. Each is overridable via env so the
+// user-triggered guidance and run on Opus. The chat is a conversation a veteran
+// is waiting on, so it runs the current Opus at low effort — the effort setting
+// is its latency control — and can be moved to Sonnet via env without a
+// redeploy if measured latency says so. Each is overridable via env so the
 // models can be tuned without a code change. ANTHROPIC_MODEL stays the Opus
 // default (backward compatible with the existing deploy).
 const DEFAULT_MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-opus-4-8';
@@ -62,13 +77,14 @@ const TASK_MODELS: Record<AiTask, string> = {
   summary: Deno.env.get('ANTHROPIC_MODEL_SUMMARY') ?? 'claude-haiku-4-5',
   plan: Deno.env.get('ANTHROPIC_MODEL_PLAN') ?? DEFAULT_MODEL,
   script: Deno.env.get('ANTHROPIC_MODEL_SCRIPT') ?? DEFAULT_MODEL,
+  chat: Deno.env.get('ANTHROPIC_MODEL_CHAT') ?? 'claude-opus-5-5',
 };
 
-// Adaptive thinking and the `effort` control exist on Opus 4.6+, Sonnet 4.6/5,
-// and Fable 5, but NOT on Haiku 4.5, which rejects both with a 400. Structured
-// outputs (output_config.format) work on every tier. Gate the two fields on the
-// model so the Haiku summary request is a shape Haiku accepts.
-const supportsEffortControls = (model: string): boolean => !model.includes('haiku');
+// Adaptive thinking and the `effort` control exist on every current model
+// except Haiku 4.5, which rejects both with a 400. Structured outputs
+// (output_config.format) work on every tier. Gate the two fields on the model
+// so the Haiku summary request is a shape Haiku accepts.
+const supportsEffortControls = (model: string): boolean => model !== 'claude-haiku-4-5';
 
 // Global hourly spend cap (USD, all callers combined). Soft app-level guard:
 // at the limit we 429 and the client shows an error/retry. The hard backstop is
@@ -77,9 +93,14 @@ const AI_HOURLY_BUDGET_USD = Number(Deno.env.get('AI_HOURLY_BUDGET_USD') ?? '5')
 
 // $/1M tokens, mirrored from the model catalog. Unknown models fall back to
 // Opus pricing (conservative — never under-counts spend against the budget).
+// The 5.x line is priced at the Opus 5 / Sonnet 5 list prices.
 const MODEL_PRICES: Record<string, { input: number; output: number }> = {
   'claude-haiku-4-5': { input: 1, output: 5 },
   'claude-opus-4-8': { input: 5, output: 25 },
+  'claude-sonnet-5': { input: 2, output: 10 },
+  'claude-sonnet-5-5': { input: 2, output: 10 },
+  'claude-opus-5': { input: 5, output: 25 },
+  'claude-opus-5-5': { input: 5, output: 25 },
 };
 
 type Usage = {
@@ -107,20 +128,14 @@ const json = (body: unknown, status = 200): Response =>
   });
 
 function isTask(value: unknown): value is AiTask {
-  return value === 'plan' || value === 'script' || value === 'summary';
+  return value === 'plan' || value === 'script' || value === 'summary' || value === 'chat';
 }
 
-/** Only free-text field a user controls; keep it a name, nothing more. */
-function sanitizeFirstName(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const cleaned = value
-    .slice(0, 40)
-    .replace(/[^\p{L}\p{N} '.-]/gu, '')
-    .trim();
-  return cleaned.length > 0 ? cleaned : undefined;
-}
-
-async function checkRateLimit(request: Request): Promise<boolean> {
+/**
+ * Bump-and-check the caller's hourly window. `bucket` keys a separate window
+ * for a surface with its own budget (the chat); the RPC takes any string.
+ */
+async function checkRateLimit(request: Request, bucket?: 'chat'): Promise<boolean> {
   // Fully fail-open: the limiter must never take AI down, including on
   // network errors reaching the database.
   try {
@@ -131,6 +146,8 @@ async function checkRateLimit(request: Request): Promise<boolean> {
     const ipHash = Array.from(new Uint8Array(digest))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
+    const key = bucket ? `${bucket}:${ipHash}` : ipHash;
+    const limit = bucket === 'chat' ? CHAT_RATE_LIMIT_PER_HOUR : RATE_LIMIT_PER_HOUR;
 
     // Service-role env vars are auto-injected into deployed functions; the
     // rate_limits table/function are granted to service_role only.
@@ -143,12 +160,12 @@ async function checkRateLimit(request: Request): Promise<boolean> {
           Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ p_ip_hash: ipHash }),
+        body: JSON.stringify({ p_ip_hash: key }),
       },
     );
     if (!response.ok) return true;
     const count = (await response.json()) as number;
-    return count <= RATE_LIMIT_PER_HOUR;
+    return count <= limit;
   } catch {
     return true;
   }
@@ -185,6 +202,95 @@ async function recordSpend(model: string, usage: Usage): Promise<void> {
   await callSpendRpc('add_ai_spend', { p_usd: estimateCostUsd(model, usage) });
 }
 
+/** The text block of a model response, or null when there is none to parse. */
+function responseText(response: Anthropic.Message): string | null {
+  return response.content.find((block) => block.type === 'text')?.text ?? null;
+}
+
+/**
+ * The navigator chat. The history is replayed as plain text — the assistant's
+ * earlier `reply` strings, never the action JSON — with the stable system core
+ * and the latest user turn marked for the prompt cache, so each turn pays for
+ * the new text rather than the whole conversation.
+ */
+async function handleChat(request: Request, body: Record<string, unknown>): Promise<Response> {
+  const parsed = parseChatRequest(body);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const { messages, context } = parsed.request;
+
+  if (!(await checkRateLimit(request, 'chat'))) {
+    return json({ error: 'Rate limit exceeded — try again later' }, 429);
+  }
+  if (await overBudget()) {
+    return json({ error: 'AI budget reached — try again later' }, 429);
+  }
+
+  const model = TASK_MODELS.chat;
+  const useEffortControls = supportsEffortControls(model);
+  const last = messages.length - 1;
+
+  try {
+    const response = await anthropic.messages.create({
+      model,
+      // A reply is ~70 words plus its JSON; thinking at low effort shares this
+      // cap. 2048 bounds the cost of any single turn.
+      max_tokens: 2048,
+      ...(useEffortControls ? { thinking: { type: 'adaptive' as const } } : {}),
+      system: [
+        { type: 'text', text: CHAT_SYSTEM_CORE, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: buildChatContextBlock(context) },
+      ],
+      output_config: {
+        ...(useEffortControls ? { effort: 'low' as const } : {}),
+        format: { type: 'json_schema', schema: TASK_SCHEMAS.chat },
+      },
+      messages: messages.map((turn, i) =>
+        i === last
+          ? {
+              role: turn.role,
+              content: [
+                { type: 'text' as const, text: turn.content, cache_control: { type: 'ephemeral' as const } },
+              ],
+            }
+          : { role: turn.role, content: turn.content },
+      ),
+    });
+
+    await recordSpend(model, response.usage as Usage);
+
+    // A refusal is an answer, not an outage: a retry would only repeat it, so
+    // the veteran gets a fixed line and the conversation keeps its footing.
+    if (response.stop_reason === 'refusal') {
+      return json({
+        reply:
+          "I can only help with finding veteran resources and benefits, so I'll leave that one. Tell me what kind of help you're looking for.",
+        actions: [],
+        followUps: [],
+        disclaimer: NOT_ADVICE_DISCLAIMER,
+      });
+    }
+    const text = responseText(response);
+    // Hitting the cap means truncated JSON; that one a retry can fix.
+    if (!text || response.stop_reason === 'max_tokens') {
+      return json({ error: 'Empty model response' }, 502);
+    }
+    const content = JSON.parse(text) as {
+      reply: string;
+      actions: unknown[];
+      followUps: string[];
+    };
+    return json({
+      reply: content.reply,
+      actions: content.actions.slice(0, 3),
+      followUps: content.followUps.slice(0, 3),
+      disclaimer: NOT_ADVICE_DISCLAIMER,
+    });
+  } catch (error) {
+    console.error('ai chat error:', error instanceof Error ? error.message : error);
+    return json({ error: 'Upstream failure' }, 502);
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'POST only' }), {
@@ -209,7 +315,10 @@ Deno.serve(async (request) => {
   }
 
   const { task, resource, need } = body;
-  if (!isTask(task)) return json({ error: 'task must be plan | script | summary' }, 400);
+  if (!isTask(task)) return json({ error: 'task must be plan | script | summary | chat' }, 400);
+  if (task === 'chat') return handleChat(request, body);
+  const resourceTask: ResourceTask = task;
+
   if (
     typeof resource !== 'object' ||
     resource === null ||
@@ -217,7 +326,10 @@ Deno.serve(async (request) => {
   ) {
     return json({ error: 'resource is required' }, 400);
   }
-  if ((task === 'plan' || task === 'script') && (typeof need !== 'object' || need === null)) {
+  if (
+    (resourceTask === 'plan' || resourceTask === 'script') &&
+    (typeof need !== 'object' || need === null)
+  ) {
     return json({ error: 'need is required for this task' }, 400);
   }
 
@@ -239,7 +351,7 @@ Deno.serve(async (request) => {
   const tone = body.tone === 'short' ? 'short' : 'standard';
   const firstName = sanitizeFirstName(body.firstName);
 
-  const model = TASK_MODELS[task];
+  const model = TASK_MODELS[resourceTask];
   const useEffortControls = supportsEffortControls(model);
 
   try {
@@ -252,13 +364,16 @@ Deno.serve(async (request) => {
       // Adaptive thinking + effort only on the models that support them (Opus
       // here); Haiku would 400. Structured outputs stay on for every task.
       ...(useEffortControls ? { thinking: { type: 'adaptive' as const } } : {}),
-      system: buildSystemPrompt(task),
+      system: buildSystemPrompt(resourceTask),
       output_config: {
         ...(useEffortControls ? { effort: 'low' as const } : {}),
-        format: { type: 'json_schema', schema: TASK_SCHEMAS[task] },
+        format: { type: 'json_schema', schema: TASK_SCHEMAS[resourceTask] },
       },
       messages: [
-        { role: 'user', content: buildUserMessage({ task, resource, need, firstName, tone }) },
+        {
+          role: 'user',
+          content: buildUserMessage({ task: resourceTask, resource, need, firstName, tone }),
+        },
       ],
     });
 
@@ -266,7 +381,7 @@ Deno.serve(async (request) => {
     await recordSpend(model, response.usage as Usage);
 
     if (response.stop_reason === 'refusal') return json({ error: 'Model declined' }, 502);
-    const text = response.content.find((block) => block.type === 'text')?.text;
+    const text = responseText(response);
     if (!text) return json({ error: 'Empty model response' }, 502);
     const content = JSON.parse(text) as Record<string, unknown>;
 
@@ -274,9 +389,9 @@ Deno.serve(async (request) => {
     // are added here, not asked of the model.
     const sourceUrl = (resource as { source_url?: string | null }).source_url ?? null;
     const payload =
-      task === 'plan'
+      resourceTask === 'plan'
         ? { ...content, disclaimer: NOT_ADVICE_DISCLAIMER }
-        : task === 'script'
+        : resourceTask === 'script'
           ? { tone, ...content, disclaimer: NOT_ADVICE_DISCLAIMER }
           : { ...content, sourceUrl }; // BenefitSummary carries no disclaimer field
 
