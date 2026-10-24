@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { captureException } from '../monitoring';
 import {
   DEFAULT_LEAD,
   LEAD_OPTIONS,
@@ -6,23 +7,16 @@ import {
   type ReminderPreference,
 } from './reminderSchedule';
 
-// The one versioned key for the on-device reminder list. Reminders are
-// deliberately *not* in the `sync` backup: a reminder is a promise this phone
-// made about this phone's clock, and restoring one onto a second device would
-// quietly double every alert. See the Decision Log.
+// Deliberately not in the `sync` backup: restoring reminders onto a second
+// device would double every alert.
 const STORAGE_KEY = 'frontline.reminders.v1';
 
 const isLead = (value: unknown): value is ReminderLead =>
   LEAD_OPTIONS.includes(value as ReminderLead);
 
 /**
- * A tolerant parse: anything malformed is dropped rather than thrown over.
- *
- * The snapshot fields are the risk here — they were written by an older build
- * that may not have had all of them, and a missing `sourceLabel` would put the
- * string `undefined` on a veteran's lock screen where the trust line belongs.
- * So every field is checked, and a preference missing any of them is discarded;
- * the reminder is cheap to set again, and a wrong one is not.
+ * A tolerant parse: a preference missing any snapshot field is dropped, since a
+ * missing `sourceLabel` would print "undefined" on the lock screen.
  */
 function parsePreference(value: unknown): ReminderPreference | null {
   if (typeof value !== 'object' || value === null) return null;
@@ -37,8 +31,6 @@ function parsePreference(value: unknown): ReminderPreference | null {
 
   return {
     resourceId: pref.resourceId,
-    // An unrecognised lead falls back rather than disqualifying the reminder —
-    // the veteran still gets told, just at the default distance.
     lead: isLead(pref.lead) ? pref.lead : DEFAULT_LEAD,
     warnBeforeClosing: pref.warnBeforeClosing === true,
     enabledAt: pref.enabledAt,
@@ -65,7 +57,11 @@ export async function loadReminders(): Promise<ReminderPreference[]> {
   }
 }
 
-/** Persist the reminders. */
+/** Persist the reminders. Never throws. */
 export async function saveReminders(prefs: ReminderPreference[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  } catch (error) {
+    captureException(error);
+  }
 }

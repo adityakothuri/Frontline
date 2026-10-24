@@ -1,34 +1,25 @@
 /**
- * HRSA Health Center Program — federally funded community clinics (FQHCs).
+ * HRSA Health Center Program — federally funded community clinics (FQHCs) that
+ * see everyone on a sliding fee scale. For a veteran not enrolled in VA care, or
+ * far from a VA clinic, this is often the real answer.
  *
- * WHY A GENERAL SOURCE IS HERE
+ * `general`, not veteran-specific: the file has no per-site veteran flag. Veteran
+ * rows rank first and general rows are capped in-app (`DENSE_GENERAL_CAPS`).
  *
- * Community health centres are required to see everyone regardless of ability to
- * pay, on a sliding fee scale. For a veteran who is not enrolled in VA health
- * care, lives too far from a VA clinic, or needs to be seen this week rather than
- * in six, this is the actual answer — and VA Community Care often pays for it.
- * HRSA explicitly names veterans among the populations these centres serve.
- *
- * It is nonetheless `general`, not veteran-specific: there is no per-site veteran
- * flag in this file, and claiming one would be the sort of invention this audit
- * exists to remove. Veteran rows still fill each category's capacity first
- * (migration 0021) and general rows are capped to the nearest few in-app
- * (`DENSE_GENERAL_CAPS`), so these back the catalogue up without swamping it.
- *
- * WHAT THIS FILE DOES *NOT* GIVE US: A SCHEDULE
- *
- * The column named "Operating Hours per Week" is a weekly TOTAL — `40.00`, `8.00`
- * — not opening times. There is no way to derive "Mon-Fri 09:00-17:00" from it,
- * and guessing one would be exactly the class of fabrication that produced the
- * ZIP-centroid bug. So `hours` stays null and the weekly total goes in the
- * description, where "open about 40 hours a week" is true and useful.
- *
- * Mobile Van sites (1,376 of 18,963) are excluded: a van's registered address is
- * not where the van is, so pinning it would mislead. Seasonal sites are kept —
- * they are real fixed places — with their status said out loud.
+ * "Operating Hours per Week" is a weekly total, not a schedule, so `hours` stays
+ * null and the total goes in the description. Mobile vans are excluded — a van's
+ * registered address is not where the van is.
  */
 import { parseCsvStream } from '../lib/csv.ts';
+import { titleCaseName } from '../lib/displayName.ts';
 import { httpRequest } from '../lib/http.ts';
+import {
+  formatAddress,
+  isSaneCoord,
+  normalizeUrl,
+  parseStateFilter,
+  trimOrNull,
+} from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -43,19 +34,9 @@ const ATTRIBUTION_URL = 'https://findahealthcenter.hrsa.gov/';
 /** Site types we can honestly place on a map. */
 const PLACEABLE_LOCATION_TYPES = new Set(['Permanent', 'Seasonal']);
 
-// School-based health centres are real HRSA sites, but they serve the students
-// enrolled at that school — an adult veteran cannot walk into an elementary-school
-// clinic and be seen. 2,959 of them were sitting in `healthcare` on 2026-07-28,
-// carrying this adapter's generic "open to everyone, including veterans" text,
-// which for these sites is simply untrue.
-//
-// Exactly the same reasoning retired 51,839 school cafeterias from `food` in
-// migration 0025: Frontline serves older veterans, and a resource they are not
-// eligible to use is worse than no resource.
-//
-// `academy` is included because charter and vocational schools use it; that risks
-// dropping a genuine clinic named "Academy Health", which is the acceptable side of
-// this trade.
+// School-based health centres serve enrolled students, not an adult veteran.
+// `academy` catches charter/vocational schools at the cost of the odd real
+// "Academy Health" clinic — the acceptable side of the trade.
 const SCHOOL_BASED_SITE =
   /\b(elementary|middle school|high school|jr\.? high|junior high|head start|preschool|pre-k|daycare|day care|academy|school[- ]based health|school health center)\b/i;
 
@@ -78,51 +59,17 @@ const COL = {
   latitude: 'Geocoding Artifact Address Primary Y Coordinate',
 } as const;
 
-const trimOrNull = (s: string | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const isSaneCoord = (lat: number, lng: number): boolean =>
-  Number.isFinite(lat) &&
-  Number.isFinite(lng) &&
-  Math.abs(lat) <= 90 &&
-  Math.abs(lng) <= 180 &&
-  !(lat === 0 && lng === 0);
-
-const normalizeUrl = (raw: string | null): string | null => {
-  if (!raw) return null;
-  return /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
-};
-
-/** "805-346-8185" → keep; anything without 10 digits is not dialable. */
-const cleanPhone = (raw: string | null): string | null => {
+/**
+ * Keep a site phone with 10 or 11 digits. Looser than `cleanPhone` in
+ * lib/normalize.ts: an 11th digit here is often a one-digit extension.
+ */
+const sitePhone = (raw: string | null): string | null => {
   if (!raw) return null;
   const digits = raw.replace(/\D/g, '');
   return digits.length === 10 || digits.length === 11 ? raw : null;
 };
 
-/** Site names are ALL CAPS in this file. */
-function titleCase(name: string): string {
-  const SMALL = new Set(['of', 'the', 'and', 'for', 'a', 'an', 'in', 'on', 'at', 'to']);
-  const KEEP_UPPER = /^(?:FQHC|HIV|WIC|II|III|IV|LLC|INC|USA|US)$/;
-  return name
-    .toLowerCase()
-    .split(/\s+/)
-    .map((word, i) => {
-      const upper = word.toUpperCase().replace(/[^A-Z]/g, '');
-      if (KEEP_UPPER.test(upper)) return word.toUpperCase();
-      if (i > 0 && SMALL.has(word)) return word;
-      return word.replace(/^([a-z])/, (c) => c.toUpperCase());
-    })
-    .join(' ');
-}
-
-/**
- * "40.00" → "They're open about 40 hours a week." A weekly total is not a
- * schedule, so it is stated as the approximate thing it is, and never written
- * into `hours` (which the app parses as real opening times).
- */
+/** "40.00" → "open about 40 hours a week". Never written to `hours`, which must be a schedule. */
 function hoursSentence(raw: string | null): string {
   const weekly = Number(raw);
   if (!Number.isFinite(weekly) || weekly <= 0) {
@@ -141,7 +88,6 @@ function normalize(row: Record<string, string>, today: string): NormalizedResour
   const locationType = trimOrNull(row[COL.locationType]) ?? '';
   if (!PLACEABLE_LOCATION_TYPES.has(locationType)) return null;
 
-  // A clinic inside a school is not somewhere an adult veteran can be seen.
   if (SCHOOL_BASED_SITE.test(siteName)) return null;
 
   const city = trimOrNull(row[COL.city]);
@@ -157,32 +103,28 @@ function normalize(row: Record<string, string>, today: string): NormalizedResour
   const centerName = trimOrNull(row[COL.centerName]);
   const runBy =
     centerName && centerName.toUpperCase() !== siteName.toUpperCase()
-      ? ` Run by ${titleCase(centerName)}.`
+      ? ` Run by ${titleCaseName(centerName)}.`
       : '';
 
   return {
-    // Site name + address is the identity; this file has no stable site id column
-    // that survives its annual rebuild.
+    // The file has no site id that survives its rebuilds, so state + ZIP + name is the identity.
     id: `hrsa:${state}-${zip ?? '00000'}-${siteName
       .replace(/[^A-Za-z0-9]+/g, '-')
       .toLowerCase()
       .slice(0, 60)}`,
-    name: titleCase(siteName),
+    name: titleCaseName(siteName),
     category: 'healthcare',
     description:
       'A federally funded community health centre. They see patients whether or not you have ' +
       'insurance and charge on a sliding scale based on your income, so cost should not stop you ' +
       'from being seen. Primary care, and often dental, mental health and prescriptions.' +
       `${runBy}${hoursSentence(trimOrNull(row[COL.hoursPerWeek]))}${seasonal}`,
-    address: [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-      .filter(Boolean)
-      .join(', '),
+    address: formatAddress(street, city, state, zip),
     latitude: hasCoords ? lat : null,
     longitude: hasCoords ? lng : null,
     geocode: hasCoords ? undefined : { street, city, state, zip },
-    phone: cleanPhone(trimOrNull(row[COL.phone])),
-    website: normalizeUrl(trimOrNull(row[COL.website])),
-    // A weekly hour count is not a schedule — see hoursSentence.
+    phone: sitePhone(trimOrNull(row[COL.phone])),
+    website: normalizeUrl(row[COL.website]),
     hours: null,
     eligibility:
       'Open to everyone, including veterans not enrolled in VA health care. Fees slide with your ' +
@@ -218,15 +160,7 @@ export const createHrsaHealthCentersSource: SourceFactory = (
         throw new Error(`HRSA: HTTP ${response.status} for ${config.baseUrl}`);
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

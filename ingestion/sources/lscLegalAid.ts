@@ -1,32 +1,14 @@
 /**
- * Legal Services Corporation grantees — free civil legal aid, by service area.
+ * Legal Services Corporation grantees — free civil legal aid (eviction, custody,
+ * debt, benefits appeals) for anyone low-income, which VA-accredited claims reps
+ * do not handle.
  *
- * WHY `legal` NEEDS THIS
- *
- * The audit found the `legal` category had no independent content at all: all
- * 7,160 rows were the VA-accredited-organization list cross-listed from
- * `benefits_help`, so a veteran tapping Legal got the Benefits list again.
- * Accredited representatives handle VA claims — they do not handle the eviction,
- * the custody case, the licence suspension or the debt that is actually about to
- * cost a veteran their housing or their job.
- *
- * LSC funds the civil legal aid programme in every state, and its 132 grantees are
- * the front door to free civil representation for anyone low-income.
- *
- * WHY THESE ARE REFERRALS AND NOT PINS
- *
- * The dataset behind LSC's own locator map (`Programs.json`, found in
- * `find-legal-services.js`) has exactly five fields: name, website, toll-free
- * number, local number, fax, and a service-area id like `TX-15`. There are no
- * office addresses — a grantee runs several offices and the map draws service-area
- * rectangles, not points. Branch addresses would mean crawling 132 separate
- * grantee websites.
- *
- * So each row is a state-scoped referral: null coords, null address, `state:XX`
- * from the service-area id, and a phone number that works. That is what the data
- * supports, and after 0027 the RPC ranks in-state referrals first.
+ * LSC's locator data (`Programs.json`) has a name, website, phones and a
+ * service-area id like `TX-15`, but no office addresses. So each row is a
+ * state-scoped referral: null coords and address, a `state:XX` tag, and a phone.
  */
 import { fetchJson } from '../lib/http.ts';
+import { normalizeUrl, parseStateFilter, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -50,16 +32,6 @@ interface LscProgram {
   /** Service area, e.g. `TX-15`, `AK-1`. The state prefix is the useful part. */
   Serv_Area_ID?: string | null;
 }
-
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const normalizeUrl = (raw: string | null): string | null => {
-  if (!raw) return null;
-  return /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
-};
 
 /** `TX-15` → `TX`. Non-state prefixes (territories, MI-*) pass through as-is. */
 function serviceState(id: string | null): string | null {
@@ -90,13 +62,12 @@ function normalize(program: LscProgram, today: string): NormalizedResource | nul
       'denials and appeals, family and custody matters, debt collection, and consumer disputes. ' +
       'They serve a whole region rather than one office, so call the intake line and they will ' +
       'route you to the nearest office. There is no charge.',
-    // No addresses exist in this dataset; null address is also what makes the app
-    // treat this as the statewide referral it is (`isNationalReferral`).
+    // Null address is what makes the app treat this as a statewide referral (`isNationalReferral`).
     address: null,
     latitude: null,
     longitude: null,
     phone: tollFree ?? direct,
-    website: normalizeUrl(trimOrNull(program.Web_URL)),
+    website: normalizeUrl(program.Web_URL),
     hours: null,
     eligibility:
       'Based on income — most programmes serve households under 125% of the federal poverty ' +
@@ -105,10 +76,8 @@ function normalize(program: LscProgram, today: string): NormalizedResource | nul
     documents_needed: [],
     source_url: ATTRIBUTION_URL,
     source_type: 'nonprofit',
-    // Civil legal aid is open to anyone low-income, not veteran-specific. It is
-    // marked `veteran_benefit` rather than `general` deliberately: the referral
-    // machinery only surfaces non-general rows, and a veteran facing eviction
-    // needs this far more than they need another accredited claims rep.
+    // Not veteran-specific, but `veteran_benefit` on purpose: the statewide-referral
+    // section only surfaces non-general rows.
     veteran_relevance: 'veteran_benefit',
     verification_status: 'verified',
     last_checked: today,
@@ -132,15 +101,7 @@ export const createLscLegalAidSource: SourceFactory = (config: SourceConfig): In
 
       if (!Array.isArray(programs)) throw new Error('LSC: Programs.json is not an array');
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

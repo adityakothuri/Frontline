@@ -1,3 +1,5 @@
+-- Note: migration number 0007 was reserved and never used; 0006 → 0008 is intentional.
+--
 -- Frontline WS-7 — ingestion provenance & dedup (first source: VA Facilities).
 --
 -- Lets a machine ingest real resources without changing the READ contract:

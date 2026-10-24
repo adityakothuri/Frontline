@@ -102,11 +102,10 @@ describe('reap', () => {
     expect(deletes).toEqual([]);
   });
 
-  it('honours a looser floor for high-churn posting feeds like USAJOBS', async () => {
-    // Job postings close constantly, so 60% turnover is correct behaviour there
-    // and would be alarming for a directory of places.
+  it('honours an explicitly looser floor passed for a high-churn feed', async () => {
+    // 60% turnover would trip the default floor, but a caller may opt in to it.
     const { deletes } = mockRest({ total: 1000, stale: 600 });
-    await expect(reap(REST, { ...ARGS, provider: 'usajobs', maxFraction: 0.9 })).resolves.toBe(600);
+    await expect(reap(REST, { ...ARGS, maxFraction: 0.9 })).resolves.toBe(600);
     expect(deletes).toHaveLength(1);
   });
 

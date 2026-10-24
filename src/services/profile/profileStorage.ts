@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { captureException } from '../monitoring';
 import { VETERAN_ROLE_LABELS, type VeteranProfile, type VeteranRole } from '@/types/profile';
 import { VETERAN_DOCUMENT_LABELS, type VeteranDocument } from '@/types/need';
 
-// The one storage key for the on-device profile. Versioned so a future shape
-// change can migrate rather than silently misread old data.
+// Versioned so a future shape change can migrate rather than misread old data.
 const STORAGE_KEY = 'frontline.profile.v1';
 
 const isRole = (v: unknown): v is VeteranRole => typeof v === 'string' && v in VETERAN_ROLE_LABELS;
@@ -24,7 +24,6 @@ const parseDocuments = (v: unknown): VeteranDocument[] | undefined => {
 export function parseProfile(value: unknown): VeteranProfile | null {
   if (!value || typeof value !== 'object') return null;
   const parsed = value as Record<string, unknown>;
-  // A profile is only usable with a name.
   if (typeof parsed.firstName !== 'string' || parsed.firstName.length === 0) {
     return null;
   }
@@ -50,17 +49,24 @@ export async function loadProfile(): Promise<VeteranProfile | null> {
     if (!raw) return null;
     return parseProfile(JSON.parse(raw));
   } catch {
-    // Never let a storage/parse failure block the app from opening.
     return null;
   }
 }
 
-/** Persist the profile. */
+/** Persist the profile. Never throws. */
 export async function saveProfile(profile: VeteranProfile): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  } catch (error) {
+    captureException(error);
+  }
 }
 
-/** Remove the profile (used by "Reset setup"). */
+/** Remove the profile (used by "Reset setup"). Never throws. */
 export async function clearProfile(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    captureException(error);
+  }
 }

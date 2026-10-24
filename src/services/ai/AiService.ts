@@ -3,16 +3,9 @@ import type { VeteranRole } from '@/types/profile';
 import type { Resource } from '@/types/resource';
 
 /**
- * The AI seam. All AI in Frontline is **embedded in workflows** — plans, scripts,
- * summaries, and the Ask Frontline navigator, whose every reply ends in an
- * in-app action — never an open-ended chatbot. It is **simplified guidance —
- * never legal, medical, financial, or government-certified advice**. See
- * `docs/obsidian/03 Technical/AI Feature Design.md`.
- *
- * Implemented only by `ClaudeAiService` — real Claude via a proxy edge function
- * (the API key never ships in the client — see
- * `docs/obsidian/03 Technical/Environment Variables.md`). There is no simulated
- * implementation; on failure the calling screen shows an error/retry state.
+ * The AI seam: plans, scripts, summaries and the Ask Frontline navigator, every
+ * reply ending in an in-app action. Simplified guidance, never legal, medical,
+ * financial or government-certified advice. Implemented by `ClaudeAiService`.
  */
 
 export interface PlanStep {

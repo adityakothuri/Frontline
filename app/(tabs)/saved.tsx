@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import {
   AppText,
   EmptyState,
@@ -13,40 +13,59 @@ import {
   ScreenContainer,
   ScreenHeader,
 } from '@/components';
-import { colors, durations, pressScale, radii, spacing } from '@/theme';
+import { durations, pressScale, spacing } from '@/theme';
 import { fadeOut, riseIn, stepDelay } from '@/theme/motionPresets';
 import { useStaggerGate } from '@/hooks/useStaggerGate';
 import { isOpenNow } from '@/lib/hours';
+import { distanceMiles, type Coordinates } from '@/lib/geo';
 import {
-  invalidateResourceCache,
   resourceService,
   resourceToNeedCategory,
   type ResourceSearchResult,
 } from '@/services/resources';
 import { useSaved } from '@/services/saved';
+import { useProfile } from '@/services/profile';
+import { resolveZipCentroid } from '@/services/location';
 import { useReminders } from '@/services/reminders';
 import { reportDataError } from '@/services/monitoring';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { toReminderSnapshot } from '@/features/resources/resourceStatus';
 import type { Resource } from '@/types/resource';
 
-// The Saved tab. `savedIds` is the source of truth for membership + order; we
-// resolve each id to live data once (cached), so unsaving here removes the row
-// instantly and trust signals never come from a stale snapshot.
+// The Saved tab. `savedIds` is the source of truth for membership and order; the
+// ids resolve to live data in one cached request, so trust signals are never
+// read from a stale snapshot.
 export default function SavedScreen() {
+  const router = useRouter();
   const { savedIds, isHydrated, toggleSave } = useSaved();
   const { refreshSnapshots } = useReminders();
+  const { profile } = useProfile();
   const [resolved, setResolved] = useState<Record<string, Resource>>({});
-  // Ids the backend no longer knows. They used to look exactly like ids that
-  // had not resolved yet: refetched on every change, never drawn, and impossible
-  // to unsave from this tab — a veteran whose only saved place had closed saw
-  // "Nothing saved yet" over a list that was not empty.
+  // Ids the backend no longer returns: the place closed or left our sources.
+  // Tracked apart from unresolved ids so they can be shown and cleared.
   const [retired, setRetired] = useState<Set<string>>(() => new Set());
   const [resolving, setResolving] = useState(false);
   const [resolveFailed, setResolveFailed] = useState(false);
   const [resolveError, setResolveError] = useState<unknown>(undefined);
   // Bumped by the error-state retry to re-run the resolve effect.
   const [attempt, setAttempt] = useState(0);
+  // Distances are measured from the veteran's ZIP, the same origin search uses.
+  const [origin, setOrigin] = useState<Coordinates | null>(null);
+  const zip = profile?.zip;
+
+  useEffect(() => {
+    if (!zip) {
+      setOrigin(null);
+      return;
+    }
+    let active = true;
+    resolveZipCentroid(zip).then((centroid) => {
+      if (active) setOrigin(centroid);
+    });
+    return () => {
+      active = false;
+    };
+  }, [zip]);
 
   useEffect(() => {
     const missing = savedIds.filter((id) => !(id in resolved) && !retired.has(id));
@@ -54,39 +73,31 @@ export default function SavedScreen() {
     let active = true;
     setResolving(true);
     setResolveFailed(false);
-    // allSettled, not all: these are independent reads, and one id that fails
-    // (or has been retired from the catalogue) should cost the veteran that one
-    // row — not the whole list, which is what a rejected Promise.all did.
-    Promise.allSettled(missing.map((id) => resourceService.getById(id)))
-      .then((outcomes) => {
+    // One request for every id still missing. An id the backend doesn't return
+    // is retired; a failed request retires nothing.
+    resourceService
+      .getByIds(missing)
+      .then((found) => {
         if (!active) return;
-        const failures = outcomes.filter((o) => o.status === 'rejected');
-        for (const failure of failures) {
-          // A real backend can fail here — surface it instead of hanging forever.
-          reportDataError('Saved', failure.reason);
-        }
         setResolved((prev) => {
           const next = { ...prev };
-          for (const outcome of outcomes) {
-            if (outcome.status === 'fulfilled' && outcome.value)
-              next[outcome.value.id] = outcome.value;
-          }
+          for (const [id, resource] of found) next[id] = resource;
           return next;
         });
-        // A clean `null` is the backend saying "gone", not a failure to ask.
         setRetired((prev) => {
-          const gone = missing.filter(
-            (id, i) => outcomes[i].status === 'fulfilled' && outcomes[i].value === null,
-          );
+          const gone = missing.filter((id) => !found.has(id));
           if (gone.length === 0) return prev;
           return new Set([...prev, ...gone]);
         });
-        // Any failure is remembered; whether it earns the whole screen or a banner
-        // is decided at render time by what else there is to show. It used to
-        // count only a *total* failure, so one retired id plus one network failure
-        // read as "that place is no longer listed" with the other quietly missing.
-        setResolveFailed(failures.length > 0);
-        setResolveError(failures[0]?.reason);
+        setResolveFailed(false);
+        setResolveError(undefined);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        // Full screen or banner is decided at render time by what else can be shown.
+        reportDataError('Saved', error);
+        setResolveFailed(true);
+        setResolveError(error);
       })
       .finally(() => {
         if (active) setResolving(false);
@@ -104,7 +115,6 @@ export default function SavedScreen() {
     for (const id of retiredIds) toggleSave(id);
   };
   const retryResolve = () => {
-    invalidateResourceCache();
     setAttempt((n) => n + 1);
   };
 
@@ -115,15 +125,20 @@ export default function SavedScreen() {
         .filter((r): r is Resource => Boolean(r))
         .map((resource) => ({
           resource,
-          distanceMiles: null,
+          distanceMiles:
+            origin && resource.latitude !== null && resource.longitude !== null
+              ? distanceMiles(origin, {
+                  latitude: resource.latitude,
+                  longitude: resource.longitude,
+                })
+              : null,
           isOpenNow: isOpenNow(resource.hours),
         })),
-    [savedIds, resolved],
+    [savedIds, resolved, origin],
   );
 
-  // This screen resolves every saved resource anyway, which makes it the one
-  // place reminder snapshots can be refreshed for free — no extra request, and
-  // a pantry whose hours changed upstream quietly gets a corrected schedule.
+  // Every saved resource is resolved here anyway, so reminder snapshots refresh
+  // for free and a reminder follows hours that changed upstream.
   useEffect(() => {
     refreshSnapshots(
       items.map(({ resource }) => ({
@@ -137,13 +152,10 @@ export default function SavedScreen() {
   const firstLoad =
     !isHydrated ||
     (savedIds.length > 0 && items.length === 0 && retiredIds.length === 0 && resolving);
-  const gate = useLoadingGate(firstLoad, resolveFailed);
-  // Only the first screenful, and only on the first paint after the list settles.
+  const gate = useLoadingGate(firstLoad);
   const staggered = useStaggerGate(isHydrated);
 
-  // Live, like every other masthead: a count once there is one, the promise
-  // until then. Held back until the store hydrates so the line never flips
-  // from "nothing" to a number on the first paint.
+  // Held back until the store hydrates so the line never flips from nothing to a number.
   const count = items.length;
   const subtitle = !isHydrated
     ? undefined
@@ -156,39 +168,28 @@ export default function SavedScreen() {
       <ScreenHeader title="Saved" subtitle={subtitle} subtitleKey={subtitle} />
       {gate.holding ? (
         gate.showShield ? (
-          <Loading label="Loading your saved resources…" done={gate.done} onFinish={gate.finish} />
+          <Loading label="Loading your saved resources…" />
         ) : null
       ) : resolveFailed && items.length === 0 && savedIds.length > 0 ? (
-        // Nothing drawable and at least one read failed: the whole screen, even
-        // if some of the missing rows are retired rather than failed — a retry
-        // is the only thing that can tell the veteran which is which.
+        // Nothing drawable and a read failed: only a retry can tell retired from failed.
         <ErrorState error={resolveError} onRetry={retryResolve} />
       ) : items.length === 0 && retiredIds.length > 0 ? (
-        // Everything saved has since left the catalogue. Say so, and offer the
-        // one action that fixes it — the list really is empty otherwise.
         <EmptyState
-          icon="bookmark-outline"
-          title={
-            retiredIds.length === 1
-              ? 'That place is no longer listed'
-              : 'Those places are no longer listed'
-          }
+          title="No longer listed"
           message="They may have closed or been removed from our sources. You can clear them and keep looking."
           actionLabel="Clear them"
           onAction={forgetRetired}
         />
       ) : items.length === 0 ? (
         <EmptyState
-          icon="bookmark-outline"
           title="Nothing saved yet"
           message="Tap the bookmark on any place to keep it here for later."
+          actionLabel="Find help nearby"
+          onAction={() => router.navigate('/discover')}
         />
       ) : (
-        // This is the one list where the rows change under the veteran: unsaving
-        // fades the row out and slides the rest up, rather than snapping the gap
-        // shut. Cheap here because the list is short — deliberately not done on
-        // Discover, where a per-item layout animation across a large result set
-        // would cost far more than it is worth.
+        // Unsaving fades the row out and slides the rest up. Affordable because
+        // this list is short; Discover's long lists skip the layout animation.
         <Animated.FlatList
           style={styles.fill}
           data={items}
@@ -205,15 +206,13 @@ export default function SavedScreen() {
             </Animated.View>
           )}
           itemLayoutAnimation={LinearTransition.duration(durations.base)}
-          // Some rows failed to load while others drew: say so above the list
-          // rather than letting them go missing in silence.
+          // Some rows failed while others drew: say so rather than drop them silently.
           ListHeaderComponent={
             resolveFailed ? (
               <RefreshFailedBanner error={resolveError} onRetry={retryResolve} />
             ) : null
           }
-          // A quiet line, not a card per retired id: there is no name left to
-          // show for them, only the fact and the way to tidy it.
+          // One quiet line for all retired ids: there is no name left to show.
           ListFooterComponent={
             retiredIds.length > 0 ? (
               <PressableScale
@@ -223,15 +222,14 @@ export default function SavedScreen() {
                 scaleTo={pressScale.chip}
                 style={styles.retiredRow}
               >
-                <Ionicons name="archive-outline" size={16} color={colors.textSecondary} />
                 <View style={styles.retiredCopy}>
                   <AppText variant="caption" color="textSecondary">
                     {retiredIds.length} saved {retiredIds.length === 1 ? 'place is' : 'places are'}{' '}
                     no longer listed
                   </AppText>
                 </View>
-                <AppText variant="caption" color="accentPressed">
-                  Remove
+                <AppText variant="data" color="accent">
+                  Remove ▸
                 </AppText>
               </PressableScale>
             ) : null
@@ -246,17 +244,12 @@ export default function SavedScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  list: { gap: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xl },
+  list: { paddingBottom: spacing.xl },
   retiredRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     minHeight: 44,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceMuted,
   },
   retiredCopy: { flex: 1 },
 });

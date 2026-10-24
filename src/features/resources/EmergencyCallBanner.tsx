@@ -1,7 +1,6 @@
 import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PressableScale } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { AppText, Glyph, PressableScale } from '@/components';
+import { colors, radii, spacing } from '@/theme';
 import type { Resource } from '@/types/resource';
 
 type DangerCallBannerProps = {
@@ -13,10 +12,8 @@ type DangerCallBannerProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-// The one danger-tinted banner shell: alert title, one line of context, one
-// big call button. EmergencyCallBanner (per-resource, detail page) and
-// CrisisBanner (category-level, Emergency results) both wrap it so the
-// treatment can't drift.
+// The shared danger-tinted banner shell (title, context, call button) wrapped by
+// EmergencyCallBanner and CrisisBanner.
 export function DangerCallBanner({
   title,
   message,
@@ -27,12 +24,12 @@ export function DangerCallBanner({
 }: DangerCallBannerProps) {
   return (
     <View style={[styles.banner, style]}>
-      <View style={styles.headerRow}>
-        <Ionicons name="alert-circle" size={20} color={colors.danger} />
-        <AppText variant="heading" style={styles.title}>
-          {title}
-        </AppText>
-      </View>
+      <AppText variant="kicker" color="dangerText">
+        Emergency
+      </AppText>
+      <AppText variant="heading" style={styles.title}>
+        {title}
+      </AppText>
       <AppText variant="body" color="textSecondary">
         {message}
       </AppText>
@@ -43,8 +40,8 @@ export function DangerCallBanner({
       >
         {({ pressed }) => (
           <View style={[styles.callButton, pressed && styles.callButtonPressed]}>
-            <Ionicons name="call" size={18} color={colors.background} />
-            <AppText variant="heading" style={styles.callLabel}>
+            <Glyph name="call" size={18} color={colors.background} />
+            <AppText variant="label" style={styles.callLabel}>
               {callLabel}
             </AppText>
           </View>
@@ -59,9 +56,7 @@ type EmergencyCallBannerProps = {
   onCall: () => void;
 };
 
-// A prominent, contact-only urgent action shown at the top of an emergency
-// resource. It only helps the veteran reach the resource fast — it gives no
-// triage or advice.
+// Contact-only urgent action at the top of an emergency resource; no triage or advice.
 export function EmergencyCallBanner({ resource, onCall }: EmergencyCallBannerProps) {
   if (!resource.phone) return null;
   return (
@@ -77,15 +72,13 @@ export function EmergencyCallBanner({ resource, onCall }: EmergencyCallBannerPro
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: withAlpha(colors.danger, 0.1),
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: withAlpha(colors.danger, 0.4),
+    backgroundColor: colors.dangerSoft,
+    borderWidth: 2,
+    borderColor: colors.danger,
     padding: spacing.lg,
     gap: spacing.sm,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  title: { color: colors.dangerText, flexShrink: 1 },
+  title: { color: colors.dangerText },
   callButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -97,8 +90,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
     marginTop: spacing.xs,
   },
-  // A darker red on press, the way `PrimaryButton` darkens its olive — a colour
-  // shift rather than a dim, so the button never looks disabled mid-tap.
+  // Darkens on press rather than dimming, so it never looks disabled.
   callButtonPressed: { backgroundColor: colors.dangerText },
-  callLabel: { color: colors.background },
+  callLabel: {
+    color: colors.background,
+    fontSize: 15,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
 });

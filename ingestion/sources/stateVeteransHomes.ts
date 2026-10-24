@@ -8,11 +8,8 @@
  * the app had nothing like it.
  *
  * The VA publishes no machine-readable list. NASVH, the association the homes
- * belong to, runs a WordPress site whose `veterans-homes` post type is exposed
- * over `wp-json`, so this reads that rather than scraping rendered pages.
- * Measured 2026-07-28: the feed returns 174 posts, of which **166 parse into a
- * home with an address** — that is the number that lands in the table, and the
- * one ingestion/README.md and freshnessGate.ts now agree on.
+ * belong to, exposes its `veterans-homes` WordPress post type over `wp-json`
+ * (~174 posts, ~166 of which parse into a home with an address).
  *
  * The record body is WPBakery shortcode soup, but the useful part is a flat
  * sequence of `LABEL:` headings followed by their values — see `parseSections`.
@@ -25,6 +22,8 @@
  * should find them.
  */
 import { titleCaseName } from '../lib/displayName.ts';
+import { sleep } from '../lib/http.ts';
+import { decodeEntities, formatAddress, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -48,22 +47,6 @@ interface WpPost {
   content?: { rendered?: string };
   link?: string;
 }
-
-const decodeEntities = (s: string): string =>
-  s
-    .replace(/&#(\d+);/g, (_, d: string) => String.fromCharCode(Number(d)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCharCode(parseInt(h, 16)))
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, ' ');
-
-const trimOrNull = (s: string | undefined | null): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
 
 /**
  * Body HTML → `{ LABEL: [values…] }`.
@@ -135,7 +118,7 @@ async function fetchPage(url: string): Promise<WpPost[]> {
       return (await response.json()) as WpPost[];
     } catch (err) {
       if (attempt >= MAX_RETRIES) throw err;
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      await sleep(1000 * 2 ** attempt);
     } finally {
       clearTimeout(timeout);
     }
@@ -173,9 +156,7 @@ function normalize(post: WpPost, today: string): NormalizedResource | null {
       `State Veterans Home — long-term care built for veterans: skilled nursing, ` +
       `assisted living or domiciliary care, and often adult day care and memory care. ` +
       `Run by the state and certified by the VA, which pays part of the cost.${care}`,
-    address: [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-      .filter(Boolean)
-      .join(', '),
+    address: formatAddress(street, city, state, zip),
     latitude: null,
     longitude: null,
     geocode: { street, city, state, zip },
@@ -242,10 +223,8 @@ export const createStateVeteransHomesSource: SourceFactory = (
         results.push(normalized, crossListHealthcare(normalized));
       }
 
-      // The parser leans on NASVH's "LABEL:" body convention. If a redesign
-      // breaks it, every record silently loses its address — fail the run
-      // instead, so the freshness gate surfaces it rather than the table
-      // quietly emptying.
+      // If a redesign breaks the "LABEL:" convention every record loses its
+      // address — fail the run rather than quietly empty the table.
       const homes = results.length / 2;
       if (homes < posts.length * MIN_ADDRESS_RATE) {
         throw new Error(

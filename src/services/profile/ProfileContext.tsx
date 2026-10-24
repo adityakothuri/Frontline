@@ -12,10 +12,7 @@ import type { ProfileDetails, VeteranProfile } from '@/types/profile';
 import { clearProfile, loadProfile, saveProfile } from './profileStorage';
 import { clearProfileBackup, pushProfile, restoreProfile } from '../sync/backupSync';
 
-// The app's single source of truth for the on-device veteran profile. A small
-// Context (not a global state library) so the home greeting updates reactively
-// after setup, and returning users are recognized on launch. This is the first
-// shared state in the app; keep it minimal.
+// The single source of truth for the on-device veteran profile.
 interface ProfileContextValue {
   profile: VeteranProfile | null;
   /** False until the stored profile has been read on launch (gates first-run routing). */
@@ -32,9 +29,8 @@ const ProfileContext = createContext<ProfileContextValue | null>(null);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<VeteranProfile | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
-  // Lets the late-arriving backup restore tell whether the veteran has since
-  // written a profile of their own, without making `profile` a dependency of the
-  // mount-once effect below.
+  // Lets the late backup restore see a profile written since mount, without
+  // making `profile` a dependency of the mount-once effect.
   const profileRef = useRef<VeteranProfile | null>(null);
   useEffect(() => {
     profileRef.current = profile;
@@ -45,23 +41,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     loadProfile()
       .then((stored) => {
         if (!active) return;
-        // A local profile is the whole answer — hydrate on it and skip the
-        // network entirely. This is every launch after setup.
         if (stored) {
           setProfile(stored);
           setIsHydrated(true);
           return;
         }
-        // No local profile (first install, or a reinstall). Hydrate as "no
-        // profile" now rather than holding the app on a blank screen for a cold
-        // `sync` round trip — up to 12s — and let a restore land after. Routing
-        // in app/index.tsx sends this veteran to onboarding meanwhile; a restore
-        // that arrives while they're still there fills the fields in.
+        // No local profile: hydrate now rather than block on a cold `sync`
+        // round trip (up to 12s), and let a restore land afterwards.
         setIsHydrated(true);
         return restoreProfile(null).then((restored) => {
-          // If the veteran finished onboarding while the pull was in flight,
-          // their profile is the newer one — leave it alone. Writing `restored`
-          // here would overwrite it on disk and in the backup.
+          // A profile written while the pull was in flight is newer; keep it.
           if (!active || !restored || profileRef.current) return;
           setProfile(restored);
           // Mirror the restore back so the backup's updated_at advances.
@@ -70,8 +59,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         });
       })
       .catch(() => {
-        // isHydrated gates the entire app (app/index.tsx won't route without
-        // it), so it must never be left false by an unexpected throw.
+        // isHydrated gates first-run routing, so it must never stay false.
         if (active) setIsHydrated(true);
       });
     return () => {
@@ -90,7 +78,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         documentsOnHand: details.documentsOnHand ?? profile?.documentsOnHand,
         preferredRadiusMiles: details.preferredRadiusMiles ?? profile?.preferredRadiusMiles,
         onboardingComplete: true,
-        // Preserve the original creation time when editing an existing profile.
         createdAt: profile?.createdAt ?? new Date().toISOString(),
       };
       await saveProfile(next);

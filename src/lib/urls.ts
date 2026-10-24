@@ -1,13 +1,7 @@
 /**
- * Make an ingested website string openable.
- *
- * Upstream directories routinely record `www.example.org` with no scheme, which
- * `Linking.openURL` rejects outright. Pure and testable, so the one regex that
- * decides "already has a scheme" is pinned by `urls.test.ts` — the first version
- * treated `example.org:8080/page` as a scheme and refused to prefix it.
- *
- * Returns null for an empty string: there is nothing to open, and `https://` on
- * its own is not a place.
+ * Make an ingested website string openable: directories often record
+ * `www.example.org` with no scheme, which `Linking.openURL` rejects. Null for an
+ * empty string.
  */
 export function normaliseWebsiteUrl(raw: string): string | null {
   const trimmed = raw.trim();

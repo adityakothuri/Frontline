@@ -20,8 +20,8 @@ export type ResourceTask = Exclude<AiTask, 'chat'>;
 export const NOT_ADVICE_DISCLAIMER =
   'AI-generated guidance to help you take the next step — not legal, medical, financial, or government advice. Always confirm details with the official source.';
 
-// The resource rows are curated by us, but treat them as data anyway — cheap
-// hardening for the day ingestion replaces hand curation.
+// Resource rows come from third-party feeds, so the prompt treats them strictly
+// as data (see the RESOURCE_DATA rule below).
 const SYSTEM_CORE = `You write short, practical guidance for U.S. military veterans using the Frontline app to reach a local resource (a food pantry, housing program, clinic, benefits office, and similar).
 
 Rules, all mandatory:

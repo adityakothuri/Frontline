@@ -44,8 +44,7 @@ export type ChatContext = {
 
 export type ChatRequest = { messages: ChatTurn[]; context: ChatContext };
 export type ChatRequestResult =
-  | { ok: true; request: ChatRequest }
-  | { ok: false; status: 400 | 413; error: string };
+  { ok: true; request: ChatRequest } | { ok: false; status: 400 | 413; error: string };
 
 /** 12 veteran turns and the 11 replies between them. The client stops at 12
  *  turns too; past that it offers a fresh conversation. */
@@ -126,7 +125,11 @@ export function parseChatRequest(body: Record<string, unknown>): ChatRequestResu
     return { ok: false, status: 400, error: 'messages must be a non-empty array' };
   }
   if (raw.length > MAX_CHAT_MESSAGES) {
-    return { ok: false, status: 400, error: `messages must have at most ${MAX_CHAT_MESSAGES} turns` };
+    return {
+      ok: false,
+      status: 400,
+      error: `messages must have at most ${MAX_CHAT_MESSAGES} turns`,
+    };
   }
 
   const messages: ChatTurn[] = [];
@@ -144,7 +147,11 @@ export function parseChatRequest(body: Record<string, unknown>): ChatRequestResu
     }
     const cap = role === 'user' ? MAX_USER_TURN_CHARS : MAX_ASSISTANT_TURN_CHARS;
     if (text.length > cap) {
-      return { ok: false, status: 413, error: `a ${role} message is longer than ${cap} characters` };
+      return {
+        ok: false,
+        status: 413,
+        error: `a ${role} message is longer than ${cap} characters`,
+      };
     }
     messages.push({ role, content: text });
   }

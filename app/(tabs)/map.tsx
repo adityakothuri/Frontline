@@ -13,7 +13,7 @@ import {
 import { colors, spacing } from '@/theme';
 import { tapSelection } from '@/lib/haptics';
 import { useRetryOnReturn } from '@/hooks/useRetryOnReturn';
-import { invalidateResourceCache, resourceService } from '@/services/resources';
+import { resourceService } from '@/services/resources';
 import { useProfile } from '@/services/profile';
 import { reportDataError } from '@/services/monitoring';
 import { ResourceMap } from '@/features/resources/ResourceMap';
@@ -22,62 +22,31 @@ import { resultsOf, type ResourceSearchState } from '@/features/resources/useRes
 import { RESOURCE_CATEGORIES, type ResourceCategory } from '@/types/resource';
 import { DEFAULT_RADIUS_MILES } from '@/types/need';
 
-// The dedicated Map tab: every located opportunity as a category pin, one tap
-// from anywhere.
-//
-// The layout is the app's ordinary one: a paper header band carrying the
-// location pill, a serif hero with a live subtitle, and the category filter —
-// with the map filling everything below it. Same `SafeAreaView`, same
-// `spacing.xl` gutters, same `lg / md` rhythm and the same title-then-subtitle
-// hero as Discover and Home.
-//
-// It took three tries to get back here. The map was framed in a card; then
-// full-bleed under two opaque slabs; then full-bleed under floating capsules and
-// a draggable sheet. Each pass drifted further from how the rest of the app
-// looks, and the sheet and the floating chrome were both rejected outright. The
-// map stays big — that part was asked for — but nothing hovers over it any more,
-// which is why this file no longer measures its own chrome or hands insets down
-// to the camera.
-//
-// The Map tab deliberately lists nothing; Discover and Results are the list
-// surfaces, and the empty states below route there when nothing can be pinned.
+// The Map tab: every located place near the veteran as a category pin. The
+// masthead and category filter sit in a band above the map rather than floating
+// over it. The tab lists nothing; its empty states route to Discover.
 export default function MapScreen() {
   const router = useRouter();
   const { profile, isHydrated: isProfileHydrated } = useProfile();
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const [state, setState] = useState<ResourceSearchState>({ status: 'loading', stale: [] });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Which categories are switched off. Hidden rather than shown, so a category
-  // that only appears after a ZIP change arrives visible instead of silently
-  // missing from a map the veteran never filtered.
+  // Categories switched off. Tracked as hidden, not shown, so a category that
+  // first appears after a ZIP change arrives visible.
   const [hidden, setHidden] = useState<Set<ResourceCategory>>(() => new Set());
 
-  // Bumped to tell `ResourceMap` to re-frame the camera on the current pins. The
-  // camera lives over there; this is how the screen reaches it without owning it.
+  // Bumped to tell `ResourceMap` to re-frame its camera on the current pins.
   const [fitToken, setFitToken] = useState(0);
 
-  // Arriving from a "See in map" tap elsewhere: focus that pin. ResourceMap
-  // glides to it once results are loaded (its own effect keys off selectedId).
-  // Only once the results actually contain it — a stale focus id would otherwise
-  // pin `selectedId` to something that can never render a card.
-  //
-  // The param is consumed by *clearing* it, not by remembering it was used. A
-  // remembered id was consumed once for the lifetime of the tab, and this tab
-  // never unmounts: tapping "See in map" on the same resource a second time
-  // re-sent an identical `focus`, the memory rejected it, and the button silently
-  // did nothing. Clearing keeps the guard that mattered — a later refetch must
-  // not re-open a preview the veteran already closed, and by then there is no
-  // param left to re-read — while letting an identical navigation arrive as a
-  // new one.
+  // "See in map" from elsewhere arrives as `?focus=id`. It's applied once the
+  // results contain that id, then cleared, so a later refetch can't reopen a
+  // closed preview and the same id can arrive again (this tab never unmounts).
   useEffect(() => {
     if (typeof focus !== 'string' || focus.length === 0) return;
     const target = resultsOf(state).find((r) => r.resource.id === focus);
     if (!target) return;
     router.setParams({ focus: undefined });
-    // A focus id landing in a switched-off category used to select nothing and
-    // say nothing: `selectedId` was set, the filtered map drew no card for it,
-    // and the veteran arrived at a map that looked untouched. Showing the
-    // category is the smaller surprise, and its chip above reports the change.
+    // A focus in a switched-off category turns that category back on.
     setHidden((prev) => {
       if (!prev.has(target.resource.category)) return prev;
       const next = new Set(prev);
@@ -90,39 +59,28 @@ export default function MapScreen() {
   // Bumped by the error state's Retry so the fetch effect re-runs on demand.
   const [reloadToken, setReloadToken] = useState(0);
   const reload = useCallback(() => {
-    invalidateResourceCache();
     setReloadToken((n) => n + 1);
   }, []);
   const stateStatus = state.status;
 
-  // Returning to a failed tab retries for the veteran — see the hook for why it
-  // is not a `useFocusEffect`.
+  // Coming back to a failed tab retries.
   useRetryOnReturn(stateStatus === 'error', reload);
 
   const zip = profile?.zip;
   const radiusMiles = profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES;
 
-  // The pins on screen: the fresh results, or the last good set when a refresh
-  // failed. Everything below reads this rather than `state.results`, so the
-  // filter, map and count all agree about what is actually being shown.
+  // Fresh results, or the last good set after a failed refresh. The filter, map
+  // and count all read this so they agree.
   const results = resultsOf(state);
 
-  // The shield is for a wait with nothing behind it. Gating it on `loading`
-  // alone would tear the live `MapView` down for the whole quiet window on every
-  // refresh — a blank frame, and the camera reset back to fit-all when it
-  // remounted. A refresh that still has pins keeps them; the `RefreshFailedBanner`
-  // is what reports a refresh that then failed.
-  const gate = useLoadingGate(
-    state.status === 'loading' && results.length === 0,
-    state.status === 'error',
-  );
+  // Only a wait with no pins shows the shield; tearing down a live `MapView` on
+  // every refresh would blank it and reset the camera.
+  const gate = useLoadingGate(state.status === 'loading' && results.length === 0);
 
   useEffect(() => {
-    // Wait for the profile: before it hydrates there is no ZIP, so the query
-    // would come back with nothing to pin and then immediately refetch.
+    // Wait for the profile, or the first query runs without a ZIP.
     if (!isProfileHydrated) return;
-    // `active` guards against out-of-order resolution: editing the ZIP twice in
-    // quick succession must not let the older response overwrite the newer one.
+    // Guards against an older response landing after a newer one.
     let active = true;
     setState((prev) => ({ status: 'loading', stale: resultsOf(prev) }));
     resourceService
@@ -139,11 +97,8 @@ export default function MapScreen() {
     };
   }, [zip, radiusMiles, reloadToken, isProfileHydrated]);
 
-  // Which categories are pinned and how many each has — the chips' labels, and
-  // the denominator for the count. Counted over the *unfiltered* results, so a
-  // chip's number describes the place, not the current filter, and never moves
-  // as chips are toggled. Ordered by the canonical category order rather than by
-  // frequency, so the row doesn't reshuffle itself between ZIP codes.
+  // Located places per category, over the unfiltered results so a chip's count
+  // never moves as chips toggle. Canonical category order, so the row is stable.
   const counts = useMemo(() => {
     const byCategory = new Map<ResourceCategory, number>();
     for (const { resource } of results) {
@@ -156,10 +111,8 @@ export default function MapScreen() {
     }));
   }, [results]);
 
-  // `hidden` is never pruned — a category switched off in one ZIP stays off if you
-  // come back to it — so everything downstream reads it intersected with what is
-  // actually here. Otherwise a category hidden in Dallas and absent in Austin left
-  // the row showing a "Show all" reset while every visible chip was already on.
+  // `hidden` persists across ZIPs, so downstream reads only the hidden
+  // categories actually present here.
   const hiddenPresent = useMemo(() => {
     const present = new Set(counts.map((c) => c.category));
     return new Set([...hidden].filter((c) => present.has(c)));
@@ -179,20 +132,10 @@ export default function MapScreen() {
     0,
   );
   const filtering = pinned < total;
-  // Switching every chip off is allowed — it is reversible and obvious — but it
-  // needs to explain itself rather than showing a map of nothing.
   const nothingShowing = counts.length > 0 && pinned === 0;
-  // A single option is not a filter. One category means one chip, which would just
-  // be the old legend wearing a switch — *unless* that one category is currently
-  // switched off, because then the chip is the only way back. Without the second
-  // clause this is a trap: hide Food in a ZIP that has several categories, move to
-  // a ZIP where Food is the only one, and the empty state below tells you to tap a
-  // "Show all" that isn't rendered, with no other way out of the screen.
+  // One category isn't a filter, unless it's switched off: then its chip is the
+  // only way to bring the pins back.
   const showFilter = counts.length > 1 || hiddenPresent.size > 0;
-
-  // `ResourceMap` resolves the open resource itself, against the filtered set it
-  // is handed — so a `?focus=` id landing in a switched-off category cannot open
-  // a card for a pin that is not on the map.
 
   const toggle = useCallback(
     (category: ResourceCategory) => {
@@ -202,9 +145,7 @@ export default function MapScreen() {
         if (!next.delete(category)) next.add(category);
         return next;
       });
-      // A pin that just left the map must not keep its card open over it.
-      // Turning a category back *on* can never match, so this covers both
-      // directions without asking which one just happened.
+      // A pin that just left the map must not keep its card open.
       setSelectedId((current) => {
         const openCategory = results.find((r) => r.resource.id === current)?.resource.category;
         return openCategory === category ? null : current;
@@ -217,19 +158,9 @@ export default function MapScreen() {
     setHidden(new Set());
   }, []);
 
-  // A ready query that legitimately found nothing — a rural ZIP, a typo, too small
-  // a radius. This used to fall through every branch to `null`: a blank screen
-  // under a header claiming to describe pins.
+  // A ready query that found nothing: a rural ZIP, a typo, too small a radius.
   const nothingNearby = !gate.holding && state.status === 'ready' && results.length === 0;
 
-  /**
-   * The hero's subtitle, and the screen's only running commentary.
-   *
-   * It carries the count because the heading deliberately does not name the
-   * screen — "Map" was the old title here, a serif restatement of the word
-   * already printed on the tab bar 20pt below it. Saying what is *on* the map
-   * earns the line instead.
-   */
   const subtitle = useMemo(() => {
     if (state.status === 'loading' && total === 0) return 'Finding resources near you…';
     if (total === 0) return 'Nothing pinned here yet.';
@@ -240,21 +171,14 @@ export default function MapScreen() {
     return `${total} ${total === 1 ? 'place' : 'places'}${where}, pinned by category.`;
   }, [state.status, total, filtering, pinned, zip]);
 
-  // Every result is phone- or online-only. `counts` tallies located rows only, so
-  // it comes back empty, `showFilter` is false, and both other empty states miss
-  // this — leaving the veteran told that help exists, shown a map that cannot
-  // draw any of it, and given nothing to press. Discover lists non-located
-  // resources for the same ZIP, so it is the exit.
+  // Help exists but none of it has an address; Discover can list it.
   const nothingMappable =
     !gate.holding &&
     state.status === 'ready' &&
     results.length > 0 &&
     !results.some((r) => r.resource.latitude !== null && r.resource.longitude !== null);
 
-  // Re-frame the camera whenever the *place* changes, not merely the pins. This
-  // covers the veteran editing their ZIP in Profile and coming back — before
-  // this, the map kept the camera it was framed with on first mount and showed
-  // an empty stretch of the old city.
+  // Re-frame the camera when the ZIP changes, not only when pins do.
   const framedZipRef = useRef(zip);
   useEffect(() => {
     if (framedZipRef.current === zip) return;
@@ -264,21 +188,12 @@ export default function MapScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      {/* A normal paper header band, the same one Discover and Home wear: the
-          location control, the live count, then the category filter. It is a
-          band and not floating chrome — the map begins below it rather than
-          running under it, so nothing here needs measuring, `pointerEvents`
-          juggling, or an inset handed down to the camera. */}
       <View style={styles.header}>
-        {/* The masthead every tab wears. "Map" is deliberately not the title: it
-            would be a display-serif restatement of the word already on the tab
-            bar below. The subtitle is keyed so a new count arrives rather than
-            being overwritten in place — it is how the veteran learns a chip did
-            anything. */}
+        {/* The keyed subtitle fades in a new count, so a chip tap visibly lands. */}
         <ScreenHeader
           style={styles.masthead}
           location={{ zip, onPress: () => router.navigate('/profile') }}
-          title="Nearby help"
+          title="On the map"
           subtitle={subtitle}
           subtitleKey={subtitle}
         />
@@ -303,28 +218,20 @@ export default function MapScreen() {
         {gate.holding ? (
           gate.showShield ? (
             <View style={styles.overlayContent}>
-              <Loading label="Loading the map…" done={gate.done} onFinish={gate.finish} />
+              <Loading label="Loading the map…" />
             </View>
           ) : null
         ) : nothingShowing ? (
           <View style={styles.overlayContent}>
-            {/* No action button: the olive "Show all" chip is already on screen in
-                the filter row above, and two identical olive actions on one screen
-                is one more primary action than this screen is allowed. */}
+            {/* No action: the "Show all" chip above is the way back. */}
             <EmptyState
-              icon="funnel-outline"
               title="No categories showing"
               message="Every category is switched off, so there's nothing to pin. Tap “Show all” above to bring the pins back."
             />
           </View>
         ) : nothingMappable ? (
           <View style={styles.overlayContent}>
-            {/* Real places, none of them mappable. Without this the veteran gets
-                `ResourceMap`'s own "Phone & online only" state, which has no
-                action — help exists, the map cannot draw it, and there is nothing
-                to press. Discover lists non-located resources for this ZIP. */}
             <EmptyState
-              icon="call-outline"
               title="Phone & online only"
               message={`Nothing near ${zip ?? 'you'} has a street address to map — these ${results.length === 1 ? 'resource is' : 'resources are'} reached by phone or online.`}
               actionLabel="Browse them in Discover"
@@ -334,7 +241,6 @@ export default function MapScreen() {
         ) : nothingNearby ? (
           <View style={styles.overlayContent}>
             <EmptyState
-              icon="map-outline"
               title={zip ? `Nothing mapped near ${zip}` : 'No location set yet'}
               message={
                 zip
@@ -346,13 +252,9 @@ export default function MapScreen() {
             />
           </View>
         ) : results.length > 0 ? (
-          // Includes a failed refresh that still has pins: a map of real places
-          // beats an error card, and the banner above says the refresh didn't land.
-          //
-          // A plain View, deliberately. This used to be an `Animated.View` with an
-          // `entering` fade, and a native `MapView` mounted inside a layout
-          // animation can paint blank on first open — the reveal now lives inside
-          // `ResourceMap`, as a veil over the map rather than an animation on it.
+          // Includes a failed refresh that still has pins (the banner reports it).
+          // A plain View: a native map mounted inside an entering animation can
+          // paint blank, so `ResourceMap` owns its own reveal.
           <View style={styles.fill}>
             <ResourceMap
               results={visibleResults}
@@ -374,20 +276,14 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   fill: { flex: 1 },
-  // The header is a band, not an overlay. A hairline under it is what separates
-  // paper from cartography — the two are close enough in tone that without a line
-  // the map looks like it is bleeding into the chrome.
+  // The heavy rule where the map begins; a hairline vanished against the map's paper tone.
   header: {
     paddingBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.rule,
   },
-  // The same gutter, top rhythm and 16pt to the chip row as Discover (which
-  // gets there as 8 + the shell row's own 8); the filter row here carries none.
   masthead: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, marginBottom: spacing.lg },
   banner: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
-  // Everything below the header. The map fills it; the loading, empty and error
-  // states sit inside it rather than over the whole screen.
   mapArea: { flex: 1 },
   overlayContent: { flex: 1, paddingHorizontal: spacing.xl },
 });

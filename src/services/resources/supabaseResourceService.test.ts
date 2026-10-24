@@ -32,7 +32,7 @@ describe('SupabaseResourceService.search — radius widening', () => {
   beforeEach(() => {
     supabaseRequest.mockReset();
     // The service caches reads for the session; these cases reuse identical
-    // queries, so each needs a clean one (same reset a "Try again" performs).
+    // queries, so each needs a clean one.
     invalidateResourceCache();
   });
 
@@ -44,24 +44,39 @@ describe('SupabaseResourceService.search — radius widening', () => {
     expect(radiiRequested()).toEqual([15]);
   });
 
-  it('widens through the steps while local results stay thin', async () => {
+  it('makes one wide search and trims it to the smallest step with enough', async () => {
     supabaseRequest
       .mockResolvedValueOnce([located('a')])
-      .mockResolvedValueOnce([located('a')])
-      .mockResolvedValueOnce([located('a'), located('b'), located('c')]);
+      .mockResolvedValueOnce([
+        located('a', 2),
+        located('b', 20),
+        located('c', 40),
+        located('d', 90),
+      ]);
 
     const results = await service.search({ need: needAt({ zip: '59829', radiusMiles: 15 }) });
 
-    expect(radiiRequested()).toEqual([15, 25, 50]);
-    expect(results).toHaveLength(3);
+    expect(radiiRequested()).toEqual([15, 100]);
+    // a, b, c fall within 50 — the smallest step holding three — so d is cut.
+    expect(results.map((r) => r.resource.id).sort()).toEqual(['a', 'b', 'c']);
   });
 
-  it('never searches a ring smaller than the veteran asked for', async () => {
+  it('keeps every wide result when no smaller step holds enough', async () => {
+    supabaseRequest
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([located('a', 60), located('b', 90)]);
+
+    const results = await service.search({ need: needAt({ zip: '59829', radiusMiles: 15 }) });
+
+    expect(results).toHaveLength(2);
+  });
+
+  it('does not widen past the widest step', async () => {
     supabaseRequest.mockResolvedValue([located('a')]);
 
-    await service.search({ need: needAt({ zip: '59829', radiusMiles: 50 }) });
+    await service.search({ need: needAt({ zip: '59829', radiusMiles: 100 }) });
 
-    expect(radiiRequested()).toEqual([50, 100]);
+    expect(radiiRequested()).toEqual([100]);
   });
 
   // Referrals ignore the radius, so counting them would make an empty rural area
@@ -73,11 +88,10 @@ describe('SupabaseResourceService.search — radius widening', () => {
 
     await service.search({ need: needAt({ zip: '59829', radiusMiles: 15 }) });
 
-    expect(radiiRequested()).toEqual([15, 25]);
+    expect(radiiRequested()).toEqual([15, 100]);
   });
 
-  // Without an origin the RPC returns every row with a null distance and applies
-  // no radius, so widening would re-fetch the same payload three times.
+  // Without an origin there is no distance, so a wider search returns the same rows.
   it('does not widen when there is no search origin', async () => {
     supabaseRequest.mockResolvedValue([referral('hotline')]);
 
@@ -98,73 +112,6 @@ describe('SupabaseResourceService.search — radius widening', () => {
 });
 
 /**
- * 35% of the catalogue (72,286 rows) has no phone and no website — the IRS
- * veterans posts, most Feeding America pantries, the USAspending grantees. They
- * have real addresses, so they belong in the data; but sorted purely by distance
- * they bury the places that answer the phone.
- */
-describe('SupabaseResourceService — uncontactable rows are capped', () => {
-  const service = new SupabaseResourceService();
-
-  beforeEach(() => {
-    supabaseRequest.mockReset();
-    // The service caches reads for the session; these cases reuse identical
-    // queries, so each needs a clean one (same reset a "Try again" performs).
-    invalidateResourceCache();
-  });
-
-  /** A located row a veteran cannot reach: no phone, no website. */
-  const uncontactable = (id: string, distance: number) => ({
-    resource: makeResource({ id, category: 'community_support', phone: null, website: null }),
-    distance_miles: distance,
-  });
-  const callable = (id: string, distance: number) => ({
-    resource: makeResource({ id, category: 'community_support', phone: '555-0100' }),
-    distance_miles: distance,
-  });
-
-  it('keeps at most five uncontactable rows per category', async () => {
-    const rows = Array.from({ length: 12 }, (_, i) => uncontactable(`u${i}`, i + 1));
-    supabaseRequest.mockResolvedValue(rows);
-
-    const results = await service.search({ need: needAt({ zip: '77002', radiusMiles: 25 }) });
-
-    expect(results).toHaveLength(5);
-    // The nearest five survive, since the cap runs after the distance sort.
-    expect(results.map((r) => r.resource.id)).toEqual(['u0', 'u1', 'u2', 'u3', 'u4']);
-  });
-
-  it('never drops a row a veteran can actually contact', async () => {
-    const rows = [
-      ...Array.from({ length: 8 }, (_, i) => uncontactable(`u${i}`, i + 1)),
-      ...Array.from({ length: 8 }, (_, i) => callable(`c${i}`, i + 20)),
-    ];
-    supabaseRequest.mockResolvedValue(rows);
-
-    const results = await service.search({ need: needAt({ zip: '77002', radiusMiles: 25 }) });
-
-    // All 8 callable rows survive even though every one is further away.
-    expect(results.filter((r) => r.resource.phone !== null)).toHaveLength(8);
-    expect(results.filter((r) => r.resource.phone === null)).toHaveLength(5);
-  });
-
-  it('caps per category rather than across the whole result set', async () => {
-    supabaseRequest.mockResolvedValue([
-      ...Array.from({ length: 7 }, (_, i) => uncontactable(`cs${i}`, i + 1)),
-      ...Array.from({ length: 7 }, (_, i) => ({
-        resource: makeResource({ id: `f${i}`, category: 'food', phone: null, website: null }),
-        distance_miles: i + 1,
-      })),
-    ]);
-
-    const results = await service.search({ need: needAt({ zip: '77002', radiusMiles: 25 }) });
-
-    expect(results.filter((r) => r.resource.category === 'community_support')).toHaveLength(5);
-    expect(results.filter((r) => r.resource.category === 'food')).toHaveLength(5);
-  });
-});
-
-/**
  * The 0027 migration filters and ranks statewide referrals server-side, which
  * only works if the caller tells it the veteran's state. Nothing asserted that
  * before, so a silent regression here would quietly hand veterans out-of-state
@@ -176,7 +123,7 @@ describe('SupabaseResourceService — veteran_state reaches the RPC', () => {
   beforeEach(() => {
     supabaseRequest.mockReset();
     // The service caches reads for the session; these cases reuse identical
-    // queries, so each needs a clean one (same reset a "Try again" performs).
+    // queries, so each needs a clean one.
     invalidateResourceCache();
     supabaseRequest.mockResolvedValue([located('a'), located('b'), located('c')]);
   });
@@ -256,5 +203,44 @@ describe('SupabaseResourceService — session cache', () => {
 
     expect(supabaseRequest).toHaveBeenCalledTimes(2);
     expect(retried).toHaveLength(1);
+  });
+});
+
+describe('SupabaseResourceService — detail and saved reads', () => {
+  const service = new SupabaseResourceService();
+
+  beforeEach(() => {
+    supabaseRequest.mockReset();
+    invalidateResourceCache();
+  });
+
+  it('opens a resource from a list without another request', async () => {
+    supabaseRequest.mockResolvedValue([located('a')]);
+    await service.listResources(undefined, '78701', 15);
+
+    const resource = await service.getById('a');
+
+    expect(resource?.id).toBe('a');
+    expect(supabaseRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves many ids in one request and leaves retired ids out', async () => {
+    supabaseRequest.mockResolvedValue([makeResource({ id: 'a' }), makeResource({ id: 'b' })]);
+
+    const found = await service.getByIds(['a', 'b', 'gone']);
+
+    expect(supabaseRequest).toHaveBeenCalledTimes(1);
+    expect([...found.keys()].sort()).toEqual(['a', 'b']);
+  });
+
+  it('only asks for the ids it does not already hold', async () => {
+    supabaseRequest.mockResolvedValueOnce([located('a')]);
+    await service.listResources(undefined, '78701', 15);
+    supabaseRequest.mockResolvedValueOnce([makeResource({ id: 'b' })]);
+
+    await service.getByIds(['a', 'b']);
+
+    const [path] = supabaseRequest.mock.calls[1] as [string];
+    expect(decodeURIComponent(path)).toContain('in.("b")');
   });
 });

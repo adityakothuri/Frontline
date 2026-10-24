@@ -101,10 +101,6 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
-    "web": {
-      "bundler": "metro",
-      "favicon": "./assets/favicon.png"
-    },
     "plugins": [
       "expo-router",
       "expo-font",

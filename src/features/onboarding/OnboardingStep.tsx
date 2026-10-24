@@ -2,23 +2,16 @@ import { useEffect, type ReactNode } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PressableScale, PrimaryButton } from '@/components';
-import { colors, durations, pressScale, radii, rise, spacing, withAlpha } from '@/theme';
+import { AppText, Glyph, PressableScale, PrimaryButton } from '@/components';
+import { colors, durations, pressScale, rise, spacing } from '@/theme';
 import { easings, riseIn } from '@/theme/motionPresets';
 import { tapImpact } from '@/lib/haptics';
-
-type IconName = keyof typeof Ionicons.glyphMap;
 
 type OnboardingStepProps = {
   stepIndex: number;
   stepCount: number;
-  /** The step shown before this one, so the progress bar animates from where it
-   * actually was — in both directions. -1 means "came from the welcome". */
+  /** The previous step, so the progress bar animates from it; -1 = the welcome. */
   previousStepIndex?: number;
-  icon: IconName;
-  /** Tint for the hero icon; defaults to the olive accent. */
-  iconColor?: string;
   title: string;
   subtitle?: string;
   children?: ReactNode;
@@ -30,15 +23,12 @@ type OnboardingStepProps = {
   loading?: boolean;
 };
 
-// The shared chrome for every setup step: a progress bar + back control, an
-// icon hero, the prompt, the step's input, and a pinned Continue / Skip footer.
-// Content springs in on each step (keyed remount in the wizard).
+// Shared chrome for every setup step: back, step counter and progress rule,
+// question, input, and a pinned Continue / Skip footer. Remounted per step.
 export function OnboardingStep({
   stepIndex,
   stepCount,
   previousStepIndex,
-  icon,
-  iconColor = colors.accent,
   title,
   subtitle,
   children,
@@ -49,10 +39,7 @@ export function OnboardingStep({
   canContinue,
   loading = false,
 }: OnboardingStepProps) {
-  // Starts at the previously shown step's fill so the bar eases into place on
-  // each remount — forward or back. The bar animates its `width` percentage,
-  // which RN's `Animated` could only drive from JS; under Reanimated the same
-  // interpolation runs on the UI thread.
+  // Starts at the previous step's fill so the bar eases in either direction.
   const fill = useSharedValue(
     previousStepIndex === undefined ? stepIndex / stepCount : (previousStepIndex + 1) / stepCount,
   );
@@ -85,13 +72,13 @@ export function OnboardingStep({
               scaleTo={pressScale.control}
               style={styles.backBtn}
             >
-              <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+              <Glyph name="back" size={22} />
             </PressableScale>
           ) : (
             <View style={styles.backBtn} />
           )}
-          <AppText variant="caption" color="textMuted">
-            Step {stepIndex + 1} of {stepCount}
+          <AppText variant="kicker" color="textSecondary">
+            Step {String(stepIndex + 1).padStart(2, '0')} / {String(stepCount).padStart(2, '0')}
           </AppText>
         </View>
 
@@ -109,9 +96,6 @@ export function OnboardingStep({
           showsVerticalScrollIndicator={false}
         >
           <Animated.View entering={riseIn(0, rise.md)}>
-            <View style={[styles.hero, { backgroundColor: withAlpha(iconColor, 0.14) }]}>
-              <Ionicons name={icon} size={30} color={iconColor} />
-            </View>
             <AppText variant="display" style={styles.title}>
               {title}
             </AppText>
@@ -142,7 +126,7 @@ export function OnboardingStep({
               containerStyle={styles.skipSlot}
               style={styles.skip}
             >
-              <AppText variant="label" color="textMuted">
+              <AppText variant="data" color="textSecondary">
                 Skip for now
               </AppText>
             </PressableScale>
@@ -164,31 +148,21 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     marginBottom: spacing.md,
   },
-  // A real 44pt target, glyph kept to the leading edge so it lines up with the
-  // content gutter below it.
+  // 44pt target with the glyph on the leading edge, aligned to the gutter.
   backBtn: { width: 44, height: 44, alignItems: 'flex-start', justifyContent: 'center' },
+  // A ruled track: hairline ink, filled with a solid olive rule.
   track: {
-    height: 4,
-    borderRadius: radii.sm,
-    backgroundColor: colors.surfaceMuted,
+    height: 3,
+    backgroundColor: colors.border,
     marginHorizontal: spacing.xl,
     overflow: 'hidden',
   },
-  trackFill: { height: 4, borderRadius: radii.sm, backgroundColor: colors.accent },
+  trackFill: { height: 3, backgroundColor: colors.accent },
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
-  hero: {
-    width: 60,
-    height: 60,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  title: { marginBottom: spacing.sm },
+  title: { marginBottom: spacing.sm, textTransform: 'uppercase' },
   subtitle: { maxWidth: 380 },
   content: { marginTop: spacing.xl },
-  // `paddingBottom` for devices with no home-indicator inset, where the footer
-  // used to sit flush against the bottom bezel.
+  // For devices with no home-indicator inset.
   footer: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,

@@ -1,31 +1,16 @@
 /**
  * Shared HTTP for ingestion adapters — timeout, retry, and rate-limit backoff.
  *
- * WHY THIS EXISTS
- *
- * Every adapter had grown its own copy of the same loop: an AbortController with
- * a timeout, a retry counter, exponential backoff, and a 429 `Retry-After`
- * check. Seven near-identical implementations that each got a slightly different
- * detail right — one honoured `Retry-After`, another didn't; one cleared its
- * timeout in a `finally`, another leaked it. The second data audit added five
- * more sources, which made "copy the loop again" the wrong answer.
- *
- * The behaviour here is the union of what the existing adapters learned the hard
- * way against real providers:
- *
- *   * 429 and 5xx are retried; 4xx other than 429 are not, because a 403 or a
- *     404 will still be a 403 or a 404 in eight seconds.
- *   * `Retry-After` is honoured when the server sends one — guessing at backoff
- *     when the provider has told us the answer is how you get rate-limited
- *     harder.
+ *   * 429 and 5xx are retried; other 4xx are not — a 403 or 404 will not change
+ *     in eight seconds.
+ *   * `Retry-After` is honoured when the server sends one.
  *   * A browser-shaped `User-Agent` by default: va.gov's OGC app and
  *     careeronestop.org both 403 a bare fetch.
- *   * Aborts and network errors retry, since ECONNRESET on a large va.gov
- *     download is transient and common.
+ *   * Aborts and network errors retry (ECONNRESET on large va.gov downloads is
+ *     transient and common).
  *
- * Adapters that need something genuinely different (Feeding America's tolerance
- * for losing whole pages, the Census geocoder's 20-minute batches) keep their own
- * logic — this is for the ordinary case, not a mandate.
+ * Adapters with genuinely different needs (Feed America's page-loss tolerance,
+ * the Census geocoder's long batches) keep their own logic.
  */
 
 /** Providers that reject a non-browser client, so this is the default. */
@@ -56,11 +41,9 @@ const DEFAULTS = {
 const isRetryableStatus = (status: number): boolean => status === 429 || status >= 500;
 
 /**
- * The longest `Retry-After` worth honouring. Beyond this the server is not
- * throttling us, it is telling us to come back another day — api.data.gov answers
- * an exhausted key quota with `Retry-After: 66729` (18½ hours). Sleeping on that
- * silently hangs an ingest run for the rest of the day, so it becomes a hard
- * failure instead, with a message that names the real problem.
+ * The longest `Retry-After` worth honouring. Beyond this the server is saying
+ * "come back tomorrow" (api.data.gov answers a spent key quota with
+ * `Retry-After: 66729`), so it becomes a hard failure rather than a silent hang.
  */
 const MAX_RETRY_AFTER_MS = 120_000;
 
@@ -73,7 +56,7 @@ function retryAfterMs(header: string | null): number | null {
   return Number.isNaN(date) ? null : Math.max(0, date - Date.now());
 }
 
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Fetch with retry. Resolves with the `Response` for any non-retryable status —
@@ -102,10 +85,7 @@ export async function httpRequest(url: string, options: HttpOptions = {}): Promi
           `${label}: HTTP ${response.status} for ${url} after ${attempt + 1} attempts`,
         );
       }
-      // The server told us how long to wait; believe it over our own guess.
-      // A server asking us back in 18 hours is not throttling, it is closed for the
-      // day (api.data.gov answers an exhausted key with `Retry-After: 66729`).
-      // Sleeping on that hangs the whole ingest run, so it becomes a hard failure.
+      // Prefer the server's own wait over our backoff guess, within MAX_RETRY_AFTER_MS.
       const requested = retryAfterMs(response.headers.get('retry-after'));
       if (requested !== null && requested > MAX_RETRY_AFTER_MS) {
         throw new Error(

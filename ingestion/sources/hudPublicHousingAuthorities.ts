@@ -3,9 +3,7 @@
  *
  * HUD-VASH is the main permanent-housing programme for homeless veterans: the VA
  * provides case management, and a local Public Housing Authority issues the
- * actual voucher. The app has carried a national HUD-VASH referral for months
- * with nowhere to send anyone, because the veteran's next step is a specific PHA
- * office and there was no list of them.
+ * actual voucher — so the veteran's next step is a specific PHA office.
  *
  * HUD publishes all 3,776 as an ArcGIS feature layer with `LAT`/`LON`, a phone
  * number and an email — public domain, keyless, quarterly-ish updates.
@@ -16,7 +14,9 @@
  * risk of homelessness needs regardless. The description says to ask for HUD-VASH
  * by name rather than implying the office is veteran-specific.
  */
+import { titleCaseName } from '../lib/displayName.ts';
 import { fetchJson } from '../lib/http.ts';
+import { formatAddress, isSaneCoord, parseStateFilter, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -57,18 +57,6 @@ interface FeatureResponse {
   error?: { message?: string };
 }
 
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const isSaneCoord = (lat: number, lng: number): boolean =>
-  Number.isFinite(lat) &&
-  Number.isFinite(lng) &&
-  Math.abs(lat) <= 90 &&
-  Math.abs(lng) <= 180 &&
-  !(lat === 0 && lng === 0);
-
 /** HUD stores phones as raw digits; format so they're tappable and readable. */
 function formatPhone(raw: string | null): string | null {
   if (!raw) return null;
@@ -78,21 +66,6 @@ function formatPhone(raw: string | null): string | null {
     return `${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
   }
   return digits.length >= 10 ? raw.trim() : null;
-}
-
-function titleCase(name: string): string {
-  const SMALL = new Set(['of', 'the', 'and', 'for', 'a', 'an', 'in', 'on', 'at', 'to']);
-  const KEEP_UPPER = /^(?:HA|PHA|HUD|USA|US|II|III|IV)$/;
-  return name
-    .toLowerCase()
-    .split(/\s+/)
-    .map((word, i) => {
-      const upper = word.toUpperCase().replace(/[^A-Z]/g, '');
-      if (KEEP_UPPER.test(upper)) return word.toUpperCase();
-      if (i > 0 && SMALL.has(word)) return word;
-      return word.replace(/^([a-z])/, (c) => c.toUpperCase());
-    })
-    .join(' ');
 }
 
 function normalize(attrs: PhaAttributes, today: string): NormalizedResource | null {
@@ -117,16 +90,14 @@ function normalize(attrs: PhaAttributes, today: string): NormalizedResource | nu
 
   return {
     id: `hudpha:${code}`,
-    name: titleCase(rawName),
+    name: titleCaseName(rawName),
     category: 'housing',
     description:
       'The local public housing authority. This is the office that issues HUD-VASH vouchers — the ' +
       'main permanent-housing programme for veterans who are homeless — as well as Section 8 ' +
       'vouchers and public housing. Ask for HUD-VASH by name; your VA case manager refers you, and ' +
       `this office issues the voucher.${voucherLine}`,
-    address: [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-      .filter(Boolean)
-      .join(', '),
+    address: formatAddress(street, city, state, zip),
     latitude: hasCoords ? lat : null,
     longitude: hasCoords ? lng : null,
     geocode: hasCoords ? undefined : { street, city, state, zip },
@@ -168,15 +139,7 @@ export const createHudPublicHousingAuthoritiesSource: SourceFactory = (
     async fetch(query: IngestionQuery): Promise<NormalizedResource[]> {
       const today = new Date().toISOString().slice(0, 10);
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

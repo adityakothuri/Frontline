@@ -1,22 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * On-device cache for AI output that is derived purely from resource content.
- *
- * Opening a resource auto-generates a benefit summary (Haiku) and a next-step
- * plan (Opus). Without a cache, re-opening the same resource re-derives
- * identical text and spends against the edge function's hourly budget every
- * time. Resource rows change at most monthly, so this is close to free hit rate.
+ * On-device cache for the AI output a resource page fires automatically
+ * (summary, plan), so re-opening a resource doesn't spend the edge function's
+ * hourly budget re-deriving identical text.
  *
  * Correctness comes from the key, not the clock: entries are keyed by a hash of
- * the exact inputs the prompt saw, so any change to the resource (or the need)
- * misses the cache and regenerates. The TTL is only a backstop so stale text
- * can't live on a device forever.
+ * the exact prompt inputs, so any change to the resource or need misses. The TTL
+ * is only a backstop.
  */
 
 const STORAGE_KEY = 'frontline.aiCache.v1';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-/** Keeps the blob small; entries are cheap to regenerate, so evict aggressively. */
 const MAX_ENTRIES = 60;
 
 type Entry = { at: number; value: unknown };
@@ -42,34 +37,39 @@ async function readStore(): Promise<Store> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as Store) : {};
   } catch {
-    // A corrupt cache must never break a resource page — treat it as empty.
     return {};
   }
 }
 
-/** Cached value for `key`, or null when absent, expired, or unreadable. */
-export async function readAiCache<T>(key: string): Promise<T | null> {
-  const store = await readStore();
-  const entry = store[key];
+// Read from disk once and shared, so the summary and plan writes that land
+// together both mutate the same store instead of one overwriting the other.
+let storePromise: Promise<Store> | null = null;
+const loadStore = (): Promise<Store> => (storePromise ??= readStore());
+
+let persisting: Promise<void> = Promise.resolve();
+
+/** Cached value for `key`, or null when absent or expired. Callers validate its shape. */
+export async function readAiCache(key: string): Promise<unknown> {
+  const entry = (await loadStore())[key];
   if (!entry || Date.now() - entry.at > TTL_MS) return null;
-  return entry.value as T;
+  return entry.value;
 }
 
 /** Cache `value` under `key`. Failures are swallowed — this is an optimisation. */
 export async function writeAiCache(key: string, value: unknown): Promise<void> {
-  try {
-    const store = await readStore();
-    store[key] = { at: Date.now(), value };
-    const keys = Object.keys(store);
-    if (keys.length > MAX_ENTRIES) {
-      // Drop the oldest entries back down to the cap.
-      keys
-        .sort((a, b) => store[a].at - store[b].at)
-        .slice(0, keys.length - MAX_ENTRIES)
-        .forEach((k) => delete store[k]);
-    }
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  } catch {
-    // Ignore: a failed write just means the next open regenerates.
+  const store = await loadStore();
+  store[key] = { at: Date.now(), value };
+  const keys = Object.keys(store);
+  if (keys.length > MAX_ENTRIES) {
+    keys
+      .sort((a, b) => store[a].at - store[b].at)
+      .slice(0, keys.length - MAX_ENTRIES)
+      .forEach((k) => delete store[k]);
   }
+  // Chained, and serialized at write time, so the last write always carries
+  // every entry.
+  persisting = persisting.then(() =>
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store)).catch(() => {}),
+  );
+  await persisting;
 }

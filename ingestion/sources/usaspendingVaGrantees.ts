@@ -1,34 +1,20 @@
 /**
  * USAspending — organizations that hold VA and DOL veteran-services grants.
  *
- * WHY A SPENDING DATABASE IS A RESOURCE DIRECTORY
+ * The VA funds community organizations to deliver much of its homeless, legal,
+ * suicide-prevention and employment work (Grant & Per Diem, SSVF, HVRP, …) but
+ * publishes few of those provider lists in machine-readable form. Every grant is
+ * a federal award, though, so filtering USAspending by CFDA program number yields
+ * the provider directory with recipient addresses — keyless, refreshed monthly.
  *
- * The VA funds community organizations to deliver most of its homeless, legal,
- * suicide-prevention and employment services, and it publishes almost none of
- * those provider lists in machine-readable form. Grant & Per Diem — transitional
- * housing for homeless veterans, the single biggest such network — was recorded in
- * the last data audit as "PDF award lists only", and SSVF only exists in this app
- * because someone downloaded a spreadsheet by hand into
- * `ingestion/data/ssvf-providers.json` (235 providers, no addresses at all).
- *
- * But every one of those grants is a federal award, and federal awards are in
- * USAspending with the recipient's name and street address. Filtering by CFDA
- * program number turns the spending API into the provider directory the VA
- * doesn't publish — no key, no scraping, and it refreshes monthly on its own.
- *
- * WHAT THIS IS NOT
- *
- * A recipient address is the address the organization gave the government, which
- * is its main office — usually but not always where services are delivered. A
- * multi-site provider appears once, at its headquarters. So rows are
- * `needs_review`, and the copy tells the veteran to call first rather than turn
- * up. That is honest and still far better than a phone number with no place
- * attached, which is what SSVF has today.
- *
- * There are no phone numbers in this feed and no hours.
+ * A recipient address is the organization's registered office, not necessarily
+ * where services are delivered, so rows are `needs_review` and the copy says to
+ * call first. No phones or hours in this feed.
  */
 import type { ResourceCategory } from '../../src/types/resource.ts';
+import { titleCaseName } from '../lib/displayName.ts';
 import { postJson } from '../lib/http.ts';
+import { formatAddress, parseStateFilter, trimOrNull } from '../lib/normalize.ts';
 import { stableKey } from '../lib/stableKey.ts';
 import type {
   IngestionQuery,
@@ -168,28 +154,6 @@ interface AwardPage {
   page_metadata?: { hasNext?: boolean };
 }
 
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-/** Recipient names arrive SHOUTING; title-case them so cards are readable. */
-function titleCase(name: string): string {
-  const SMALL = new Set(['of', 'the', 'and', 'for', 'a', 'an', 'in', 'on', 'at', 'to']);
-  // Acronyms a veteran would recognise should stay upper-case.
-  const KEEP_UPPER = /^(?:VA|DAV|VFW|LLC|INC|USA|US|YMCA|YWCA|II|III|IV|[A-Z]&[A-Z])$/;
-  return name
-    .toLowerCase()
-    .split(/\s+/)
-    .map((word, i) => {
-      const upper = word.toUpperCase().replace(/[^A-Z&]/g, '');
-      if (KEEP_UPPER.test(upper)) return word.toUpperCase();
-      if (i > 0 && SMALL.has(word)) return word;
-      return word.replace(/^([a-z])/, (c) => c.toUpperCase());
-    })
-    .join(' ');
-}
-
 /** FY-aligned start date `LOOKBACK_YEARS` federal years back. */
 function lookbackStart(today: Date): string {
   const fyOfToday = today.getUTCMonth() >= 9 ? today.getUTCFullYear() + 1 : today.getUTCFullYear();
@@ -252,7 +216,7 @@ function toGrantee(row: AwardRow, program: Program): Grantee | null {
   if (/^(multiple recipients|redacted|miscellaneous)/i.test(rawName)) return null;
 
   return {
-    name: titleCase(rawName),
+    name: titleCaseName(rawName),
     program,
     street,
     city: trimOrNull(loc.city_name),
@@ -277,18 +241,10 @@ function normalize(grantee: Grantee, today: string): NormalizedResource {
       `${grantee.name} ${program.blurb}. This is the organization's registered address, which may ` +
       `be its main office rather than where services are delivered — call or check their website ` +
       `before travelling.`,
-    address: [
-      grantee.street,
-      [grantee.city, [grantee.state, grantee.zip].filter(Boolean).join(' ')]
-        .filter(Boolean)
-        .join(', '),
-    ]
-      .filter(Boolean)
-      .join(', '),
+    address: formatAddress(grantee.street, grantee.city, grantee.state, grantee.zip),
     latitude: null,
     longitude: null,
     geocode: { street: grantee.street, city: grantee.city, state: grantee.state, zip: grantee.zip },
-    // USAspending carries no contact details at all.
     phone: null,
     website: null,
     hours: null,
@@ -333,15 +289,7 @@ export const createUsaspendingVaGranteesSource: SourceFactory = (
       const today = now.toISOString().slice(0, 10);
       const start = lookbackStart(now);
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

@@ -7,9 +7,11 @@ Obsidian vault ([docs/obsidian/](docs/obsidian/)); this file is the git-facing s
 ## Development Principles
 
 - **Veteran-first clarity & privacy** — plain language, an obvious next action, and the minimum data
-  collected (an optional first name + ZIP, on-device; never SSN, VA login, bank, or diagnosis).
-- **AI in workflows, not a chatbot** — AI powers plans, scripts, and summaries; its output is
-  simplified guidance, never legal/medical/financial/government-certified advice.
+  collected (an optional, on-device profile with an anonymous backup; never SSN, VA login, bank,
+  or diagnosis).
+- **AI in workflows, not an open-ended chatbot** — AI powers plans, scripts, summaries, and the
+  Ask Frontline navigator, where every reply ends in an in-app action. Its output is simplified
+  guidance, never legal/medical/financial/government-certified advice.
 - **Trust by verification** — every resource shows source type, last-checked date, and status.
 - **No AI slop** — intentional, typed, readable code and designed UI.
 - **Structured development** — plan → scope → implement → review → test → log.
@@ -65,9 +67,8 @@ refactor: simplify resource sort logic
 Run before every PR:
 
 ```bash
-npm run verify        # typecheck + lint
-npm test              # Vitest unit tests
-npm run format:check  # Prettier (optional; `npm run format` to fix)
+npm run verify        # typecheck + lint + format:check + test
+npm run format        # fix Prettier issues (app source; Markdown is excluded)
 ```
 
 Also run the app and exercise the flow for anything with runtime behavior. CI
@@ -85,7 +86,7 @@ MVP-critical? + "could an existing file be updated?" — then getting approval. 
 
 No giant files, vague names (`Thing`, `Data`, `Card2`), duplicate components, fake complexity,
 dead code, unexplained mock data, or unrelated changes. Prefer small focused files, typed
-models, consistent tokens, realistic mock data, obvious data flow. Canonical:
+models, consistent tokens, real (not invented) data, obvious data flow. Canonical:
 [Anti-AI-Slop Code Rules](docs/obsidian/03%20Technical/Anti-AI-Slop%20Code%20Rules.md).
 
 ## Obsidian Logging Requirements

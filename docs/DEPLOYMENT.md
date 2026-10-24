@@ -56,7 +56,7 @@ eas build --platform ios --profile preview
 ```
 EAS will offer to **create the Apple app record and manage signing certificates** — say yes. Install the
 build from the link on your iPhone and **walk the full loop over cellular**: onboarding → Discover →
-results → map → open a resource (AI summary/plan/call script load) → save. Fix anything, rebuild.
+results → map → open a resource (AI summary/plan/call script load) → save → Ask Frontline. Fix anything, rebuild.
 
 ### 4. Host the privacy policy — ✅ DONE
 Live at <https://adikothuri3.github.io/frontline-legal/privacy.html> (Terms at `/terms.html`), served
@@ -64,8 +64,8 @@ by GitHub Pages from the public `frontline-legal` repo. [`docs/PRIVACY.md`](PRIV
 canonical source — edit it there, then mirror into the HTML.
 
 ### 4b. Set the Anthropic spend cap
-In console.anthropic.com, set a hard monthly limit. The in-app guards (30 req/IP/hr, $5/hr budget)
-are **fail-open by design**, so this is the only real backstop against a runaway bill once public.
+In console.anthropic.com, set a hard monthly limit. The in-function guards (30 req/IP/hr for resource
+tasks, a separate 20/hr chat bucket, and a $5/hr global budget) are **fail-open by design**, so this is the only real backstop against a runaway bill once public.
 
 ### 5. Production build
 ```bash

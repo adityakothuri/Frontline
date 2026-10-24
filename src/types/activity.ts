@@ -1,9 +1,6 @@
 import type { ResourceCategory } from './resource';
 
-/**
- * On-device record of how a veteran has interacted with opportunities, used to
- * power the Home "How was ___?" review prompt. Local-only, nothing sensitive.
- */
+/** On-device record of resources a veteran engaged with, feeding the Home review deck. */
 
 export type EngagementAction = 'viewed' | 'called' | 'directions';
 

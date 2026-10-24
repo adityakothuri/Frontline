@@ -1,28 +1,18 @@
 import { View, StyleSheet } from 'react-native';
-import Animated from 'react-native-reanimated';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { NotConfiguredError, SupabaseRequestError } from '@/services/supabase/client';
-import { colors, rise, spacing, radii } from '@/theme';
-import { riseIn } from '@/theme/motionPresets';
+import { spacing } from '@/theme';
 import { AppText } from './AppText';
-import { PrimaryButton } from './PrimaryButton';
+import { TextAction } from './TextAction';
 
 type ErrorStateProps = {
   title?: string;
   message?: string;
-  /** The failure itself, so the copy can say which one it was. Explicit
-   *  `title`/`message` still win. */
+  /** The failure, so the copy can name it. Explicit `title`/`message` win. */
   error?: unknown;
   onRetry?: () => void;
 };
 
-/**
- * Turn a data failure into words a veteran can act on.
- *
- * Every screen used to show one generic sentence, which told someone with no
- * signal to "try again" and someone hitting a broken backend exactly the same
- * thing. The distinction matters: one of them can fix it.
- */
+/** Turn a data failure into words a veteran can act on (offline vs our fault). */
 export function describeDataError(error: unknown): { title: string; message: string } {
   if (error instanceof NotConfiguredError) {
     return {
@@ -50,10 +40,8 @@ export function describeDataError(error: unknown): { title: string; message: str
       message: 'The connection timed out. Check your signal and try again.',
     };
   }
-  // React Native surfaces a failed connection as a TypeError — which covers a
-  // phone with no signal *and* a service that is not answering. The copy used to
-  // assume the first ("You seem to be offline"), which told a veteran with full
-  // bars that their connection was the problem.
+  // RN reports a failed connection as a TypeError for both no signal and a
+  // service not answering, so the copy must not blame the veteran's connection.
   if (error instanceof TypeError) {
     return {
       title: 'We couldn’t reach Frontline',
@@ -67,54 +55,24 @@ export function describeDataError(error: unknown): { title: string; message: str
   };
 }
 
-// The error state for data-backed screens. Calm, not alarming — a muted red mark
-// and a clear retry, never a red-everywhere panic screen.
+// The error state for data-backed screens: the same plain shape as an empty
+// state. No red — a failed load is not an emergency.
 export function ErrorState({ title, message, error, onRetry }: ErrorStateProps) {
   const described = describeDataError(error);
-  const heading = title ?? described.title;
-  const body = message ?? described.message;
   return (
-    <Animated.View entering={riseIn(0, rise.md)} style={styles.root}>
-      <View style={styles.iconWrap}>
-        <Ionicons name="alert-circle-outline" size={28} color={colors.danger} />
-      </View>
-      <AppText variant="heading" style={styles.center}>
-        {heading}
+    <View style={styles.root}>
+      <AppText variant="kicker" accessibilityRole="header">
+        {title ?? described.title}
       </AppText>
-      <AppText variant="body" color="textSecondary" style={styles.message}>
-        {body}
+      <AppText variant="body" color="textSecondary">
+        {message ?? described.message}
       </AppText>
-      {onRetry ? (
-        <PrimaryButton
-          label="Try again"
-          onPress={onRetry}
-          variant="secondary"
-          style={styles.action}
-        />
-      ) : null}
-    </Animated.View>
+      {onRetry ? <TextAction label="Try again" onPress={onRetry} /> : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  // 64, the same disc as `EmptyState`: the two states are siblings and were a
-  // different size for no reason anyone could name.
-  iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.dangerSoft,
-    marginBottom: spacing.sm,
-  },
-  center: { textAlign: 'center' },
-  message: { textAlign: 'center', maxWidth: 300 },
-  action: { marginTop: spacing.lg, paddingHorizontal: spacing.xxl },
+  // No rule of its own: it sits under a masthead that already has one.
+  root: { gap: spacing.sm, paddingTop: spacing.sm },
 });

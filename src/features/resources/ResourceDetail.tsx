@@ -1,31 +1,26 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { Share, View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AppText,
-  CategoryMedallion,
-  NavigatorDisclaimer,
+  DataRow,
+  Glyph,
+  GlyphButton,
   PressableScale,
   SectionHeader,
+  TextAction,
+  type GlyphName,
 } from '@/components';
-import { colors, pressScale, radii, rise, spacing, stagger, surfaceTint } from '@/theme';
-import { heroMedallionIn, riseIn } from '@/theme/motionPresets';
+import { colors, pressScale, spacing, swatchStyle } from '@/theme';
 import { isOpenNow } from '@/lib/hours';
 import { useProfile } from '@/services/profile';
 import { useActivity } from '@/services/activity';
 import { useReminders } from '@/services/reminders';
-import {
-  aiService,
-  AI_NOT_ADVICE_DISCLAIMER,
-  type BenefitSummary,
-  type NextStepPlan,
-} from '@/services/ai';
+import { aiService, type BenefitSummary, type NextStepPlan } from '@/services/ai';
 import { RESOURCE_CATEGORY_META, type Resource } from '@/types/resource';
 import { defaultNeedForCategory, type NeedCategory } from '@/types/need';
 import { callPhone, openDirections, openWebsite } from './resourceActions';
-import { openNowStatus, toReminderSnapshot, trustWarning } from './resourceStatus';
+import { openNowStatus, shortSourceLabel, toReminderSnapshot } from './resourceStatus';
 import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
 import { ActionRow } from './ActionRow';
@@ -34,7 +29,9 @@ import { DocumentChecklist } from './DocumentChecklist';
 import { CallScriptSheet } from './CallScriptSheet';
 import { useAiGuidance } from './useAiGuidance';
 import { EmergencyCallBanner } from './EmergencyCallBanner';
+import { ReminderBell } from './ReminderBell';
 import { ResourceRating } from './ResourceRating';
+import { VeteranBadge } from './VeteranBadge';
 
 type ResourceDetailProps = {
   resource: Resource;
@@ -42,9 +39,9 @@ type ResourceDetailProps = {
   needCategory: NeedCategory;
 };
 
-// The full resource page, top-down: what it is → every action in one row under
-// the header → what to do → what to bring → how to reach it → trust. The call
-// script opens in a slide-up sheet from the action row.
+// The full resource page, top-down: name and status → the action bar → about →
+// next steps → what to bring → contact → source. The call script opens in a
+// slide-up sheet from the action bar.
 export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) {
   const { profile } = useProfile();
   const { recordEngagement } = useActivity();
@@ -56,17 +53,12 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
 
   const [scriptOpen, setScriptOpen] = useState(false);
 
-  // Both calls fire at once and each block paints the moment its own lands, so a
-  // veteran reads whichever guidance is ready instead of waiting on the slower
-  // of the two. Each also fails and retries on its own.
+  // Both calls fire at once; each block paints, fails and retries on its own.
   const summary = useAiGuidance<BenefitSummary>(
     () => aiService.summarizeBenefit({ resource }),
     resource.id,
   );
-  // The plan is built from the need, so it keys on the ZIP as well as the
-  // resource: a page opened before the profile hydrated would otherwise keep
-  // showing location-less next steps after the ZIP arrived. (The summary is
-  // about the resource alone, so the id is the whole key there.)
+  // The plan keys on the ZIP too, so it regenerates once the profile hydrates.
   const plan = useAiGuidance<NextStepPlan>(
     () => aiService.buildNextStepPlan({ need, resource }),
     `${resource.id}:${need.location.zip ?? ''}`,
@@ -85,18 +77,17 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
   }, [resource.id]);
 
   useEffect(() => {
-    // Opportunistic: this page already has the live record, so any reminder on
-    // it gets fresh hours and a fresh trust line without a dedicated fetch.
-    // A no-op unless something the schedule depends on actually changed.
+    // Refresh any reminder's snapshot from the live record; no-op if unchanged.
     refreshSnapshots([{ resourceId: resource.id, snapshot: toReminderSnapshot(resource) }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resource.id, resource.hours, resource.name]);
 
   const meta = RESOURCE_CATEGORY_META[resource.category];
-  const open = openNowStatus(isOpenNow(resource.hours));
-  // Job postings have no visiting hours, so the open-now pill would be noise.
+  const openFlag = isOpenNow(resource.hours);
+  const open = openNowStatus(openFlag, resource);
+  // No visiting hours for a job posting.
   const showStatus = resource.category !== 'jobs';
-  const warning = trustWarning(resource);
+  const trust = shortSourceLabel(resource);
   const hasDirections =
     resource.address !== null || (resource.latitude !== null && resource.longitude !== null);
   const isEmergency = resource.category === 'emergency';
@@ -111,139 +102,117 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
     run();
   };
 
+  const share = () => {
+    const lines = [resource.name, resource.address, resource.phone, resource.website].filter(
+      (line): line is string => Boolean(line),
+    );
+    // Fire-and-forget: the OS sheet owns the interaction from here.
+    Share.share({ message: lines.join('\n') }).catch(() => {});
+  };
+
   return (
     <SafeAreaView style={styles.root} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Category hero — a soft header zone in the category's own hue, so every
-            resource type opens with a distinct, premium identity. The medallion
-            rides beside the category label (same pattern as ResourceCard) rather
-            than on its own line, so the name stays high on the page. Full-bleed
-            under the nav header. */}
-        <Animated.View
-          entering={riseIn(0, rise.md)}
-          style={[styles.hero, { backgroundColor: surfaceTint(meta.color, 0.14) }]}
-        >
-          <View style={styles.heroCategory}>
-            {/* The medallion arrives at the size it left on the card (44 -> 36),
-                so opening a resource reads as the card growing into the page
-                rather than a new screen appearing. */}
-            <Animated.View entering={heroMedallionIn()}>
-              <CategoryMedallion icon={meta.icon} color={meta.color} size={36} />
-            </Animated.View>
-            <AppText variant="label" color="textSecondary">
-              {meta.label}
-            </AppText>
-          </View>
-          <AppText variant="title">{resource.name}</AppText>
-          {/* Jobs have no visiting hours, so the wrapper is skipped entirely
-              rather than left to contribute empty space to the hero. */}
-          {showStatus ? (
-            <View style={styles.headerMeta}>
-              <StatusPill label={open.label} tone={open.tone} />
+        <View style={styles.hero}>
+          <View style={styles.heroTop}>
+            <View style={styles.heroCategory}>
+              <View style={swatchStyle(meta.color, 10)} />
+              <AppText variant="kicker">{meta.label}</AppText>
+              <VeteranBadge relevance={resource.veteran_relevance} />
             </View>
-          ) : null}
-        </Animated.View>
+            <View style={styles.heroTools}>
+              {/* Renders nothing unless the hours are good enough to schedule against. */}
+              <ReminderBell resource={resource} />
+              <GlyphButton name="share" label="Share" framed={false} onPress={share} />
+            </View>
+          </View>
+          <AppText variant="display" style={styles.name}>
+            {resource.name}
+          </AppText>
+          {/* One meta line: open now (not for jobs, which have no hours) and trust. */}
+          <View style={styles.meta}>
+            {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
+            <StatusPill label={trust.label} tone={trust.tone} />
+          </View>
+          <View style={styles.rule} />
+        </View>
 
-        {/* Rating sits below the tinted hero so its muted caption keeps AA
-            contrast on the plain paper background. Real votes only (0 until then). */}
-        <Animated.View entering={riseIn(stagger.step)}>
-          <ResourceRating resourceId={resource.id} />
-        </Animated.View>
-
-        {/* Emergency: a prominent way to call, right up top */}
         {isEmergency ? (
-          <Animated.View entering={riseIn(stagger.step * 2)}>
-            <EmergencyCallBanner
-              resource={resource}
-              onCall={recordAnd('called', () => callPhone(resource.phone as string))}
-            />
-          </Animated.View>
+          <EmergencyCallBanner
+            resource={resource}
+            onCall={recordAnd('called', () => callPhone(resource.phone as string))}
+          />
         ) : null}
 
-        {/* Every action, one compact cluster — Call stays above the fold.
-            The stagger stops here: everything below is off-screen on arrival,
-            so animating it would be cost with nothing to show for it. */}
-        <Animated.View entering={riseIn(stagger.step * (isEmergency ? 3 : 2))}>
-          <ActionRow
-            resource={resource}
-            onCall={
-              resource.phone
-                ? recordAnd('called', () => callPhone(resource.phone as string))
-                : undefined
-            }
-            onDirections={
-              hasDirections ? recordAnd('directions', () => openDirections(resource)) : undefined
-            }
-            onGetScript={resource.phone ? () => setScriptOpen(true) : undefined}
-          />
-        </Animated.View>
+        <ActionRow
+          resource={resource}
+          onCall={
+            resource.phone
+              ? recordAnd('called', () => callPhone(resource.phone as string))
+              : undefined
+          }
+          onDirections={
+            hasDirections ? recordAnd('directions', () => openDirections(resource)) : undefined
+          }
+          onGetScript={resource.phone ? () => setScriptOpen(true) : undefined}
+        />
 
-        {/* What it is */}
         <AiContentBlock
-          title="Summary"
-          color={meta.color}
+          title="About"
           loading={!summary.data}
-          loadingLabel="Reading this resource…"
+          loadingLabel="Reading this place…"
           failed={summary.failed}
           onRetry={summary.retry}
         >
           {summary.data ? (
             <>
-              <SummaryLine label="What it is" value={summary.data.whatItIs} />
-              <SummaryLine label="Who may qualify" value={summary.data.whoMayQualify} />
-              {summary.data.deadlinesOrWarnings ? (
-                <SummaryLine label="Heads up" value={summary.data.deadlinesOrWarnings} />
-              ) : null}
+              <AppText variant="body">{summary.data.whatItIs}</AppText>
+              <View>
+                <DataRow
+                  layout="stacked"
+                  label="Qualifies"
+                  value={summary.data.whoMayQualify}
+                  last={!summary.data.deadlinesOrWarnings}
+                />
+                {summary.data.deadlinesOrWarnings ? (
+                  <DataRow
+                    layout="stacked"
+                    label="Heads up"
+                    value={summary.data.deadlinesOrWarnings}
+                    last
+                  />
+                ) : null}
+              </View>
             </>
           ) : null}
         </AiContentBlock>
 
-        {/* What to do */}
         <AiContentBlock
-          title="Your next steps"
-          color={meta.color}
+          title="Next steps"
           loading={!plan.data}
           loadingLabel="Working out your next steps…"
           failed={plan.failed}
           onRetry={plan.retry}
         >
-          {plan.data ? (
-            <>
-              {/* Index-qualified: the model can legitimately repeat a title. */}
-              {plan.data.steps.map((step, i) => (
+          {plan.data
+            ? // Index-qualified: the model can legitimately repeat a title.
+              plan.data.steps.map((step, i) => (
                 <View key={`${i}-${step.title}`} style={styles.step}>
-                  <View style={styles.stepNum}>
-                    <AppText variant="label" color="textOnAccent">
-                      {i + 1}
-                    </AppText>
-                  </View>
+                  <AppText variant="data" color="accent" style={styles.stepNum}>
+                    {String(i + 1).padStart(2, '0')}
+                  </AppText>
                   <View style={styles.stepBody}>
                     <AppText variant="bodyStrong">{step.title}</AppText>
-                    <AppText variant="body" color="textSecondary">
+                    <AppText variant="caption" color="textSecondary">
                       {step.detail}
                     </AppText>
                   </View>
                 </View>
-              ))}
-              {plan.data.backup ? (
-                <AppText variant="body" color="textSecondary" style={styles.backup}>
-                  {plan.data.backup}
-                </AppText>
-              ) : null}
-            </>
-          ) : null}
+              ))
+            : null}
         </AiContentBlock>
 
-        {/* The one place the not-advice line is said on this page, under both AI
-            blocks rather than inside each: the blocks carry the short
-            "AI-generated" tag, this carries the whole sentence. It was defined
-            in `AiService.ts` as "attached to every AI surface" and rendered
-            nowhere. */}
-        <NavigatorDisclaimer text={AI_NOT_ADVICE_DISCLAIMER} />
-
-        {/* What to bring — the listing's own documents, the plan's suggestions,
-            and the veteran's answer from onboarding, in one list. */}
-        <Section title="What should I bring?">
+        <Section title="What to bring">
           <DocumentChecklist
             documents={resource.documents_needed}
             suggested={plan.data?.whatToBring}
@@ -251,56 +220,43 @@ export function ResourceDetail({ resource, needCategory }: ResourceDetailProps) 
           />
         </Section>
 
-        {/* How to reach it */}
         <Section title="Contact">
           {resource.phone ? (
-            // Recorded like the Call pill is: a call placed from here is the same
-            // engagement, and it used to be the one call that never reached the
-            // Home review prompt.
+            // Recorded as an engagement, like the Call tile.
             <ContactRow
-              icon="call-outline"
+              glyph="call"
+              label="Phone"
               text={resource.phone}
               onPress={recordAnd('called', () => callPhone(resource.phone as string))}
             />
           ) : null}
           {resource.website ? (
             <ContactRow
-              icon="globe-outline"
+              glyph="globe"
+              label="Website"
               text={resource.website}
               onPress={() => openWebsite(resource.website as string)}
             />
           ) : null}
-          {resource.address ? <ContactRow icon="location-outline" text={resource.address} /> : null}
-          {resource.hours ? <ContactRow icon="time-outline" text={resource.hours} /> : null}
+          {resource.address ? (
+            <ContactRow glyph="location" label="Address" text={resource.address} />
+          ) : null}
+          {resource.hours ? <ContactRow glyph="clock" label="Hours" text={resource.hours} /> : null}
         </Section>
 
-        {/* Trust */}
-        {/* SourceRow already carries "· updated <date>" — no separate date line,
-            it read as the same fact twice. */}
-        <Section title="Trust & verification">
+        <Section title="Source">
+          {/* Carries the source type, the updated date and any licence credit. */}
           <SourceRow resource={resource} size="body" />
-          {warning ? (
-            <AppText variant="body" style={styles.trustWarning}>
-              {warning}
-            </AppText>
-          ) : null}
-          {/* The model's own read on how far to trust the source — generated for
-              exactly this section and, until now, dropped on the floor. */}
-          {summary.data?.verificationNote ? (
-            <AppText variant="body" color="textSecondary">
-              {summary.data.verificationNote}
-            </AppText>
-          ) : null}
           {resource.source_url ? (
-            <ContactRow
-              icon="open-outline"
-              text="View the source"
+            <TextAction
+              label="View source"
               onPress={() => openWebsite(resource.source_url as string)}
             />
           ) : null}
         </Section>
 
-        <NavigatorDisclaimer />
+        {/* Real votes only (0 until then). */}
+        <ResourceRating resourceId={resource.id} />
       </ScrollView>
 
       {/* The call script rides in a sheet so the page itself stays short */}
@@ -325,32 +281,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function SummaryLine({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.summaryLine}>
-      <AppText variant="label" color="textSecondary">
-        {label}
-      </AppText>
-      <AppText variant="body">{value}</AppText>
-    </View>
-  );
-}
-
+// A contact line led by its glyph. Tappable ones (phone, website) read in olive.
 function ContactRow({
-  icon,
+  glyph,
+  label,
   text,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  glyph: GlyphName;
+  label: string;
   text: string;
   onPress?: () => void;
 }) {
   const content = (
     <View style={styles.contactRow}>
-      <Ionicons name={icon} size={18} color={onPress ? colors.accent : colors.textMuted} />
+      <Glyph name={glyph} size={18} color={onPress ? colors.accent : colors.textSecondary} />
       <AppText
         variant="body"
-        color={onPress ? 'textPrimary' : 'textSecondary'}
+        color={onPress ? 'accent' : 'textPrimary'}
         style={styles.contactText}
         numberOfLines={2}
         ellipsizeMode="tail"
@@ -359,11 +307,17 @@ function ContactRow({
       </AppText>
     </View>
   );
-  if (!onPress) return content;
+  if (!onPress) {
+    return (
+      <View accessible accessibilityLabel={`${label}: ${text}`}>
+        {content}
+      </View>
+    );
+  }
   return (
     <PressableScale
       accessibilityRole="link"
-      accessibilityLabel={text}
+      accessibilityLabel={`${label}: ${text}`}
       onPress={onPress}
       scaleTo={pressScale.subtle}
     >
@@ -374,43 +328,31 @@ function ContactRow({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.xl },
-  // Full-bleed hero: cancel the content padding (top + sides), re-inset its own
-  // content, and clip the rounded bottom corners. `gap` on `content` keeps the
-  // next section spaced.
-  hero: {
-    marginTop: -spacing.xl,
-    marginHorizontal: -spacing.xl,
-    paddingTop: spacing.xl,
+  content: {
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
-    gap: spacing.sm,
-    borderBottomLeftRadius: radii.md,
-    borderBottomRightRadius: radii.md,
-    overflow: 'hidden',
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
+    gap: spacing.xl,
   },
-  heroCategory: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  headerMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md },
-  section: { gap: spacing.sm },
-  summaryLine: { gap: spacing.xxs },
-  trustWarning: { color: colors.warningText },
-  step: { flexDirection: 'row', gap: spacing.sm },
-  stepNum: {
-    width: 24,
-    height: 24,
-    borderRadius: radii.sm,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  hero: { gap: spacing.sm },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  heroCategory: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  heroTools: { flexDirection: 'row', marginVertical: -spacing.md },
+  name: { textTransform: 'uppercase' },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.lg },
+  rule: { height: 2, backgroundColor: colors.rule, marginTop: spacing.xs },
+  section: { gap: spacing.xs },
+  step: { flexDirection: 'row', gap: spacing.md },
+  stepNum: { marginTop: 3 },
   stepBody: { flex: 1, gap: spacing.xxs },
-  backup: { marginTop: spacing.xs, fontStyle: 'italic' },
   // spacing.md padding keeps tappable phone/website rows at >=44pt.
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   contactText: { flex: 1 },
 });

@@ -15,10 +15,10 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/adikothuri3/watchdog.git"
+    "url": "git+https://github.com/adikothuri3/Frontline.git"
   },
   "bugs": {
-    "url": "https://github.com/adikothuri3/watchdog/issues"
+    "url": "https://github.com/adikothuri3/Frontline/issues"
   },
   "engines": {
     "node": ">=22"
@@ -26,9 +26,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/barlow-condensed": "^0.4.1",
-    "@expo-google-fonts/fraunces": "^0.4.1",
-    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
-    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/overpass-mono": "^0.4.2",
     "@expo-google-fonts/public-sans": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -47,7 +45,6 @@
     "expo-splash-screen": "~57.0.5",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
     "react-native": "0.86.0",
     "react-native-gesture-handler": "3.1.0",
     "react-native-maps": "1.27.2",
@@ -55,7 +52,6 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "react-native-web": "^0.21.2",
     "react-native-worklets": "0.10.3"
   },
   "devDependencies": {
@@ -71,14 +67,13 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify": "npm run typecheck && npm run lint"
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm test"
   },
   "prettier": {
     "singleQuote": true,

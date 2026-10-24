@@ -14,11 +14,14 @@ export const spacing = {
   xxxl: 48,
 } as const;
 
-// Square corners: `sm` for fields and buttons, `md` for sheets and pins.
+// Crisp corners, never a pill: `xs` for small marks (a checkbox, a map dot), `sm`
+// for fields, buttons and chips, `md` for cards and sheets. Past ~10 a bordered
+// card starts to read as a rounded-card template.
 export const radii = {
   none: 0,
-  sm: 2,
-  md: 4,
+  xs: 3,
+  sm: 6,
+  md: 10,
 } as const;
 
 // Only the bottom sheet lifts off the page — it has to read over a live map.
@@ -32,6 +35,3 @@ export const shadows = {
     elevation: 8,
   },
 } as const;
-
-export type SpacingToken = keyof typeof spacing;
-export type ShadowToken = keyof typeof shadows;

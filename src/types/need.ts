@@ -1,21 +1,12 @@
 import type { Ionicons } from '@expo/vector-icons';
 
-/**
- * The structured "need" produced by the "What do you need help with?" guided
- * flow (Phase 3). It is the query that drives resource discovery and every AI
- * output. See `docs/obsidian/02 Design/App Flow.md`.
- */
+/** The structured "need": the query behind resource discovery and every AI output. */
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 /**
- * The 10 user-facing need categories listed under Discover's "Other" shell.
- *
- * `va_benefits` covers both disability claims and VA benefits generally. They
- * were two categories until 2026-07-28, but both fanned out to the single
- * `benefits_help` resource category — a VSO rep is who helps with either — so
- * they returned identical local lists in every ZIP measured. One entry point,
- * with both sets of official links behind it.
+ * The 10 user-facing need categories. `va_benefits` covers disability claims and
+ * VA benefits generally, since both map to the same `benefits_help` resources.
  */
 export type NeedCategory =
   | 'essentials'
@@ -61,39 +52,23 @@ export interface Need {
 
 export interface NeedCategoryMeta {
   label: string;
-  /**
-   * A shorter label for narrow surfaces — a Discover shell chip, a Home tile.
-   * Only set where the full label doesn't fit; read it as
-   * `meta.shortLabel ?? meta.label`.
-   */
+  /** For narrow surfaces, only where the full label doesn't fit: `shortLabel ?? label`. */
   shortLabel?: string;
   icon: IoniconName;
-  /**
-   * One-line helper. Visible under the label on Discover's category list, and
-   * spoken as the accessibility hint on both Discover and the Home tiles — the
-   * Home tiles stopped *showing* it on 2026-07-30, when four two-line captions
-   * were what made those tiles too big.
-   */
+  /** One-line helper, shown on Discover's list and used as the accessibility hint. */
   description: string;
   /** A category-coded accent used for its icon chip. */
   color: string;
 }
 
 /**
- * Display metadata for the 10 need categories — one source of truth for the
- * category list under Discover's "Other" shell.
- * Each category owns its own muted hue, chosen against the measured constraints
- * documented on RESOURCE_CATEGORY_META (`types/resource.ts`): >=12 CIEDE2000 from
- * every semantic token, >=11 from every other category, >=3:1 for the icon on its
- * own medallion wash. Every hue here matches its counterpart in
- * RESOURCE_CATEGORY_META — keep the two in sync.
+ * Display metadata for the 10 need categories. Hues match their counterparts in
+ * RESOURCE_CATEGORY_META, whose constraints `categoryMeta.test.ts` enforces.
  */
 export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
   essentials: {
     label: 'Essentials',
-    // A cart rather than a basket: `essentials` merges food and clothing, and at
-    // the sizes this glyph is drawn a basket is easy to misread. Home shows these
-    // glyphs with no label at all, so legibility beats nicety.
+    // A cart: food and clothing both, and legible at small sizes.
     icon: 'cart-outline',
     description: 'Food, clothing, and everyday basics',
     color: '#B85C1E',
@@ -113,10 +88,7 @@ export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
   va_benefits: {
     label: 'Disability & VA benefits',
     shortLabel: 'VA benefits',
-    // A document. This was briefly a service medal, on the reasoning that a
-    // document reads as "a form" while a medal reads as something earned — but a
-    // medal turned out to say *veteran* rather than *benefits*, and every one of
-    // these categories is for veterans. Claims are paperwork; the document says so.
+    // Claims are paperwork; a medal would just say "veteran".
     icon: 'document-text-outline',
     description: 'Claims, ratings, and other VA benefits',
     color: '#4A5580',
@@ -186,14 +158,7 @@ export const NEED_CATEGORIES: NeedCategory[] = [
   'emergency',
 ];
 
-/**
- * The four needs a veteran reaches for most, in the order they're shown. Two
- * surfaces curated this shortlist until 2026-08-05, when Home's quick-start grid
- * was deleted; Discover's shell row is now the only consumer. Kept here rather
- * than inlined there because "which needs are common" is a product fact about
- * the catalogue, not a detail of one chip row — and the last surface to want it
- * should not have to rediscover it.
- */
+/** The four needs a veteran reaches for most, in display order (Discover's shell row). */
 export const TOP_NEED_CATEGORIES = [
   'essentials',
   'housing',
@@ -204,25 +169,6 @@ export const TOP_NEED_CATEGORIES = [
 /** One of the four common needs — narrower than `NeedCategory`, so a surface
  *  that only handles the shortlist can say so in its types. */
 export type TopNeedCategory = (typeof TOP_NEED_CATEGORIES)[number];
-
-export const URGENCY_LABELS: Record<Urgency, string> = {
-  today: 'I need something today',
-  this_week: 'Sometime this week',
-  info: 'Just looking for information',
-};
-
-export const MODALITY_LABELS: Record<Modality, string> = {
-  in_person: 'In person',
-  online: 'Online',
-  either: 'Either is fine',
-};
-
-export const HELP_TYPE_LABELS: Record<HelpType, string> = {
-  call: 'Help calling',
-  visit: 'Help visiting',
-  apply: 'Help applying',
-  understand: 'Help understanding it',
-};
 
 export const VETERAN_DOCUMENT_LABELS: Record<VeteranDocument, string> = {
   veteran_id: 'Veteran ID',
@@ -250,10 +196,8 @@ export const DOCUMENT_OPTIONS: { value: VeteranDocument; label: string }[] = (
 export const DEFAULT_RADIUS_MILES = 15;
 
 /**
- * Builds a `Need` from just a tapped category + the veteran's ZIP, filling the
- * rest with sensible defaults. Since Stage 4 removed the per-category questions,
- * both the results list and the resource detail page derive their `Need` this way
- * — keep it the single source so the two views always agree.
+ * Builds a `Need` from a tapped category + ZIP with default answers. The single
+ * source for results and resource detail, so the two always agree.
  */
 export function defaultNeedForCategory(
   category: NeedCategory,

@@ -3,13 +3,9 @@ import * as Notifications from 'expo-notifications';
 import type { PlannedNotification } from './reminderSchedule';
 
 /**
- * The only module that talks to the OS scheduler.
- *
- * Everything here is a thin, failure-swallowing wrapper: the planning decisions
- * live in `reminderSchedule`, which vitest can actually run. Every call is
- * wrapped because a rejected OS promise must degrade to "no reminder" rather
- * than take down the render that triggered it — the same never-throw contract
- * `savedStorage` keeps.
+ * The only module that talks to the OS scheduler. Thin, never-throwing wrappers:
+ * a rejected OS promise degrades to "no reminder". Planning lives in
+ * `reminderSchedule`, where vitest can run it.
  */
 
 /** Android needs a channel before it will ask for permission at all. */
@@ -18,16 +14,12 @@ const CHANNEL_ID = 'frontline-hours';
 export type PermissionState = 'granted' | 'denied' | 'undetermined';
 
 /** Where a tapped notification wants to go. */
-export const RESOURCE_ID_KEY = 'resourceId';
+const RESOURCE_ID_KEY = 'resourceId';
 
 let configured = false;
 
-/**
- * Register the foreground presentation rules and the Android channel.
- *
- * No badge: a badge implies an unread count the app does not maintain, and a
- * number stuck on the icon that nothing clears is its own small betrayal.
- */
+/** Register the foreground presentation rules and the Android channel. No
+ *  badge: the app keeps no unread count to clear it with. */
 export async function configureNotifications(): Promise<void> {
   if (configured) return;
   configured = true;
@@ -65,10 +57,7 @@ export async function getPermissionState(): Promise<PermissionState> {
   }
 }
 
-/**
- * Ask, once, at the moment the veteran taps a bell — never at launch. Same
- * posture the app already takes with location.
- */
+/** Ask when the veteran taps a bell, never at launch. */
 export async function requestPermission(): Promise<PermissionState> {
   try {
     await configureNotifications();
@@ -88,21 +77,44 @@ async function pendingByKey(): Promise<Map<string, string>> {
       if (typeof key === 'string') pending.set(key, request.identifier);
     }
   } catch {
-    // An unreadable schedule is treated as empty: `applyPlan` will then try to
-    // schedule everything, and the OS de-duplicates nothing — which is why the
-    // catch matters. See the note in `applyPlan`.
+    // An unreadable schedule is treated as empty.
   }
   return pending;
 }
 
+let applying: Promise<void> | null = null;
+let queued: PlannedNotification[] | null = null;
+
 /**
  * Make the device's schedule match the plan.
  *
- * A diff rather than a cancel-all-and-repave: rescheduling every trigger on
- * every foreground would reset trigger state and risks dropping one that was
- * about to fire. Keys are stable across rebuilds precisely so this can be cheap.
+ * Serialized: two diffs running at once would both see a key as missing and
+ * schedule it twice. A call made mid-apply queues, and only the latest queued
+ * plan runs next.
  */
-export async function applyPlan(planned: PlannedNotification[]): Promise<void> {
+export function applyPlan(planned: PlannedNotification[]): Promise<void> {
+  queued = planned;
+  if (!applying) {
+    applying = (async () => {
+      try {
+        while (queued) {
+          const next = queued;
+          queued = null;
+          await diffSchedule(next);
+        }
+      } finally {
+        applying = null;
+      }
+    })();
+  }
+  return applying;
+}
+
+/**
+ * A diff rather than cancel-all-and-repave, which would reset trigger state and
+ * risk dropping one about to fire. Keys are stable across rebuilds for this.
+ */
+async function diffSchedule(planned: PlannedNotification[]): Promise<void> {
   const pending = await pendingByKey();
   const wanted = new Set(planned.map((p) => p.key));
 
@@ -144,9 +156,8 @@ const resourceIdFrom = (response: Notifications.NotificationResponse | null): st
 };
 
 /**
- * The resource a tapped notification was about, when that tap is what launched
- * the app. Read once on mount — a cold start has no listener registered yet, so
- * without this the tap opens the app and then loses where it was going.
+ * The resource a tapped notification was about, when that tap launched the app.
+ * A cold start has no listener registered yet to receive it.
  */
 export async function getInitialResourceId(): Promise<string | null> {
   try {
@@ -166,14 +177,5 @@ export function addResponseListener(onResource: (resourceId: string) => void): (
     return () => subscription.remove();
   } catch {
     return () => {};
-  }
-}
-
-/** Drop every scheduled reminder. Used when the last reminder is turned off. */
-export async function cancelAll(): Promise<void> {
-  try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-  } catch {
-    // Nothing to do — the next `applyPlan` reconciles.
   }
 }

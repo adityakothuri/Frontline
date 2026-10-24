@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { captureException } from '../monitoring';
 
-// The one versioned key for the on-device saved list. Stores ids (+ when saved),
-// not resource snapshots — the Saved tab re-resolves live data so trust signals
-// (open-now, last-checked, verification) are never stale.
+// Stores ids, not resource snapshots: the Saved tab re-resolves live data so
+// trust signals (open-now, last-checked) are never stale.
 const STORAGE_KEY = 'frontline.saved.v1';
 
 export interface SavedEntry {
@@ -28,7 +28,11 @@ export async function loadSaved(): Promise<SavedEntry[]> {
   }
 }
 
-/** Persist the saved entries. */
+/** Persist the saved entries. Never throws. */
 export async function saveSaved(entries: SavedEntry[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  } catch (error) {
+    captureException(error);
+  }
 }

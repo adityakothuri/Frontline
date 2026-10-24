@@ -75,7 +75,9 @@ describe('parseChatRequest', () => {
   });
 
   it('cleans control characters but keeps newlines', () => {
-    const result = parseChatRequest({ messages: [user('line one\u0000\n\n\n\nline two\u001B[0m')] });
+    const result = parseChatRequest({
+      messages: [user('line one\u0000\n\n\n\nline two\u001B[0m')],
+    });
     expect(result).toMatchObject({ ok: true });
     if (result.ok) expect(result.request.messages[0].content).toBe('line one\n\nline two[0m');
   });

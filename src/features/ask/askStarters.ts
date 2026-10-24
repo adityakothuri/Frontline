@@ -2,18 +2,13 @@ import type { NeedCategory } from '@/types/need';
 
 export type AskStarter = { text: string; category: NeedCategory };
 
-/** What the empty field says — on Home's faux pill and in the real composer,
- *  so the tap lands on the object it touched. */
+/** Placeholder shared by Home's pill and the real composer. */
 export const ASK_PLACEHOLDER = 'Ask about food, housing, a VA claim…';
 
 /**
- * The first things a veteran might say, offered as chips on the welcome view.
- *
- * Written in the veteran's own voice, because a tap sends the text as the
- * first turn — there is no prefill step. Each names a real category so the
- * reply has an obvious action; two go to `va_benefits` because claims and
- * DD-214 copies are the two most common benefit asks and read as different
- * problems to the person asking.
+ * Starter chips on the welcome view. In the veteran's voice, because a tap sends
+ * the text as the first turn; each maps to a real category so the reply has an
+ * obvious action.
  */
 export const ASK_STARTERS: readonly AskStarter[] = [
   { text: 'I need food this week', category: 'essentials' },

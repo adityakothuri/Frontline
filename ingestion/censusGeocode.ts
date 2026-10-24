@@ -1,9 +1,9 @@
 /**
  * Exact-address geocoding for ingestion, via the free US Census batch geocoder.
  *
- * For sources whose provider gives street addresses but no coordinates (GI Bill
- * schools), pins must sit on the real building or not exist at all — never a
- * ZIP-centroid approximation. This module resolves address parts to coordinates:
+ * For sources that give street addresses but no coordinates, pins must sit on the
+ * real building or not exist at all — never an approximation. This module
+ * resolves `geocode` address parts to coordinates:
  *
  *   1. Read the `geocode_cache` table (service role) — hits and known misses.
  *   2. Chunk uncached addresses into <=10,000-row CSV batches and POST them to
@@ -14,6 +14,7 @@
  * Only a Census "Match" yields coordinates; "No_Match" and ambiguous "Tie"
  * results stay null — the resource is still listed, just not pinned.
  */
+import { sleep } from './lib/http.ts';
 import type { AdminConfig } from './upsert.ts';
 import type { AddressParts, NormalizedResource } from './types.ts';
 
@@ -220,7 +221,7 @@ export async function geocodeResources(
         console.warn(
           `[geocode] batch failed (${String(err).slice(0, 200)}) — retrying in ${BATCH_RETRY_DELAY_MS / 1000}s`,
         );
-        await new Promise((r) => setTimeout(r, BATCH_RETRY_DELAY_MS));
+        await sleep(BATCH_RETRY_DELAY_MS);
       }
     }
     const cacheRows: CacheRow[] = [];

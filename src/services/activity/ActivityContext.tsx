@@ -8,19 +8,15 @@ import {
   type ReactNode,
 } from 'react';
 import type { ActivityState, EngagementEntry, Rating } from '@/types/activity';
-import { loadActivity, saveActivity } from './activityStorage';
+import { EMPTY_ACTIVITY, loadActivity, saveActivity } from './activityStorage';
 
-// On-device record of the veteran's engagement with opportunities + their
-// thumbs votes, used by the Home "How was ___?" prompt. A small Context mirroring
-// ProfileContext — local-only, no backend, nothing sensitive.
-const EMPTY: ActivityState = { engagements: [], ratings: {} };
+// On-device engagements and thumbs votes, feeding the Home review deck.
+// Local-only, nothing sensitive.
 
-// Keep the engagement log small; one entry per resource (latest wins).
+// One entry per resource (latest wins).
 const MAX_ENGAGEMENTS = 20;
 
-// How many unrated engagements the Home review deck is handed. The deck shows
-// one card and a peek of the next, so anything past a small buffer is invisible
-// — and a stack of twenty things to rate reads as a chore, not a nudge.
+// The deck shows one card and a peek of the next; a deeper stack reads as a chore.
 const REVIEW_DECK_DEPTH = 3;
 
 interface ActivityContextValue {
@@ -39,7 +35,7 @@ interface ActivityContextValue {
 const ActivityContext = createContext<ActivityContextValue | null>(null);
 
 export function ActivityProvider({ children }: { children: ReactNode }) {
-  const [activity, setActivity] = useState<ActivityState>(EMPTY);
+  const [activity, setActivity] = useState<ActivityState>(EMPTY_ACTIVITY);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -50,9 +46,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
         setActivity(stored);
         setIsHydrated(true);
       })
-      // loadActivity already returns EMPTY on failure, so this only fires on an
-      // unexpected throw — but Home renders nothing until isHydrated, and a
-      // permanently blank slot is not a state worth risking.
+      // Home renders the deck only once hydrated, so this must never stay false.
       .catch(() => {
         if (active) setIsHydrated(true);
       });
@@ -61,7 +55,6 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Persist whenever activity changes (after the initial hydrate).
   useEffect(() => {
     if (isHydrated) saveActivity(activity);
   }, [activity, isHydrated]);
@@ -83,8 +76,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     [activity.ratings],
   );
 
-  // Engagements are already newest-first, so the unrated ones come out in the
-  // order the deck should ask about them.
+  // Engagements are newest-first, which is the order the deck asks in.
   const pendingReviews = useMemo(
     () =>
       activity.engagements

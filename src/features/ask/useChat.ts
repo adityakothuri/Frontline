@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { aiService, type ChatAction, type ChatContext, type ChatTurn } from '@/services/ai';
 import {
+  aiService,
   appendUserTurn,
   MAX_USER_TURN_CHARS,
   MAX_USER_TURNS,
   trimHistory,
   withCrisisIfNeeded,
-} from '@/services/ai/chatActions';
+  type ChatAction,
+  type ChatContext,
+  type ChatTurn,
+} from '@/services/ai';
 import { reportDataError } from '@/services/monitoring';
 import { tapImpact } from '@/lib/haptics';
 
@@ -17,17 +20,10 @@ export type ChatEntry =
 export type ChatStatus = 'idle' | 'pending' | 'error';
 
 /**
- * One Ask Frontline conversation.
- *
- * Session-only by design. The free-text channel is the one place in the app
- * where a veteran might type something sensitive — a diagnosis, a landlord's
- * name — so the transcript lives in component state and never touches
- * AsyncStorage: no retention policy to write, no "clear history" to build, and
- * nothing to leak on a shared phone. The profile already carries what grounds
- * the next conversation.
- *
- * `request` is the same guard `CallScriptCard` uses: a reply that lands after
- * a reset, a retry, or an unmount can never set state it no longer owns.
+ * One Ask Frontline conversation. Session-only by design: free text may be
+ * sensitive, so the transcript never touches AsyncStorage.
+ * `request` (as in `CallScriptCard`) drops replies that land after a reset,
+ * retry or unmount.
  */
 export function useChat(context: ChatContext, ready: boolean) {
   const [entries, setEntries] = useState<ChatEntry[]>([]);

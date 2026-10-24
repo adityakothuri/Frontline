@@ -1,28 +1,15 @@
 /**
- * Display name tidying for sources that shout.
- *
- * Federal and aggregated feeds store names in upper case — "COL ROBERT L. HOWARD
- * STATE VETERANS HOME", "DELAWARE OPPORTUNITIES, INCORPORATED", "CALIFORNIA
- * SUNRISE INC". A 2026-07-28 sweep found **48,056 rows** rendering that way, which
- * reads as unfinished rather than authoritative.
- *
- * Several adapters had grown near-identical private copies of this, each with its
- * own acronym list and its own bug — `irsVeteransOrganizations.ts` had `AMERICAN`
- * in its keep-uppercase list, so every post read "AMERICAN Legion".
- *
- * Mixed-case input is left completely alone: if a source already capitalised its
- * names, second-guessing it only introduces errors.
+ * Display name tidying for sources that shout. Federal and aggregated feeds
+ * store names in upper case ("COL ROBERT L. HOWARD STATE VETERANS HOME");
+ * mixed-case input is left alone, since second-guessing it only adds errors.
  */
 
 /** Joining words that stay lower-case unless they lead. */
 const SMALL = new Set(['of', 'the', 'and', 'for', 'a', 'an', 'in', 'on', 'at', 'to', 'by']);
 
-/**
- * Tokens to leave exactly as they are. Acronyms only — no ordinary words, which is
- * the mistake that produced "AMERICAN Legion".
- */
+/** Tokens to leave exactly as they are. Acronyms only — never ordinary words ("AMERICAN Legion"). */
 const ACRONYM =
-  /^(?:VFW|DAV|AMVETS|VVA|VA|USA|US|POW|MIA|LLC|HIV|AIDS|WIC|FQHC|YMCA|YWCA|MTA|RTA|RTD|II|III|IV|[A-Z]&[A-Z])$/;
+  /^(?:VFW|DAV|AMVETS|VVA|VA|USA|US|POW|MIA|LLC|HIV|AIDS|WIC|FQHC|YMCA|YWCA|MTA|RTA|RTD|HUD|PHA|HA|II|III|IV|[A-Z]&[A-Z])$/;
 
 /** Trailing punctuation should not stop a token being recognised as an acronym. */
 const bare = (word: string): string => word.replace(/[^A-Za-z&]/g, '').toUpperCase();

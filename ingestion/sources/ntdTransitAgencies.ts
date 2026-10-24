@@ -1,38 +1,26 @@
 /**
- * Public transit agencies, from the FTA National Transit Database.
+ * Public transit agencies, from the FTA National Transit Database — including the
+ * rural §5311 and demand-response providers that will collect a veteran from
+ * their door.
  *
- * The question `transportation` still could not answer: a veteran in a rural county
- * with no car and an appointment 40 miles away. The VA's own transportation
- * programme (`vaTransportation.ts`) covers 163 medical centres; this covers the
- * **1,218 rural §5311 providers** and the demand-response services that will
- * collect someone from their door.
+ * `transit.dot.gov` 403s non-browser clients, but the same data is open and
+ * keyless on Socrata. Two tables, joined on `ntd_id`:
  *
- * WHY THIS WAS WRITTEN OFF BEFORE
+ *   ccvf-fykn  reporter agency info (~2,900 agencies, most with a GeoJSON point)
+ *   uk25-sge7  demand-response schedules with real per-day service times
  *
- * `transit.dot.gov/ntd/ntd-data` returns **403** to any non-browser client, so the
- * dataset looked inaccessible. It is not — the same data sits on Socrata, open and
- * keyless. Checking the portal instead of the publisher's marketing page is the
- * whole trick.
- *
- * TWO TABLES, JOINED ON `ntd_id`
- *
- *   ccvf-fykn  Reporter agency info — 2,914 agencies, 2,833 with a GeoJSON point
- *   uk25-sge7  Demand-response service schedules — 11,943 rows across 1,919 agencies,
- *              with real per-day `svc_begin_time` / `svc_end_time`
- *
- * That second table is one of only two sources in this pipeline that yields genuine
- * opening hours, which is why the join is worth the extra paging.
- *
- * There is **no phone field** in the NTD — `url` is the fallback. Agencies are
- * general-population and labelled so; the description flags the two things that
- * actually decide whether a veteran can use one: whether it is demand-response
- * (door to door, booked ahead) and whether it runs volunteer drivers.
- *
- * Public domain (`https://www.usa.gov/government-works`), attribution: Federal
- * Transit Administration.
+ * The NTD has no phone field; `url` is the only contact. Public domain;
+ * attribution: Federal Transit Administration.
  */
 import { fromDayRanges, type DayRange } from '../lib/openingHours.ts';
 import { fetchJson } from '../lib/http.ts';
+import {
+  formatAddress,
+  isSaneCoord,
+  normalizeUrl,
+  parseStateFilter,
+  trimOrNull,
+} from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -52,6 +40,7 @@ const MAX_PAGES = 25;
 /** Below this, assume the dataset moved. 2,914 agencies live. */
 const MIN_AGENCIES = 1_500;
 
+/** Field types as documented; Socrata may still send numbers (trimOrNull coerces). */
 interface AgencyRow {
   ntd_id?: string | null;
   agency_name?: string | null;
@@ -78,35 +67,9 @@ interface ScheduleRow {
 }
 
 /**
- * Socrata types its columns loosely — a ZIP or a driver count can arrive as a JSON
- * number rather than a string, so this coerces instead of assuming `.trim()`
- * exists. Calling `.trim()` on a number is how the first run of this adapter died.
- */
-const trimOrNull = (value: unknown): string | null => {
-  if (value === null || value === undefined) return null;
-  const t = String(value).trim();
-  return t ? t : null;
-};
-
-const isSaneCoord = (lat: number, lng: number): boolean =>
-  Number.isFinite(lat) &&
-  Number.isFinite(lng) &&
-  Math.abs(lat) <= 90 &&
-  Math.abs(lng) <= 180 &&
-  !(lat === 0 && lng === 0);
-
-const normalizeUrl = (raw: string | null): string | null => {
-  if (!raw) return null;
-  return /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
-};
-
-/**
- * Agency names are mostly mixed-case already; only the all-caps ones need work.
- *
- * Transit is full of acronym names — RIPTA, MARTA, SEPTA, TARC — and blindly
- * title-casing turns them into "Ripta", which reads as a typo. Any all-caps token
- * of five characters or fewer is treated as an acronym and left alone; longer ones
- * are real words being shouted.
+ * Title-case an all-caps agency name, leaving tokens of five letters or fewer
+ * alone: transit names are full of acronyms (RIPTA, MARTA, SEPTA) that
+ * `titleCaseName` would turn into "Ripta".
  */
 function tidyName(raw: string): string {
   if (raw !== raw.toUpperCase()) return raw;
@@ -154,8 +117,7 @@ function normalize(
   const zip = trimOrNull(agency.zip_code)?.slice(0, 5) ?? null;
 
   const point = agency.street_address_geo_reference?.coordinates;
-  // GeoJSON is [longitude, latitude] — reversing these is the classic way to end
-  // up with every transit agency in the Indian Ocean.
+  // GeoJSON order is [longitude, latitude].
   const lon = Array.isArray(point) ? Number(point[0]) : NaN;
   const lat = Array.isArray(point) ? Number(point[1]) : NaN;
   const hasCoords = isSaneCoord(lat, lon);
@@ -182,16 +144,12 @@ function normalize(
       `to a medical appointment, what it costs, and how far ahead you need to book — and mention ` +
       `you are a veteran, since some providers have reduced fares. If they cannot help, your VA ` +
       `medical centre's transportation representative may be able to.`,
-    address:
-      [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-        .filter(Boolean)
-        .join(', ') || null,
+    address: formatAddress(street, city, state, zip),
     latitude: hasCoords ? lat : null,
     longitude: hasCoords ? lon : null,
     geocode: hasCoords ? undefined : { street, city, state, zip },
-    // The NTD carries no phone at all; the agency website is the only contact.
     phone: null,
-    website: normalizeUrl(trimOrNull(agency.url)),
+    website: normalizeUrl(agency.url),
     hours,
     eligibility:
       'Open to everyone. Fares and booking rules vary by agency, and demand-response services ' +
@@ -268,15 +226,7 @@ export const createNtdTransitAgenciesSource: SourceFactory = (
         else dayRanges.set(id, [entry]);
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

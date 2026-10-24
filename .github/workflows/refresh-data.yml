@@ -1,11 +1,13 @@
 name: Refresh resource data
 
 # Keeps the live resource DB current and every `last_checked` date honest.
-#   • places (VA facilities, GI Bill schools, VSO organizations, state veterans
-#             homes, Fisher Houses, SAMHSA veteran behavioral health, USAspending
-#             VA/DOL grantees, IRS veterans organizations, LSC legal aid, HUD
-#             counseling + PHAs, HRSA health centers, Feeding America food,
-#             curated veteran referrals) — change slowly, so monthly
+#   • places — every source in ingestion/refresh.sh (VA facilities, GI Bill
+#             schools, VSO organizations, CVSOs, state veterans homes, Fisher
+#             Houses, SAMHSA veteran behavioral health, USAspending VA/DOL
+#             grantees, American Job Centers, VA transportation, LSC legal aid,
+#             HUD counseling + PHAs, HRSA health centers, transit agencies,
+#             charity shops, Catholic Charities, Feed America food, curated
+#             veteran referrals) — they change slowly, so monthly
 # Curated referrals + SSVF providers are reviewed by hand quarterly; the
 # freshness gate below fails loudly when any source ages past its cadence.
 # Each source is reaped straight after its own run (ingestion/reap.ts) so rows
@@ -21,10 +23,7 @@ name: Refresh resource data
 
 on:
   schedule:
-    # Monthly only. The weekly slot existed for USAJOBS postings, which churned
-    # fast; that provider was retired on 2026-07-28 (migration 0033) and nothing
-    # left in the pipeline changes weekly. Running the full sweep weekly would
-    # just burn the 90-minute budget four times as often.
+    # Monthly only: no remaining source changes weekly (USAJOBS was retired in 0033).
     - cron: '0 4 1 * *'   # monthly — 1st at 04:00 UTC   → places
   workflow_dispatch:
     inputs:

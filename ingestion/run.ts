@@ -44,14 +44,9 @@ import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
 
 const root = resolve(import.meta.dirname, '..');
-// VA Facilities is a PUBLIC dataset, so the sandbox host mirrors real production
-// facility data — it is NOT a truncated demo. Verified 2026-07-24: sandbox returns
-// the full national set (health 1,399, benefits 443, vet_center 417, cemetery 318),
-// matching the live table. With the service cross-listing added 2026-07-27 this
-// yields ~3,970 rows, every one of them with a phone number.
-// The free developer.va.gov key is sandbox-scoped (production 401s), so
-// sandbox is the correct, complete source here — do not "upgrade" the default to
-// api.va.gov without first provisioning a production key, or ingestion will break.
+// VA facility data is public, so the sandbox host mirrors production in full. The
+// free developer.va.gov key is sandbox-scoped (api.va.gov 401s it), so do not
+// change this default without provisioning a production key.
 const VA_SANDBOX_BASE = 'https://sandbox-api.va.gov/services/va_facilities/v1';
 const VA_GIBILL_BASE = 'https://api.va.gov/v0/gi/institutions/search';
 const HUD_HCS_BASE = 'https://data.hud.gov/Housing_Counselor';
@@ -86,9 +81,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'hud-housing': {
     factory: createHudCounselingSource,
-    // HUD's housing-counselor locator is public and keyless. The ONE kept
-    // general source: veterans navigating HUD-VASH use HUD-approved counselors,
-    // and veteran SSVF providers still rank above it. General (hybrid rule).
+    // HUD's housing-counselor locator: public, keyless, `general`.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.HUD_HCS_BASE_URL ?? HUD_HCS_BASE,
@@ -96,10 +89,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'vso-organizations': {
     factory: createVsoOrganizationsSource,
-    // VA OGC's accredited-ORGANIZATION export, rolled up to one office per
-    // organization per town. Replaces `vso-representatives`, which listed 7,759
-    // individual people with no address. Fetched directly over HTTP, so unlike
-    // the rep list there is no manual download step. Keyless.
+    // VA OGC's accredited-organization export, rolled up to organization × state. Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -109,10 +99,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'state-veterans-homes': {
     factory: createStateVeteransHomesSource,
-    // VA-certified long-term care run by the states — the most on-mission
-    // resource there is for an aging veteran. NASVH's WordPress `veterans-homes`
-    // collection is the only machine-readable national list; the VA publishes
-    // none. Keyless. Addresses only, so the runner geocodes them.
+    // NASVH's WordPress `veterans-homes` collection. Keyless; addresses only, so geocoded.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.NASVH_BASE_URL ?? 'https://nasvh.org/wp-json/wp/v2/veterans-homes',
@@ -120,10 +107,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'samhsa-veteran-bh': {
     factory: createSamhsaVeteranBehavioralHealthSource,
-    // FindTreatment.gov filtered to facilities reporting a veterans program
-    // (`sCodes=VET`). Keyless, robots-permitted, and already geocoded. This is
-    // the app's only source of non-VA mental health and substance use treatment
-    // — before it, `healthcare` was VA facilities and nothing else.
+    // FindTreatment.gov filtered to facilities with a veterans program. Keyless, geocoded.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -132,12 +116,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'american-job-centers': {
     factory: createAmericanJobCentersSource,
-    // The public workforce offices — 2,169 open centres, 1,542 with a dedicated
-    // veterans' employment representative (DVOP/LVER). Replaces job *postings*
-    // with places a veteran can walk into. Free bulk XLSX, no key, coordinates
-    // included. careeronestop.org 403s a default client, so the shared browser
-    // User-Agent in lib/http.ts is required. Attribution to DOL ETA + Minnesota
-    // DEED is a licence condition and rides in every row's description.
+    // CareerOneStop's bulk AJC workbook. Keyless; needs lib/http.ts's browser User-Agent.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -147,9 +126,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'hud-pha': {
     factory: createHudPublicHousingAuthoritiesSource,
-    // The 3,776 offices that actually issue HUD-VASH vouchers — the app carried a
-    // national HUD-VASH referral for months with nowhere to send anyone. Public
-    // ArcGIS layer with LAT/LON and phone; keyless, public domain.
+    // HUD's public ArcGIS layer of housing authorities (LAT/LON + phone). Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -159,10 +136,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'catholic-charities': {
     factory: createCatholicCharitiesSource,
-    // 168 local agencies, 100% with coordinates and 167 with a phone — rent and
-    // utility help, food, clothing, and a caseworker who knows the area. The old
-    // /find-help/ URL 301s, which is why earlier audits missed it; the current page
-    // embeds the whole list in one JSON tag. robots.txt permits everything.
+    // The directory page embeds the whole agency list in one JSON tag. Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -172,10 +146,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'fta-ntd': {
     factory: createNtdTransitAgenciesSource,
-    // 2,914 transit agencies incl. 1,218 rural demand-response providers, plus
-    // real per-day service hours for 1,919 of them. transit.dot.gov 403s any
-    // non-browser client, which is why this looked inaccessible — the data is open
-    // on Socrata with no key. Public domain; attribution: Federal Transit Admin.
+    // FTA National Transit Database on Socrata (transit.dot.gov 403s non-browsers). Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -184,10 +155,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'va-transportation': {
     factory: createVaTransportationSource,
-    // The VA's per-facility Veterans Transportation Program representatives — the
-    // answer to "I have an appointment and no way to get there", which the 85
-    // travel-reimbursement rows never gave. Keyless, public domain. Phones live in
-    // `<va-telephone contact="...">` ATTRIBUTES, so a text-only scrape finds none.
+    // The VA's Veterans Transportation Program representatives page. Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -197,11 +165,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'osm-clothing': {
     factory: createOsmCharityShopsSource,
-    // Charity and second-hand shops from OpenStreetMap — the only national answer
-    // for `clothing`, which held one row. Includes ~2,252 Goodwill and ~495
-    // Salvation Army locations that those organisations' own sites block us from
-    // (Goodwill 403s even its robots.txt). Keyless. ODbL: the "© OpenStreetMap
-    // contributors" credit is rendered by resourceStatus.ts off the `osm` tag.
+    // Charity and second-hand shops from OpenStreetMap (Overpass). Keyless; ODbL.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.OVERPASS_URL ?? 'https://overpass-api.de/api/interpreter',
@@ -209,12 +173,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'nacvso-cvso': {
     factory: createNacvsoOfficersSource,
-    // County Veterans Service Officers — the free, staffed county offices that
-    // file VA claims for veterans. The data exists nowhere centrally; NACVSO's
-    // member directory is the only national list. Its robots.txt disallows the
-    // Novi `/api/` and `/novi-api/` JSON backend (which we never touch) but NOT
-    // the rendered profile pages, and it advertises the sitemap that lists them.
-    // Read at low concurrency with a delay — ~2,900 pages against a small site.
+    // NACVSO's member directory, read from its sitemap at low concurrency. Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.NACVSO_SITEMAP_URL ?? 'https://www.nacvso.org/sitemap.xml',
@@ -222,9 +181,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'lsc-legal-aid': {
     factory: createLscLegalAidSource,
-    // Free civil legal aid. Restores independent content to `legal`, which the
-    // audit found was entirely the accredited-rep list cross-listed from
-    // benefits_help. Service areas only, no addresses — state-scoped referrals.
+    // LSC grantees — free civil legal aid, as state-scoped referrals. Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -234,10 +191,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'hrsa-health-centers': {
     factory: createHrsaHealthCentersSource,
-    // Federally funded community clinics — sliding-scale care for a veteran who
-    // isn't enrolled in VA health care or lives too far from a VA clinic. General
-    // under the hybrid rule, and capped in-app so it backs the catalogue up
-    // without swamping it. One ~14 MB CSV, keyless, refreshed near-daily.
+    // HRSA health-centre site file (~14 MB CSV, streamed). Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -247,9 +201,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'fisher-houses': {
     factory: createFisherHousesSource,
-    // Free lodging for the family of a hospitalised veteran. Only ~74 houses, but
-    // per row the most consequential resource in the catalogue. Undocumented but
-    // stable JSON behind the foundation's directory; coordinates included.
+    // The undocumented but stable JSON behind Fisher House's directory. Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.FISHER_HOUSE_URL ?? 'https://www.fisherhouse.org/api/houses/current',
@@ -257,9 +209,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'usaspending-va-grants': {
     factory: createUsaspendingVaGranteesSource,
-    // The provider directory the VA doesn't publish: organizations holding VA/DOL
-    // veteran-services grants, by CFDA number, with recipient addresses. This is
-    // how Grant & Per Diem housing gets in without parsing award PDFs. Keyless.
+    // USAspending award search by CFDA number (VA/DOL veteran-services grants). Keyless.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl:
@@ -285,11 +235,7 @@ const SOURCES: Record<string, SourceDef> = {
   },
   'feed-america': {
     factory: createFeedAmericaFoodSource,
-    // Food pantries (open to everyone, labeled). Veterans face food insecurity
-    // and no veteran-specific food dataset exists; the in-app cap (nearest ~20)
-    // keeps it from dominating. Keyless. National by default as of 2026-07-27 —
-    // `--state` now only narrows it for spot-checks. The former 8-state gate
-    // left 42 states with no food at all.
+    // Feed America's HSDS feed. Keyless; national, `--state` narrows it for spot-checks.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.FEEDAM_BASE_URL ?? 'https://feedam.org/hsds/v3',
@@ -383,8 +329,6 @@ async function main(): Promise<void> {
     state: typeof args.state === 'string' ? args.state : undefined,
     national,
     types: typeof args.type === 'string' ? args.type.split(',') : undefined,
-    locationName: typeof args.location === 'string' ? args.location : undefined,
-    keyword: typeof args.keyword === 'string' ? args.keyword : undefined,
     perPage: numberArg(args['per-page']) ?? pageDefaults?.perPage ?? 100,
     // Nationwide VA needs enough pages for the largest type (~1,400 health rows).
     maxPages: numberArg(args['max-pages']) ?? pageDefaults?.maxPages ?? (national ? 20 : 5),

@@ -1,11 +1,6 @@
 import type { Rating } from '@/types/activity';
 
-/**
- * Community rating for a resource — REAL thumbs data, never simulated. The
- * aggregate is the count of up/down votes across all devices; it is 0 until
- * veterans actually vote, and grows as they do. The veteran's own vote is
- * tracked separately (on-device) by ActivityContext.
- */
+/** Community thumbs counts across all devices. The veteran's own vote lives in ActivityContext. */
 export interface RatingAggregate {
   helpful: number;
   notHelpful: number;

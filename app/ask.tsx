@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { AiMark, AppText, NavigatorDisclaimer, PrimaryButton } from '@/components';
+import { AppText, NavigatorDisclaimer, PrimaryButton } from '@/components';
 import { colors, spacing } from '@/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useProfile } from '@/services/profile';
@@ -18,21 +18,15 @@ import { ChatErrorRow, ThinkingRow } from '@/features/ask/ThinkingRow';
 import { chatErrorCopy } from '@/features/ask/chatErrorCopy';
 
 // Ask Frontline: the veteran says what they need in their own words, and every
-// reply ends in something to tap — nearby places for a category, the map, the
-// profile, or the Veterans Crisis Line. It is a conversation whose every turn
-// is a workflow entry, which is what keeps it inside "AI in workflows, not an
-// open-ended chatbot" (Decision Log, 2026-10-14).
+// reply ends in something to tap — places for a category, the map, the profile,
+// or the Veterans Crisis Line. Every turn is a way into a workflow, not an
+// open-ended chat.
 //
-// A plain `ScrollView`, not an inverted list: a session is at most twelve
-// pairs, and `inverted` would flip the screen-reader order, the entrances'
-// direction and the drag-to-dismiss gesture. The thread scrolls to its end
-// whenever its content grows.
+// A plain `ScrollView`, not an inverted list: a session is at most twelve pairs,
+// and `inverted` would flip screen-reader order and drag-to-dismiss.
 //
-// The nav bar's height is measured rather than imported: expo-router 57
-// vendors react-navigation privately and does not export `useHeaderHeight`, so
-// the root view reports its own window offset, which is exactly what
-// `keyboardVerticalOffset` is defined as. Falls back to the compact iOS bar
-// height over the status bar if the measurement has not landed.
+// expo-router doesn't export `useHeaderHeight`, so the root view measures its
+// own window offset for `keyboardVerticalOffset`.
 export default function AskScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -53,7 +47,13 @@ export default function AskScreen() {
       role: profile?.role,
       documentsOnHand: profile?.documentsOnHand,
     }),
-    [zip, profile?.preferredRadiusMiles, profile?.firstName, profile?.role, profile?.documentsOnHand],
+    [
+      zip,
+      profile?.preferredRadiusMiles,
+      profile?.firstName,
+      profile?.role,
+      profile?.documentsOnHand,
+    ],
   );
 
   const chat = useChat(context, isHydrated);
@@ -85,18 +85,14 @@ export default function AskScreen() {
   );
 
   const lastAssistantId = [...chat.entries].reverse().find((e) => e.role === 'assistant')?.id;
-  // The not-advice line reads once at the start (in the welcome) and once after
-  // the first reply; every later bubble carries the short "AI-generated" tag.
-  // Pinning it under the composer cost ~60pt of the space left above a keyboard.
+  // The not-advice line shows in the welcome and once after the first reply,
+  // rather than pinned above the keyboard.
   const firstAssistantId = chat.entries.find((e) => e.role === 'assistant')?.id;
   const errorMessage = chat.status === 'error' ? chatErrorCopy(chat.error) : null;
 
   return (
     <View ref={rootRef} style={styles.root} onLayout={measure}>
-      {/* `title` stays for the back label and the screen's accessible name; the
-          drawn title adds the mark, so the bar says what the page is before the
-          first bubble does. */}
-      <Stack.Screen options={{ title: 'Ask Frontline', headerTitle: AskHeaderTitle }} />
+      <Stack.Screen options={{ title: 'Ask Frontline' }} />
       <SafeAreaView style={styles.root} edges={['bottom']}>
         <KeyboardAvoidingView
           style={styles.root}
@@ -135,7 +131,10 @@ export default function AskScreen() {
                     />
                   ) : null}
                   {entry.id === firstAssistantId ? (
-                    <NavigatorDisclaimer text={AI_NOT_ADVICE_DISCLAIMER} style={styles.disclaimer} />
+                    <NavigatorDisclaimer
+                      text={AI_NOT_ADVICE_DISCLAIMER}
+                      style={styles.disclaimer}
+                    />
                   ) : null}
                 </View>
               ))
@@ -166,19 +165,8 @@ export default function AskScreen() {
   );
 }
 
-/** The stack bar's title: the AI mark beside the serif, in the bar's own style. */
-function AskHeaderTitle() {
-  return (
-    <View style={styles.headerTitle}>
-      <AiMark size={18} />
-      <AppText variant="itemTitle">Ask Frontline</AppText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  headerTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   thread: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
@@ -186,9 +174,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     gap: spacing.lg,
   },
-  // A reply and its actions are one turn; the gap inside is tighter than the
-  // gap between turns, so the pills read as belonging to the bubble above.
-  turn: { gap: spacing.sm },
+  // A reply and its actions are one turn, ruled off like a log entry.
+  turn: {
+    gap: spacing.md,
+    paddingTop: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   disclaimer: { marginTop: spacing.xs },
   capNote: { textAlign: 'center' },
   foot: {

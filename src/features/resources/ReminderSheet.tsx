@@ -27,13 +27,8 @@ const LEAD_CHOICES: { value: ReminderLead; label: string }[] = [
 ];
 
 /**
- * Everything you can say to a reminder, in one sheet.
- *
- * It has four faces, and which one shows is decided by the OS and the budget
- * rather than by navigation: ask for permission, explain a refusal, admit the
- * phone is full, or configure. None of them is a dead end — the denied state
- * links into Settings, and the full state names the screen where reminders can
- * be turned off.
+ * The reminder sheet. Permission and the notification budget pick its state:
+ * ask, denied (links to Settings), full, or configure. None is a dead end.
  */
 export function ReminderSheet({ resource, visible, onClose }: ReminderSheetProps) {
   const {
@@ -49,14 +44,12 @@ export function ReminderSheet({ resource, visible, onClose }: ReminderSheetProps
   const [lead, setLead] = useState<ReminderLead>(existing?.lead ?? DEFAULT_LEAD);
   const [warnBeforeClosing, setWarnBeforeClosing] = useState(existing?.warnBeforeClosing ?? false);
 
-  // Re-seed from the stored preference each time the sheet opens, so reopening
-  // after a change shows what is actually armed rather than the last draft.
+  // Re-seed from the stored preference each time the sheet opens.
   useEffect(() => {
     if (!visible) return;
     setLead(existing?.lead ?? DEFAULT_LEAD);
     setWarnBeforeClosing(existing?.warnBeforeClosing ?? false);
-    // `existing` is read only at the moment the sheet opens; depending on it
-    // would reset the veteran's in-progress choice on every context update.
+    // Depending on `existing` would reset in-progress choices on context updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -78,13 +71,13 @@ export function ReminderSheet({ resource, visible, onClose }: ReminderSheetProps
 
   const close = () => onClose();
 
-  const onConfirm = async () => {
-    await setReminder(resource.id, toReminderSnapshot(resource), { lead, warnBeforeClosing });
+  const onConfirm = () => {
+    setReminder(resource.id, toReminderSnapshot(resource), { lead, warnBeforeClosing });
     close();
   };
 
-  const onTurnOff = async () => {
-    await clearReminder(resource.id);
+  const onTurnOff = () => {
+    clearReminder(resource.id);
     close();
   };
 
@@ -142,8 +135,8 @@ export function ReminderSheet({ resource, visible, onClose }: ReminderSheetProps
         ) : null}
 
         <View style={styles.field}>
-          <AppText variant="label" color="textMuted">
-            NOTIFY ME
+          <AppText variant="kicker" color="textSecondary">
+            Notify me
           </AppText>
           <OptionGroup options={LEAD_CHOICES} value={lead} onChange={setLead} />
         </View>
@@ -151,14 +144,12 @@ export function ReminderSheet({ resource, visible, onClose }: ReminderSheetProps
         <SelectableOption
           label="Also warn me before it closes"
           description="An hour before the doors shut, on days it's open long enough."
-          icon="time-outline"
           multiple
           selected={warnBeforeClosing}
           onPress={() => setWarnBeforeClosing((on) => !on)}
         />
 
-        {/* The same hedge the card carries. A lock-screen banner must never
-            claim more certainty than the screen the veteran read it on. */}
+        {/* Same hedge as the card: a notification must not claim more certainty. */}
         <AppText variant="caption" color="textMuted">
           Hours come from {source}. Call ahead to confirm. Reminders use your phone&apos;s time
           zone.
@@ -187,9 +178,9 @@ const styles = StyleSheet.create({
   section: { gap: spacing.lg },
   schedule: {
     gap: spacing.xxs,
-    borderLeftWidth: 2,
-    borderLeftColor: colors.border,
-    paddingLeft: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
   },
   field: { gap: spacing.sm },
 });

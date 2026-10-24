@@ -1,44 +1,27 @@
 /**
- * Charity and second-hand shops, from OpenStreetMap via the Overpass API.
+ * Charity and second-hand shops, from OpenStreetMap via the Overpass API — the
+ * only national answer for `clothing`, including Goodwill and Salvation Army
+ * locations whose own sites block automated access.
  *
- * WHY THIS EXISTS
+ * Two Overpass details: the query must be form-encoded (`data=…`; a text/plain
+ * body gets 406), and `out tags center;` is what gives ways and relations a
+ * single lat/lon.
  *
- * `clothing` held **one** row. A veteran needing interview clothes, a winter coat
- * or work boots had nowhere to go. Two previous audits concluded no national
- * dataset existed, and both were wrong in the same way: they checked the
- * *retailers'* own websites. Goodwill returns 403 to everything including its own
- * `robots.txt`, so permission cannot even be established; Salvation Army's locator
- * is broken. Neither matters, because the community had already mapped them:
- *
- *   Goodwill ~2,252 · Salvation Army ~495 · Habitat ReStore ~319 · St Vincent de Paul ~141
- *
- * One Overpass query returns **8,664 US locations**, 96.6% with a name, 56% with a
- * full street address, and — the part no other source in this pipeline offers at
- * this rate — **2,472 with real `opening_hours`**.
- *
- * TWO THINGS THAT BREAK NAIVE ATTEMPTS
- *
- * 1. Overpass rejects `Content-Type: text/plain` with **406**. The query must be
- *    form-encoded as `data=…`.
- * 2. `out tags center;` — not `out tags;` — is what gives ways and relations a
- *    single lat/lon. A shop mapped as a building outline is a way, and without
- *    `center` it comes back with no coordinates at all.
- *
- * LICENCE — ODbL 1.0, AND IT HAS A UI CONSEQUENCE
- *
- * Attribution must be **visible to the user**, not merely present in the repo.
- * Rows carry `source_type: 'community'` and an `osm` tag, and
+ * Licence: ODbL 1.0, and attribution must be visible. Rows carry
+ * `source_type: 'community'` and an `osm` tag, from which
  * `src/features/resources/resourceStatus.ts` renders "© OpenStreetMap
- * contributors" for them. Share-alike attaches to a redistributed *database*, not
- * to rendering in the app, so the `osm` tag also exists so an ODbL request could
- * be honoured without relicensing the whole table.
- *
- * These are general-population shops, labelled `general` — no veteran-specific
- * clothing dataset exists anywhere, and pretending otherwise would be a lie a
- * veteran would discover at the counter.
+ * contributors". General-population shops, labelled `general`.
  */
 import { fromOsm } from '../lib/openingHours.ts';
 import { httpRequest } from '../lib/http.ts';
+import {
+  cleanPhone,
+  formatAddress,
+  isSaneCoord,
+  normalizeUrl,
+  parseStateFilter,
+  trimOrNull,
+} from '../lib/normalize.ts';
 import { stableKey } from '../lib/stableKey.ts';
 import type {
   IngestionQuery,
@@ -76,33 +59,6 @@ interface OverpassElement {
   tags?: Record<string, string>;
 }
 
-const trimOrNull = (s: string | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const isSaneCoord = (lat: number, lng: number): boolean =>
-  Number.isFinite(lat) &&
-  Number.isFinite(lng) &&
-  Math.abs(lat) <= 90 &&
-  Math.abs(lng) <= 180 &&
-  !(lat === 0 && lng === 0);
-
-const normalizeUrl = (raw: string | null): string | null => {
-  if (!raw) return null;
-  return /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
-};
-
-/** OSM phone tags are free-text; keep only something dialable. */
-function cleanPhone(raw: string | null): string | null {
-  if (!raw) return null;
-  const first = raw.split(';')[0].trim();
-  const digits = first.replace(/\D/g, '');
-  if (digits.length === 10) return first;
-  if (digits.length === 11 && digits.startsWith('1')) return first;
-  return null;
-}
-
 /** What kind of place this is, for the description. */
 function shopKind(tags: Record<string, string>): string {
   if (tags.social_facility === 'clothing_bank') return 'a clothing bank';
@@ -127,10 +83,7 @@ function normalize(element: OverpassElement, today: string): NormalizedResource 
   const state = trimOrNull(tags['addr:state'])?.toUpperCase() ?? null;
   const zip = trimOrNull(tags['addr:postcode'])?.slice(0, 5) ?? null;
 
-  const address =
-    [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-      .filter(Boolean)
-      .join(', ') || null;
+  const address = formatAddress(street, city, state, zip);
 
   const isClothingBank = tags.social_facility === 'clothing_bank';
   const freeNote = isClothingBank
@@ -152,7 +105,7 @@ function normalize(element: OverpassElement, today: string): NormalizedResource 
     latitude: lat,
     longitude: lon,
     phone: cleanPhone(trimOrNull(tags.phone) ?? trimOrNull(tags['contact:phone'])),
-    website: normalizeUrl(trimOrNull(tags.website) ?? trimOrNull(tags['contact:website'])),
+    website: normalizeUrl(trimOrNull(tags.website) ?? tags['contact:website']),
     hours: fromOsm(tags.opening_hours),
     eligibility:
       'Open to everyone. Charity shops are ordinary shops — no referral or proof of anything is ' +
@@ -160,16 +113,13 @@ function normalize(element: OverpassElement, today: string): NormalizedResource 
       'from a caseworker or veterans service officer.',
     documents_needed: [],
     source_url: ATTRIBUTION_URL,
-    // Crowd-sourced, so the app should say so rather than assert official data.
-    // This is what renders the "Community-submitted" label and the hedged warning.
+    // Renders the "Community-submitted" label and hedged warning.
     source_type: 'community',
     veteran_relevance: 'general',
     verification_status: 'needs_review',
     last_checked: today,
     last_updated: today,
-    // `osm` is load-bearing: `resourceStatus.ts` keys the ODbL attribution off it,
-    // and it makes the OSM-derived subset selectable if ODbL share-alike is ever
-    // invoked against a redistributed database.
+    // `osm` is load-bearing: resourceStatus.ts keys the ODbL attribution off it.
     tags: [
       'osm',
       'clothing',
@@ -194,16 +144,8 @@ export const createOsmCharityShopsSource: SourceFactory = (
     async fetch(query: IngestionQuery): Promise<NormalizedResource[]> {
       const today = new Date().toISOString().slice(0, 10);
 
-      // Two header requirements, both verified by trial against the live API:
-      //
-      //  * The body must be form-encoded. A `text/plain` body gets 406.
-      //  * The User-Agent must be honest. `lib/http.ts` defaults to a
-      //    `Mozilla/5.0 (compatible; …)` string so that va.gov and
-      //    careeronestop.org don't 403 us, but Overpass's mod_security rejects
-      //    exactly that shape with 406 — measured: `Mozilla/5.0 (compatible;
-      //    FrontlineIngest/1.0)` → 406, plain `FrontlineIngest/1.0` → 200. Which
-      //    is the right outcome: Overpass's usage policy asks callers to identify
-      //    themselves rather than pose as a browser.
+      // Form-encoded body (text/plain → 406) and an honest User-Agent: Overpass
+      // 406s the browser-shaped default from lib/http.ts.
       const response = await httpRequest(config.baseUrl, {
         label: 'Overpass',
         method: 'POST',
@@ -229,15 +171,7 @@ export const createOsmCharityShopsSource: SourceFactory = (
         );
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

@@ -19,32 +19,15 @@ import { easings } from '@/theme/motionPresets';
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 /**
- * The Frontline shield, drawn on stroke-first — the app's loading state.
+ * The Frontline shield, drawn stroke-first — the app's loading state.
  *
- * The shape of the animation follows the shape of the wait. While the resource
- * is still loading, a **fixed-length arc travels the outline, lap after lap**,
- * breathing a little in length as it goes: that loop carries no information
- * beyond "still working", so it never resolves into anything. It is deliberately
- * never empty and never complete. An earlier version filled the outline in and
- * erased it back off on every cycle, which read as a progress bar that kept
- * failing; a complete outline is the finale's to give, not the wait's.
- * The star is the payoff and is held back entirely — it only draws once the data
- * is actually there (`done`), blooms, throws off a burst of celebration lines,
- * and the whole mark fades downward to hand over to the content.
+ * While waiting, a fixed-length arc travels the outline lap after lap; it never
+ * completes, because a closed outline is the finale's. When `done`, the arc grows
+ * shut, the star draws and bursts, and the mark fades down into the content.
  *
- * Holding an arc at a constant length takes two degrees of freedom, a head and a
- * tail, where `strokeDashoffset` alone gives one. So `strokeDasharray` animates
- * with it — both are on react-native-svg's animatable native prop list.
- *
- * Geometry is authored here in a 100x100 viewBox rather than traced from
- * `assets/icon.png`, so the mark stays crisp at any size and takes the accent
- * colour.
- *
- * Every value below is driven from the UI thread through `useAnimatedProps`.
- * That matters more here than anywhere else in the app: `strokeDashoffset` is
- * neither a transform nor an opacity, so under RN's `Animated` it could not use
- * the native driver — meaning the mark stuttered precisely when the JS thread
- * was busy parsing the response it was waiting on.
+ * A constant-length travelling arc needs both `strokeDasharray` and
+ * `strokeDashoffset` animated. Everything runs on the UI thread via
+ * `useAnimatedProps`, so the mark keeps moving while JS parses the response.
  */
 const OUTER = 'M 50 8 L 85 20 L 85 45 C 85 68 70 84 50 92 C 30 84 15 68 15 45 L 15 20 Z';
 const INNER = 'M 50 17 L 77 26.5 L 77 46 C 77 63 65 76 50 83 C 35 76 23 63 23 46 L 23 26.5 Z';
@@ -52,12 +35,7 @@ const STAR =
   'M 50 29 L 54.47 41.85 L 68.07 42.13 L 57.23 50.35 L 61.17 63.37 ' +
   'L 50 55.6 L 38.83 63.37 L 42.77 50.35 L 31.93 42.13 L 45.53 41.85 Z';
 
-/**
- * The celebration burst: eight short spokes ringing the star, sitting in the gap
- * between its points and the inner rule. They are drawn with the same
- * dash-offset trick as everything else, so they shoot outward rather than just
- * appearing.
- */
+/** Eight short spokes around the star, drawn by dash offset so they shoot outward. */
 const BURST = [
   'M 50 27 L 50 22',
   'M 64.85 33.15 L 68.38 29.62',
@@ -70,16 +48,8 @@ const BURST = [
 ];
 const BURST_LENGTH = 5;
 
-/**
- * True path lengths, measured by integrating the `d` strings above (straight
- * segments exactly, cubics by 2000-sample arc length) rather than estimated.
- *
- * The precision earns its keep on the two outline paths: their dash pattern is
- * built to sum to exactly one path length, which is what makes the travelling arc
- * wrap invisibly (see the worklets below). An estimate that was off by a unit put
- * a visible stutter at the seam once per lap. The previous `OUTER_LENGTH = 248`
- * was also *under* the real 248.96, so the outline's tail never quite closed.
- */
+/** Measured path lengths of the `d` strings above. Must be exact: the outline
+ *  dash pattern sums to one path length, and any error shows a seam each lap. */
 const OUTER_LENGTH = 248.96;
 const INNER_LENGTH = 193.1;
 const STAR_LENGTH = 136.04;
@@ -87,13 +57,8 @@ const STAR_LENGTH = 136.04;
 /** How much of each outline the travelling arc lights while waiting. */
 const OUTER_ARC = 0.38;
 const INNER_ARC = 0.3;
-/**
- * How far the arc lengthens and shortens over a lap, as a fraction of itself.
- * The trailing edge holds a constant speed and the leading edge does the
- * breathing, so the mark reads as a light sweeping round rather than a bar
- * filling. Kept small — past ~0.2 it starts to look like the fill/empty cycle
- * this replaced.
- */
+/** How much the arc's length breathes over a lap. Past ~0.2 it reads as a
+ *  progress bar filling. */
 const ARC_BREATH = 0.12;
 /** How far behind the outer arc the inner one runs, as a fraction of a lap. */
 const INNER_LAG = 0.06;
@@ -103,27 +68,17 @@ const MIN_GAP = 0.01;
 /** The star's fill at full bloom — a wash, not a solid. */
 const STAR_FILL = 0.18;
 
-/**
- * When the star has finished blooming, and so the earliest the mark may leave.
- * The outline's close overlaps the star's draw deliberately — run end-to-end they
- * read as two separate events, overlapped they read as one gesture.
- */
+/** When the star has finished blooming: the earliest the mark may leave. The
+ *  outline's close overlaps the star's draw so they read as one gesture. */
 const FINALE_MS = durations.micro + durations.base;
 
 type ShieldTraceProps = {
   size?: number;
   /** Stroke colour. Defaults to the action olive. */
   color?: string;
-  /**
-   * The thing being waited on is ready. Flips the mark out of its waiting loop
-   * and into the finale; `onFinish` follows once the fade completes.
-   */
+  /** The wait is over: play the finale, then call `onFinish`. */
   done?: boolean;
-  /**
-   * Run the finale but keep the finished mark on screen instead of fading it
-   * down. For the one place the shield is the destination rather than a
-   * handover — the end of onboarding.
-   */
+  /** Keep the finished mark on screen instead of fading it (end of onboarding). */
   hold?: boolean;
   onFinish?: () => void;
 };
@@ -143,14 +98,11 @@ export function ShieldTrace({
   const star = useSharedValue(0);
   const exit = useSharedValue(0);
 
-  // Held in a ref so a caller passing an inline callback cannot restart the loop
-  // on every render. Synced in its own effect — React forbids writing refs during
-  // render.
+  // A ref, so an inline `onFinish` cannot restart the loop on every render.
   const finishRef = useRef(onFinish);
   useEffect(() => {
     finishRef.current = onFinish;
   });
-  // Stable identity so the worklet below has something safe to hand back to JS.
   const notify = useCallback(() => finishRef.current?.(), []);
 
   useEffect(() => {
@@ -163,17 +115,14 @@ export function ShieldTrace({
       star.set(0);
       exit.set(0);
       if (reduced) {
-        // Reduce Motion: hold the completed outline instead of sweeping. A loop
-        // has no finished frame for the library to snap to, so this is one of
-        // the few places the degrade has to be written out by hand.
+        // Reduce Motion: hold the completed outline. A loop has no end frame for
+        // Reanimated to snap to, so this is written out by hand.
         sweep.set(0);
         seal.set(1);
         return;
       }
       sweep.set(0);
-      // Lap after lap at a constant speed. `linear` is not a stylistic choice
-      // here: any easing puts its slow end at the wrap, which is the one frame
-      // the arc has to cross without a hitch.
+      // Must be linear: any easing would put a hitch at the wrap.
       sweep.set(
         withRepeat(withTiming(1, { duration: loops.shieldTrace, easing: easings.linear }), -1),
       );
@@ -193,24 +142,16 @@ export function ShieldTrace({
       return () => clearTimeout(timer);
     }
 
-    // The payoff: freeze the arc where the wait ended and grow it shut from
-    // there, draw and bloom the star with its burst, then fade the whole mark
-    // downward. Freezing first is what stops the outline sliding round while it
-    // closes, which read as the mark being yanked.
+    // Finale: freeze the arc where it is (so it doesn't slide while closing),
+    // grow it shut, bloom the star, then fade the mark down.
     cancelAnimation(sweep);
-    // `base`, not `fast`: the arc has ~60% of the outline left to cover, and over
-    // 180ms that is ~600pt/s — a flash-fill rather than a close. 240ms also keeps
-    // `FINALE_MS` exactly as it was, and still lands before the star finishes.
     seal.set(withTiming(1, { duration: durations.base, easing: easings.out }));
     star.set(
       withDelay(durations.micro, withTiming(1, { duration: durations.base, easing: easings.out })),
     );
 
     if (hold) {
-      // Nothing to hand over to — the finished mark is the destination. `exit` is
-      // pinned rather than assumed: every other branch states it outright, and a
-      // caller that ever flipped `hold` true *after* `done` would otherwise leave
-      // the mark stuck part-faded and part-dropped.
+      // Pin `exit` explicitly in case `hold` flips true after `done`.
       cancelAnimation(exit);
       exit.set(0);
       const timer = setTimeout(notify, FINALE_MS);
@@ -238,15 +179,9 @@ export function ShieldTrace({
   }, [done, hold, exit, notify, reduced, seal, star, sweep]);
 
   /**
-   * One arc, travelling. `dash` and the gap always sum to exactly one path
-   * length, so the dash pattern's period *is* the path: advancing the offset by a
-   * whole length lands on a bit-identical pattern, which is what lets `sweep`
-   * wrap 1 -> 0 with nothing to see. The breath is period-locked to the lap for
-   * the same reason — sin(2*pi*t) is equal at both ends of the cycle, so it
-   * cannot introduce a seam the travel doesn't have.
-   *
-   * `seal` grows the arc to the full length for the finale. At 1 the gap is
-   * effectively nil, so the outline reads as closed wherever the sweep froze.
+   * Dash + gap sum to one path length, so `sweep` can wrap 1 -> 0 invisibly; the
+   * breath is period-locked to the lap for the same reason. `seal` grows the arc
+   * to the full length for the finale.
    */
   const outerProps = useAnimatedProps(() => {
     const lap = sweep.get();
@@ -257,8 +192,7 @@ export function ShieldTrace({
       strokeDashoffset: -OUTER_LENGTH * lap,
     };
   });
-  // The inner rule runs the same lap a little behind, so the two strokes read as
-  // one gesture with depth rather than two rings moving in lockstep.
+  // The inner rule runs slightly behind the outer one.
   const innerProps = useAnimatedProps(() => {
     const lap = sweep.get() - INNER_LAG;
     const breath = 1 + ARC_BREATH * Math.sin(2 * Math.PI * lap);
@@ -269,13 +203,11 @@ export function ShieldTrace({
     };
   });
 
-  // One value runs the whole finale: the star draws across the first half, then
-  // its fill blooms while the burst shoots out.
+  // The star draws over the first half, then fills while the burst shoots out.
   const starProps = useAnimatedProps(() => ({
     strokeDashoffset: interpolate(star.get(), [0, 0.5, 1], [STAR_LENGTH, 0, 0]),
     fillOpacity: interpolate(star.get(), [0, 0.45, 1], [0, 0, STAR_FILL]),
   }));
-  // All eight spokes share one offset, so they shoot out together.
   const burstProps = useAnimatedProps(() => ({
     strokeDashoffset: interpolate(star.get(), [0, 0.45, 1], [BURST_LENGTH, BURST_LENGTH, 0]),
   }));
@@ -301,8 +233,7 @@ export function ShieldTrace({
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
-            // The at-rest arc, so the very first frame is already right — before
-            // the worklet has run there is no animated value to read.
+            // Static at-rest arc for the first frame, before the worklet runs.
             strokeDasharray={[OUTER_LENGTH * OUTER_ARC, OUTER_LENGTH * (1 - OUTER_ARC)]}
             animatedProps={outerProps}
           />

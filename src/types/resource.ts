@@ -1,22 +1,13 @@
 import type { Ionicons } from '@expo/vector-icons';
 
 /**
- * The canonical resource/benefit model for Frontline.
- *
- * A `Resource` is a single place or program a veteran can get help from (a food
- * pantry, a housing program, a legal-aid clinic, a benefit, etc.). This is the
- * contract every screen, card, map pin, and the trust surfacing depend on. See
- * `docs/obsidian/03 Technical/Resource Data Model.md`.
- *
- * All resources are REAL, ingested from official and directory sources (VA,
- * USAJOBS, GI Bill Comparison Tool, HUD, SSVF, curated veteran referrals) via
- * `ingestion/`. There is no simulated resource data anywhere in the app.
+ * The canonical resource model: a single place or program a veteran can get help
+ * from, ingested from official and directory sources by `ingestion/`.
  */
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
-/** What a resource offers. Distinct from the user-facing need categories (food +
- * clothing here map up to the single "essentials" need — see needMapping.ts). */
+/** What a resource offers. Maps onto the user-facing need categories via needMapping.ts. */
 export type ResourceCategory =
   | 'food'
   | 'clothing'
@@ -37,14 +28,10 @@ export type SourceType = 'official' | 'directory' | 'nonprofit' | 'community' | 
 export type VerificationStatus = 'verified' | 'needs_review' | 'unverified';
 
 /**
- * Why this resource belongs in a veterans' app — the hybrid inclusion rule.
- * `veteran_specific`: exists to serve veterans (VA, Vet Centers, VSOs, GPD/SSVF,
- * DAV, CVSOs). `veteran_benefit`: a place/program that offers a concrete veteran
- * benefit (GI Bill-approved school, veterans' hiring preference). `general`:
- * open to everyone and clearly labeled so — used to backfill categories with no
- * veteran-specific local coverage (legal aid, housing counseling, food pantries).
- * Veteran rows always take priority: they fill the per-category result cap first
- * and win distance ties. Every row must carry one of these labels (DB NOT NULL).
+ * Why this resource belongs in a veterans' app. `veteran_specific` exists to serve
+ * veterans (VA, VSOs, SSVF); `veteran_benefit` offers a concrete veteran benefit
+ * (a GI Bill school); `general` is open to everyone, labeled so, and backfills
+ * thin categories. Veteran rows win the per-category cap and distance ties.
  */
 export type VeteranRelevance = 'veteran_specific' | 'veteran_benefit' | 'general';
 
@@ -92,20 +79,11 @@ export interface ResourceCategoryMeta {
 }
 
 /**
- * Display metadata for each resource category — one source of truth for UI.
- *
- * Each category owns its own muted hue, so a food resource never reads like a
- * housing one. The set is chosen against three measured constraints, not by eye
- * (see `docs/obsidian/02 Design/UI Design System.md` → Category identity hues):
- *   1. >=12 CIEDE2000 from every semantic token (accent olive, success emerald,
- *      warning amber, danger red) so a category never impersonates a state.
- *      `emergency` is the deliberate exception — there, identity IS severity.
- *   2. >=11 CIEDE2000 from every other category.
- *   3. >=3:1 contrast for the icon on its own medallion wash (the compound
- *      tint-on-tint case, which is the worst surface each hue lands on).
- * They are used for icons, pins, borders and washes — never as small text, which
- * several are too light to carry. Mirrored in NEED_CATEGORY_META (`types/need.ts`)
- * for the categories that correspond; keep the two in sync.
+ * Display metadata for each resource category. Each muted hue is measured, not
+ * picked by eye (`categoryMeta.test.ts`): far from every semantic token except
+ * `emergency`, far from every other category, and >=3:1 as an icon on its own
+ * wash. Identity only — icons, pins, washes, never small text. Mirrored in
+ * NEED_CATEGORY_META.
  */
 export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMeta> = {
   food: {
@@ -134,8 +112,7 @@ export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMe
   },
   benefits_help: {
     label: 'Benefits help',
-    // Kept in step with `va_benefits` in NEED_CATEGORY_META — the two maps must
-    // not show a veteran two different glyphs for the same thing.
+    // Same glyph as `va_benefits` in NEED_CATEGORY_META.
     icon: 'document-text-outline',
     blurb: 'Help understanding and applying for VA benefits.',
     color: '#4A5580',

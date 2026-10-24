@@ -28,15 +28,13 @@ import { ViewToggle, type ResultsView } from '@/features/resources/ViewToggle';
 import { resultsOf, useResourceSearch } from '@/features/resources/useResourceSearch';
 import { defaultNeedForCategory, isNeedCategory, NEED_CATEGORY_META } from '@/types/need';
 
-// Results for a category, as a list or a map of the same nearby resources. The
-// local opportunity finder is the focus; an "Official online sources" widget sits
-// below it (and in the empty state) as trusted backup.
+// Results for one category, as a list or a map of the same nearby places, with
+// official online sources below as a trusted backup.
 export default function ResultsScreen() {
   const router = useRouter();
   const { profile, isHydrated: isProfileHydrated } = useProfile();
   const params = useLocalSearchParams<{ category?: string }>();
-  // Validated before anything trusts it. An unknown category used to reach the
-  // RPC as `categories: null` — every row in range, under a title of "Resources".
+  // A deep link can carry any string; an unknown category goes back to Discover.
   const category = isNeedCategory(params.category) ? params.category : null;
   useEffect(() => {
     if (category === null) router.replace('/discover');
@@ -48,53 +46,31 @@ export default function ResultsScreen() {
     [category, profile?.zip, profile?.preferredRadiusMiles],
   );
 
-  // Disabled while the param is bad, so the placeholder need above never fetches.
   const { state, reload } = useResourceSearch(need, isProfileHydrated && category !== null);
   const { getRating } = useActivity();
   const [view, setView] = useState<ResultsView>('list');
-  // Only the first screenful of a fresh result set gets a staggered entrance.
   const staggered = useStaggerGate(state);
-  // Selection is shared so the map preview and the list stay in sync across toggles.
+  // Shared so the map preview and the list stay in sync across toggles.
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Measured so the map can keep its own overlays clear of the floating toggle.
   const [toggleHeight, setToggleHeight] = useState(0);
 
-  // Located results are strictly within whichever radius the search settled on
-  // — the service widens past the veteran's setting when almost nothing is near
-  // (see supabaseResourceService.search), so each card states its own distance.
-  // Veteran resources with no pinpoint (SSVF, hotlines) go in a separate
-  // "statewide" section, filtered to the veteran's state so it isn't
-  // out-of-state noise.
+  // Veteran help with no pinpoint (SSVF, hotlines) goes in its own statewide
+  // section, filtered to the veteran's state.
   const veteranState = stateFromZip(profile?.zip);
-  // `resultsOf` falls back to the last good results on a failed refresh, so the
-  // screen keeps showing nearby help under a banner instead of an error card.
-  //
-  // A place the veteran marked "Not helpful" on Home sinks to the bottom of the
-  // local list. It has to happen here rather than in the service: the ratings
-  // live in `ActivityContext`, and `sortSearchResults` is called from
-  // `supabaseResourceService`, where there is no React.
-  //
-  // `demoteDownvoted` is deliberately the **last** thing to touch a list that is
-  // about to be rendered — the same rule Discover follows. Ordering it before a
-  // regrouping step silently undoes it (see the `interleaveByCategory` note
-  // there), and one uniform rule is easier to keep than a per-site judgement
-  // about which downstream steps happen to preserve order.
+  // `resultsOf` keeps the last good list on a failed refresh. Places rated "Not
+  // helpful" sink to the bottom; ratings live in React context, so this can't
+  // happen in the service. `demoteDownvoted` must run last — any regrouping
+  // after it would undo it.
   const { referrals, locals, referralsLead } = useMemo(() => {
     const split = splitLocalsAndReferrals(resultsOf(state), veteranState);
     return { ...split, locals: demoteDownvoted(split.locals, getRating) };
   }, [state, veteranState, getRating]);
 
-  // The two views crossfade rather than snapping. This used to be a one-shot
-  // `LayoutAnimation`, which silently did nothing on web; the entering/exiting
-  // pair below works on every platform.
-  const changeView = (next: ResultsView) => setView(next);
-
-  // "See in map" on a card: flip to this screen's own map and focus the pin
-  // (ResourceMap glides to selectedId). Keeps the veteran in the results context
-  // rather than jumping to the global Map tab.
+  // "See in map" on a card flips to this screen's own map and focuses the pin,
+  // keeping the veteran in this category rather than the Map tab.
   const seeInMap = (id: string) => {
     setSelectedId(id);
-    changeView('map');
+    setView('map');
   };
 
   const referralSection = (
@@ -108,20 +84,16 @@ export default function ResultsScreen() {
 
   const categoryLabel = NEED_CATEGORY_META[need.category].label;
   const radiusMiles = need.location.radiusMiles;
-  // The Emergency path routes to real crisis lines before anything else — the
-  // banner must survive every branch (list, map, empty), so it's decided once.
+  // Crisis lines come first on the Emergency path, in every branch below.
   const isEmergency = need.category === 'emergency';
 
-  // Map view is the whole screen — edge-to-edge under the header, with the toggle
-  // floating over it — so it reads as a real map, not a widget. Gated on
-  // `locals.length`: referral-only results (national help lines) would map to zero
-  // pins. Note that `locals` is split on "not a national referral", not on having
-  // coordinates, so a local row with no geocode still lands here and shows up in
-  // the map's off-map note instead of as a pin.
+  // The map takes the whole screen under the header, with the toggle floating
+  // over it. Referral-only results would map to zero pins, so it needs locals;
+  // a local row with no geocode is counted in the map's off-map note.
   if (locals.length > 0 && view === 'map') {
     return (
-      // Not an `Animated.View`: a native map mounted inside an entering animation
-      // can paint blank on first open. `ResourceMap` owns its own reveal.
+      // Not an `Animated.View`: a native map mounted inside an entering
+      // animation can paint blank. `ResourceMap` owns its own reveal.
       <View style={styles.mapScreen}>
         <Stack.Screen options={{ title: categoryLabel }} />
         {isEmergency ? (
@@ -129,25 +101,20 @@ export default function ResultsScreen() {
             <CrisisBanner />
           </View>
         ) : null}
-        {/* No NavigatorDisclaimer here on purpose — a floating caption over the
-            map would be noise; the list, empty, and detail views all carry it. */}
         <View style={styles.mapWrap}>
           <ResourceMap
             results={locals}
             needCategory={need.category}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            // The toggle floats over the map's top-right, and the map's off-map
-            // note is centred at the top — wide enough, on a narrow screen, to run
-            // straight under it. Reporting the toggle's real height pushes the note
-            // clear of it.
+            // Keeps the map's off-map note clear of the floating toggle.
             topInset={toggleHeight}
           />
           <View
             style={styles.toggleFloat}
             onLayout={(e) => setToggleHeight(e.nativeEvent.layout.height + spacing.sm * 2)}
           >
-            <ViewToggle value={view} onChange={changeView} />
+            <ViewToggle value={view} onChange={setView} />
           </View>
         </View>
       </View>
@@ -157,28 +124,18 @@ export default function ResultsScreen() {
   if (category === null) return null;
 
   return (
-    // Both edges: this is a pushed screen with no tab bar under it, so the last
-    // card and the disclaimer used to sit against the home indicator.
-    <ScreenContainer edges={['top', 'bottom']}>
+    // Bottom only: the stack header already clears the status bar.
+    <ScreenContainer edges={['bottom']}>
       <Stack.Screen options={{ title: categoryLabel }} />
-      {/* Crisis routing depends on nothing async — it must survive loading and
-          error states too, not just results. */}
       {isEmergency ? <CrisisBanner style={styles.crisis} /> : null}
       {state.status === 'loading' ? (
         <ResultsSkeleton />
       ) : state.status === 'error' && referrals.length + locals.length === 0 ? (
-        // Nothing to fall back on — the only case that earns the whole screen.
         <ErrorState error={state.error} onRetry={reload} />
       ) : referrals.length + locals.length === 0 ? (
         <ScrollView contentContainerStyle={styles.emptyScroll} showsVerticalScrollIndicator={false}>
-          {/* The shared `EmptyState`, not a third hand-rolled disc. The label is
-              used verbatim — lower-casing it turned "Disability & VA benefits"
-              into "va benefits". "Change ZIP or radius" lands in edit mode:
-              "update" that drops you on a read-only card is one more tap than the
-              word promised. */}
           <View style={styles.emptyMsg}>
             <EmptyState
-              icon="location-outline"
               title={`Nothing nearby for ${categoryLabel}`}
               message={`We looked within ${radiusMiles} miles${profile?.zip ? ` of ${profile.zip}` : ''} and didn’t find a local match. A wider radius or a nearby ZIP usually finds more${officialSourcesFor(need.category).length > 0 ? ' — and the official sources below can help right now.' : '.'}`}
               actionLabel="Change ZIP or radius"
@@ -194,13 +151,13 @@ export default function ResultsScreen() {
             <RefreshFailedBanner error={state.error} onRetry={reload} />
           ) : null}
           <View style={styles.headerRow}>
-            <AppText variant="body" color="textSecondary">
+            <AppText variant="data" color="textSecondary" style={styles.count}>
               {referrals.length + locals.length}{' '}
-              {referrals.length + locals.length === 1 ? 'place' : 'places'} that can help
+              {referrals.length + locals.length === 1 ? 'place' : 'places'}
               {profile?.zip ? ` near ${profile.zip}` : ''}
             </AppText>
-            {/* No toggle when nothing is mappable — a map of zero pins is a dead end. */}
-            {locals.length > 0 ? <ViewToggle value={view} onChange={changeView} /> : null}
+            {/* No toggle when nothing is mappable. */}
+            {locals.length > 0 ? <ViewToggle value={view} onChange={setView} /> : null}
           </View>
           <FlatList
             style={styles.fill}
@@ -228,8 +185,8 @@ export default function ResultsScreen() {
   );
 }
 
-// Card-shaped placeholders where the results will land, so the page doesn't
-// jump from a centered spinner to a full list.
+// Ruled placeholder rows where the results will land, so the page doesn't jump
+// from a spinner to a full list.
 function ResultsSkeleton() {
   return (
     <View
@@ -240,10 +197,14 @@ function ResultsSkeleton() {
     >
       <Skeleton width={120} height={16} />
       {[0, 1, 2].map((i) => (
-        <View key={i} style={styles.skeletonCard}>
-          <Skeleton width="55%" height={18} />
-          <Skeleton width="35%" />
-          <Skeleton width="80%" />
+        <View key={i} style={styles.skeletonRow}>
+          <Skeleton width={4} height={88} borderRadius={0} delay={i * 120} />
+          <View style={styles.skeletonLines}>
+            <Skeleton width="30%" height={12} delay={i * 120} />
+            <Skeleton width="65%" height={20} delay={i * 120} />
+            <Skeleton width="40%" height={12} delay={i * 120} />
+            <Skeleton width="90%" delay={i * 120} />
+          </View>
         </View>
       ))}
     </View>
@@ -256,9 +217,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
   },
+  count: { flexShrink: 1 },
   fill: { flex: 1 },
-  list: { gap: spacing.md, paddingBottom: spacing.xl },
+  list: { paddingBottom: spacing.xl },
   emptyScroll: { paddingBottom: spacing.xl },
   emptyMsg: { paddingVertical: spacing.xxl },
   mapScreen: { flex: 1, backgroundColor: colors.background },
@@ -275,12 +238,12 @@ const styles = StyleSheet.create({
   },
   disclaimer: { marginTop: spacing.lg },
   skeletons: { gap: spacing.md },
-  skeletonCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
+  skeletonRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
+  skeletonLines: { flex: 1, gap: spacing.sm },
 });

@@ -1,26 +1,21 @@
 /**
- * Fisher Houses — free lodging for families of veterans in hospital.
+ * Fisher Houses — free lodging on VA medical centre campuses for the families of
+ * hospitalised veterans. ~74 houses: the smallest source, and per row one of the
+ * most consequential.
  *
- * When a veteran is admitted to a VA medical center far from home, the family
- * either pays for a hotel for weeks or doesn't come. A Fisher House sits on the
- * medical center campus and puts them up at no charge. There are only ~74 of
- * them, which makes this the smallest source in the pipeline — and per row, the
- * one most likely to matter enormously to the person who finds it.
- *
- * Fisher House Foundation runs an undocumented but stable JSON endpoint behind
- * its house directory (`/api/houses/current`, discovered as
- * `fetch('/api/houses/' + houseType)` in the directory page). It returns
- * structured addresses AND coordinates, so nothing needs geocoding. `/upcoming`
- * covers houses under construction — deliberately NOT ingested: a veteran cannot
- * stay in a building that isn't open.
- *
- * The house manager's name, phone and email are embedded in the record's
- * `content` HTML rather than exposed as fields, so they are extracted by regex.
- * The phone is used (it is the number to call for a room) but the manager's
- * personal email is not stored — a published contact for one purpose is not ours
- * to redistribute in another.
+ * Reads the undocumented but stable JSON behind the foundation's directory
+ * (`/api/houses/current`), which includes coordinates. `/upcoming` (houses under
+ * construction) is deliberately not ingested. The manager's phone is regexed out
+ * of the record's `content` HTML; their personal email is not stored.
  */
 import { fetchJson } from '../lib/http.ts';
+import {
+  decodeEntities,
+  formatAddress,
+  isSaneCoord,
+  parseStateFilter,
+  trimOrNull,
+} from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -55,26 +50,6 @@ interface House {
   content?: string | null;
 }
 
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const isSaneCoord = (lat: number, lng: number): boolean =>
-  Number.isFinite(lat) &&
-  Number.isFinite(lng) &&
-  Math.abs(lat) <= 90 &&
-  Math.abs(lng) <= 180 &&
-  !(lat === 0 && lng === 0);
-
-const decodeEntities = (s: string): string =>
-  s
-    .replace(/&#(\d+);/g, (_, d: string) => String.fromCharCode(Number(d)))
-    .replace(/&amp;/g, '&')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'");
-
 const PHONE_RE = /\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})/;
 
 /** First plausible phone number in the record body — the house's own line. */
@@ -91,9 +66,7 @@ function managerPhone(content: string | null | undefined): string | null {
  * a veteran is looking for, so it is put back in.
  */
 function houseName(title: string): string {
-  // The API returns WordPress-escaped titles, so entities must be decoded or the
-  // card literally reads "Veterans&#039; Hospital I &amp; II". `decodeEntities`
-  // existed here but was only ever applied to the manager phone.
+  // Titles are WordPress-escaped ("Veterans&#039; Hospital I &amp; II").
   const decoded = decodeEntities(title);
   const withoutState = decoded.replace(/^[A-Za-z\s]+:\s*/, '').trim() || decoded.trim();
   return /fisher house/i.test(withoutState) ? withoutState : `Fisher House — ${withoutState}`;
@@ -131,9 +104,7 @@ function normalize(house: House, today: string): NormalizedResource | null {
       'centre. A private room in a comfortable house on or near the hospital campus, with a shared ' +
       'kitchen and laundry — there is never a charge to stay. Ask the hospital social worker or ' +
       'patient advocate to request a room for you; rooms are limited and go quickly.',
-    address: [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-      .filter(Boolean)
-      .join(', '),
+    address: formatAddress(street, city, state, zip),
     latitude: hasCoords ? lat : null,
     longitude: hasCoords ? lng : null,
     geocode: hasCoords ? undefined : { street, city, state, zip },
@@ -161,12 +132,7 @@ function normalize(house: House, today: string): NormalizedResource | null {
   };
 }
 
-/**
- * A second row under `community_support`. A Fisher House is caregiver and family
- * support as much as it is lodging, and `family_caregiver` is the need shell that
- * maps there — a spouse looking for help being near their veteran should find it
- * without guessing that it's filed under housing.
- */
+/** A second row under `community_support`, where the `family_caregiver` need shell looks. */
 function crossListCommunity(base: NormalizedResource): NormalizedResource {
   return {
     ...base,
@@ -191,15 +157,7 @@ export const createFisherHousesSource: SourceFactory = (config: SourceConfig): I
         );
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

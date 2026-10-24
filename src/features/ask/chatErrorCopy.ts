@@ -1,12 +1,9 @@
 import { NotConfiguredError, SupabaseRequestError } from '@/services/supabase/client';
 
 /**
- * What the chat says when a turn fails, in the veteran's register.
- *
- * Separate from `describeDataError` (in `ErrorState.tsx`, which pulls in
- * React Native) because a failed chat turn is not a failed screen: the
- * conversation is still there, and the line under the last bubble has to say
- * whether to wait, shorten, or retry. Pure, so it is tested.
+ * What the chat says when a turn fails: whether to wait, shorten, or retry.
+ * Separate from `describeDataError` because the conversation is still on screen;
+ * pure (no React Native) so it can be unit tested.
  */
 export function chatErrorCopy(error: unknown): string {
   if (error instanceof SupabaseRequestError) {

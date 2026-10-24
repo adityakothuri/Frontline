@@ -1,48 +1,27 @@
 /**
- * American Job Centers — the public workforce offices, with their veterans' reps.
- *
- * WHY THIS REPLACES JOB POSTINGS WITH PLACES
- *
- * `jobs` was 358 USAJOBS *postings*: adverts that expire, none of which has a
- * phone number, and none of which is somewhere a veteran can go. An American Job
- * Center is a staffed office that will sit down with someone, and — the reason
- * this source matters — **1,542 of the 2,169 open centres have a dedicated
- * veterans' employment representative**, the DVOP/LVER staff funded by the Jobs
- * for Veterans State Grant whose entire job is getting veterans hired.
- *
- * Veterans also have *priority of service* at every AJC by federal law
- * (38 U.S.C. § 4215), which is why even the centres without a named rep are
+ * American Job Centers — staffed public workforce offices. ~1,500 of ~2,170 open
+ * centres have a DVOP/LVER veterans' employment representative; the rest still
+ * give veterans priority of service by law (38 U.S.C. § 4215), so they are
  * `veteran_benefit` rather than `general`.
  *
- * THE DATA
+ * Source: CareerOneStop's free bulk XLSX, with coordinates and phones. The site
+ * 403s a default client, so `lib/http.ts`'s browser User-Agent is required.
  *
- * A free bulk XLSX, no API key, published by CareerOneStop. Measured 2026-07-28:
- * 2,177 rows, of which 8 are flagged closed. Every row has a name, street
- * address, city, state, ZIP, phone **and coordinates**, so nothing needs
- * geocoding. 1,423 carry a direct line for the veterans' representative.
- *
- * `careeronestop.org` 403s a default client, so `lib/http.ts`'s browser
- * User-Agent is required.
- *
- * ATTRIBUTION IS A LICENCE CONDITION, NOT A COURTESY
- *
- * The CareerOneStop data licence requires that any use or display of the data
- * acknowledge both the U.S. Department of Labor Employment and Training
- * Administration and the Minnesota Department of Employment and Economic
- * Development. Because the app renders `description` wherever a resource appears,
- * the acknowledgement lives there — that is the only field guaranteed to be shown
- * on the card, the map preview and the detail page alike.
- *
- * WHAT IS DELIBERATELY DROPPED
- *
- * The file carries representative names and email addresses (veterans', business
- * and up to six youth-services reps). Names and emails are not stored: DVOP/LVER
- * turnover is high, a stale name is worse than no name, and none of it adds
- * anything once the direct phone line is in hand. The rep's *phone* is kept,
- * because reaching that person is the whole point.
+ * The CareerOneStop licence requires acknowledging US DOL ETA and Minnesota DEED
+ * wherever the data is shown; `description` is the one field every surface
+ * renders, so the attribution lives there. Rep names and emails are not stored
+ * (high turnover; the direct phone line is what matters).
  */
 import { readXlsxTable } from '../lib/xlsx.ts';
 import { httpRequest } from '../lib/http.ts';
+import {
+  cleanPhone,
+  formatAddress,
+  isSaneCoord,
+  normalizeUrl,
+  parseStateFilter,
+  trimOrNull,
+} from '../lib/normalize.ts';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -89,34 +68,6 @@ const COL = {
   closed: 'Center Closure Y/N',
 } as const;
 
-const trimOrNull = (s: string | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const isSaneCoord = (lat: number, lng: number): boolean =>
-  Number.isFinite(lat) &&
-  Number.isFinite(lng) &&
-  Math.abs(lat) <= 90 &&
-  Math.abs(lng) <= 180 &&
-  !(lat === 0 && lng === 0);
-
-const normalizeUrl = (raw: string | null): string | null => {
-  if (!raw) return null;
-  return /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
-};
-
-/** Keep a number only if it has enough digits to dial. */
-function cleanPhone(raw: string | null): string | null {
-  if (!raw) return null;
-  // Some cells list two reps: "(907) 269-4802; (907) 269-4721". Take the first.
-  const first = raw.split(/[;/]/)[0].trim();
-  const digits = first.replace(/\D/g, '');
-  if (digits.length === 10) return first;
-  if (digits.length === 11 && digits.startsWith('1')) return first;
-  return null;
-}
-
 /** "Comprehensive American Job Center" → "comprehensive" / "affiliate". */
 function centerKind(programType: string | null): string {
   if (!programType) return 'American Job Center';
@@ -132,8 +83,6 @@ function normalize(row: Record<string, string>, today: string): NormalizedResour
   const state = trimOrNull(row[COL.state])?.toUpperCase();
   if (!id || !name || !street || !state || state.length !== 2) return null;
 
-  // 8 rows are flagged closed. Sending a veteran to a shut office is the exact
-  // failure this whole audit was about.
   if (trimOrNull(row[COL.closed])?.toUpperCase() === 'Y') return null;
 
   const suite = trimOrNull(row[COL.address2]);
@@ -181,14 +130,12 @@ function normalize(row: Record<string, string>, today: string): NormalizedResour
       `seekers. Help with your résumé, job search, interview practice, training grants and ` +
       `apprenticeships, plus computers and printers you can use. ${vetLine}${fallbackLine}` +
       `${exOffender} ${ATTRIBUTION}`,
-    address: [fullStreet, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-      .filter(Boolean)
-      .join(', '),
+    address: formatAddress(fullStreet, city, state, zip),
     latitude: hasCoords ? lat : null,
     longitude: hasCoords ? lng : null,
     geocode: hasCoords ? undefined : { street: fullStreet, city, state, zip },
     phone,
-    website: normalizeUrl(trimOrNull(row[COL.website])),
+    website: normalizeUrl(row[COL.website]),
     // The file has no opening times — only a free-text status note on 24 rows.
     hours: null,
     eligibility:
@@ -253,15 +200,7 @@ export const createAmericanJobCentersSource: SourceFactory = (
         );
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

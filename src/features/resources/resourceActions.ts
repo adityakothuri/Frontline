@@ -9,18 +9,13 @@ export async function callPhone(phone: string): Promise<void> {
   try {
     await Linking.openURL(`tel:${digits}`);
   } catch {
-    // No dialer here (tablet, simulator, web) — show the number instead of
-    // failing silently; on a crisis line that silence would be the worst UX.
+    // No dialer (tablet, simulator): show the number rather than fail silently.
     Alert.alert('Calling isn’t available on this device', `Dial ${phone} from a phone.`);
   }
 }
 
-/**
- * Open a website from ingested data. Upstream directories routinely record
- * `www.example.org` with no scheme, which `Linking.openURL` rejects outright —
- * and an unhandled rejection from a tap is a red screen in development and a
- * silent nothing in production. Normalise, then fail in words.
- */
+/** Open a website from ingested data. Adds a missing scheme (which
+ *  `Linking.openURL` rejects) and reports failure in words. */
 export async function openWebsite(url: string): Promise<void> {
   const target = normaliseWebsiteUrl(url);
   if (target === null) return;
@@ -50,4 +45,10 @@ export async function openDirections(resource: Resource): Promise<void> {
     // No maps app that answers this scheme — leave the veteran the address.
     Alert.alert('Couldn’t open directions', resource.address ?? query);
   }
+}
+
+/** A resource is pinnable only with real coordinates; address-only and referral
+ *  rows (national hotlines, county-wide programs) are reached by phone or online. */
+export function isOnMap(resource: Resource): boolean {
+  return resource.latitude !== null && resource.longitude !== null;
 }

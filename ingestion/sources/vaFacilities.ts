@@ -7,12 +7,12 @@
  * Endpoint: GET /facilities?lat=&long=&radius=&per_page=&page= (or ?state=).
  * Response is JSON:API — `data[].attributes` per facility.
  *
- * Because it's an official API, ingested rows are `source_type: 'official'` /
- * `verification_status: 'verified'` with `last_checked` set to the fetch date:
- * for an official source the fetch IS the confirmation. Field shapes are
- * verified against a live sample (via `--dry-run`) before any bulk write.
+ * Official API, so rows are `verified` with `last_checked` = the fetch date: for
+ * an official source the fetch is the confirmation.
  */
 import type { ResourceCategory } from '../../src/types/resource.ts';
+import { sleep } from '../lib/http.ts';
+import { isSaneCoord, trimOrNull } from '../lib/normalize.ts';
 import { fromVaHours } from '../lib/openingHours.ts';
 import type {
   IngestionQuery,
@@ -30,16 +30,10 @@ const DEFAULT_MAX_RETRIES = 4;
 const SANDBOX_THROTTLE_MS = 1_100;
 const PROD_THROTTLE_MS = 250;
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
 /**
- * VA `facility_type` → our `ResourceCategory`. Unknown types are skipped
- * (conservative).
- *
- * Cemeteries were skipped until 2026-07-27 as "not a help resource". That was
- * wrong for this audience: burial and survivor benefits are among the things an
- * older veteran and their family most need to plan, and the 318 national
- * cemeteries were being discarded while `community_support` held 417 rows.
+ * VA `facility_type` → our `ResourceCategory`; unknown types are skipped.
+ * Cemeteries count: burial and survivor benefits are something older veterans
+ * and their families need to plan.
  */
 const CATEGORY_BY_FACILITY_TYPE: Record<string, ResourceCategory | null> = {
   va_health_facility: 'healthcare',
@@ -50,24 +44,15 @@ const CATEGORY_BY_FACILITY_TYPE: Record<string, ResourceCategory | null> = {
 };
 
 /**
- * Health services that mean a facility belongs in a second category too.
- *
- * A VA medical center running a homeless program is a real, geocoded, veteran
- * housing resource — and before this, `housing` had **zero** geocoded
- * veteran-specific rows nationwide (SSVF, the only other veteran housing
- * source, has no addresses). Measured against the API on 2026-07-27:
- * Homeless Veteran care 262 facilities, Social work 482, CaregiverSupport 142.
- *
- * Deliberately NOT mapped: "Nutrition, food, and dietary care" is clinical
- * dietetics, not a food pantry — mapping it to `food` would repeat exactly the
- * mistake that put schools in that category.
+ * Health services that put a facility in a second category too — e.g. a medical
+ * centre with a homeless program is a real, located veteran housing resource.
+ * "Nutrition, food, and dietary care" is deliberately NOT mapped: it is clinical
+ * dietetics, not a food pantry.
  */
 const CROSS_LIST_BY_SERVICE: { service: string; category: ResourceCategory }[] = [
   { service: 'Homeless Veteran care', category: 'housing' },
   { service: 'CaregiverSupport', category: 'community_support' },
   { service: 'Social work', category: 'community_support' },
-  // `emergency` and `transportation` held one national referral each and no
-  // local rows at all, in any state. These are the VA's own answer to both.
   { service: 'Emergency care', category: 'emergency' },
   { service: 'Urgent care', category: 'emergency' },
   { service: 'Travel reimbursement', category: 'transportation' },
@@ -112,11 +97,6 @@ interface VaResponse {
   data?: VaFacility[];
 }
 
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
 function buildAddress(
   physical: NonNullable<VaFacility['attributes']['address']>['physical'],
 ): string | null {
@@ -129,13 +109,6 @@ function buildAddress(
   const cityRegion = [physical.city?.trim(), region].filter(Boolean).join(', ');
   const full = [street, cityRegion].filter(Boolean).join(', ');
   return full.length > 0 ? full : null;
-}
-
-function isSaneCoord(lat: number | null | undefined, long: number | null | undefined): boolean {
-  if (typeof lat !== 'number' || typeof long !== 'number') return false;
-  if (!Number.isFinite(lat) || !Number.isFinite(long)) return false;
-  if (lat < -90 || lat > 90 || long < -180 || long > 180) return false;
-  return lat !== 0 || long !== 0; // (0,0) is the null-island sentinel, never a VA site
 }
 
 /**
@@ -203,7 +176,7 @@ function normalize(facility: VaFacility, today: string): NormalizedResource | nu
   const a = facility.attributes;
   const facilityType = a.facilityType ?? '';
   const category = CATEGORY_BY_FACILITY_TYPE[facilityType] ?? null;
-  if (!category) return null; // cemeteries / unknown types
+  if (!category) return null; // unknown facility type
   if (!isSaneCoord(a.lat, a.long)) return null; // a located resource needs real coords
 
   const name = trimOrNull(a.name);
@@ -337,7 +310,7 @@ function crossListService(
 }
 
 // Response `facilityType` values → the `?type=` param values used for nationwide
-// pulls. Cemeteries joined 2026-07-27 (see CATEGORY_BY_FACILITY_TYPE).
+// pulls.
 const NATIONAL_TYPES = ['health', 'benefits', 'vet_center', 'cemetery'] as const;
 
 function buildUrl(
@@ -438,7 +411,7 @@ export const createVaFacilitiesSource: SourceFactory = (config: SourceConfig): I
             }
             const offered = new Set(
               (facility.attributes.services?.health ?? [])
-                .map((s) => trimOrNull(s?.name ?? undefined))
+                .map((s) => trimOrNull(s?.name))
                 .filter((n): n is string => Boolean(n)),
             );
             for (const { service, category } of CROSS_LIST_BY_SERVICE) {

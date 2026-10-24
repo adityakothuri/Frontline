@@ -11,15 +11,10 @@ import { getCurrentCoordinates, geocodeZip } from './userLocation';
 export type LocationStatus = 'idle' | 'locating' | 'granted' | 'denied' | 'unavailable';
 
 /**
- * Resolves "where is the veteran" for the map: on demand for the recenter
- * control, and — once permission is known to be granted — as a live coordinate
- * for the user puck. Session-only: no precise location is ever stored.
- *
- * The watch deliberately cannot start on its own. It begins only after `locate()`
- * has returned `granted`, which is the one moment the veteran actually asked to
- * be found, so this adds **no new permission prompt and no background GPS** to a
- * product whose whole location story is "a ZIP is enough". `watch` on top of that
- * lets the caller stop it while its screen is off-camera.
+ * Resolves "where is the veteran" for the map: on demand for recenter, and as a
+ * live coordinate for the puck. Session-only; nothing is stored. The watch starts
+ * only after `locate()` was granted, so it adds no permission prompt and no
+ * background GPS; `watch` lets the caller pause it off-screen.
  */
 export function useUserLocation(
   zip?: string,
@@ -33,14 +28,8 @@ export function useUserLocation(
 } {
   const [status, setStatus] = useState<LocationStatus>('idle');
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-  // Sticky, and deliberately not derived from `status`.
-  //
-  // `status` is a *transient* — tapping recenter flips it to `'locating'` and
-  // back. Keying the watch on `status === 'granted'` therefore tore the
-  // subscription down and rebuilt it on every recenter tap, blanking the puck
-  // mid-gesture and opening a second GPS session to replace the one that had
-  // just been closed. Permission, once given, does not flicker; this records
-  // that rather than the request in flight.
+  // Sticky, not derived from `status`, which flips through 'locating' on every
+  // recenter tap and would tear the watch down each time.
   const [everGranted, setEverGranted] = useState(false);
 
   const locate = useCallback(async (): Promise<Coordinates | null> => {
@@ -69,22 +58,17 @@ export function useUserLocation(
 
   useEffect(() => {
     if (!watch || !everGranted) {
-      // Drop the last fix rather than leaving a stale puck sitting on the map
-      // reporting a position we are no longer tracking.
+      // No stale puck for a position we no longer track.
       setCoordinates(null);
       return;
     }
 
-    // `active` covers the gap between this effect being torn down and the
-    // subscription promise resolving: without it a fast tab switch leaves an
-    // orphaned watch running with no one left to remove it.
+    // Covers teardown before the subscription resolves, which would orphan the watch.
     let active = true;
     let subscription: Location.LocationSubscription | null = null;
 
     Location.watchPositionAsync(
-      // Balanced, not BestForNavigation: this is a dot on an overview map, not
-      // turn-by-turn, and the highest accuracy tier is the expensive one. 25m is
-      // under a city block — finer than the puck can even draw at these zooms.
+      // A dot on an overview map: balanced accuracy, 25m steps.
       { accuracy: Location.Accuracy.Balanced, distanceInterval: 25 },
       (position) => {
         setCoordinates({
@@ -98,8 +82,7 @@ export function useUserLocation(
         else sub.remove();
       })
       .catch(() => {
-        // A watch that won't start is not worth surfacing: the recenter button
-        // still works, and the puck is an enhancement over the map, not the map.
+        // The puck is an enhancement; recenter still works without it.
       });
 
     return () => {

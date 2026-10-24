@@ -1,12 +1,11 @@
+import { colors } from '@/theme';
 import type { NeedCategory } from '@/types/need';
+import { RESOURCE_CATEGORY_META } from '@/types/resource';
 
 /**
- * Curated **official / trusted online** backups shown as a supporting widget on
- * each category page — never the main experience. Prioritizes VA.gov and federal
- * benefit pages, state/county veteran-service directories, and verified
- * nonprofits. Descriptions are plain-English summaries; links go to the official
- * sites. This is static reference data (not a live directory) — replace with a
- * verified feed in Phase 10.
+ * Curated official / trusted online backups, shown as a supporting widget on each
+ * category page. Static reference data: VA.gov and federal pages first, then
+ * state/county directories and verified nonprofits.
  */
 
 export type SourceTrust = 'va' | 'federal' | 'state' | 'county' | 'nonprofit';
@@ -27,22 +26,14 @@ export const SOURCE_TRUST_LABELS: Record<SourceTrust, string> = {
   nonprofit: 'Verified Nonprofit',
 };
 
-/**
- * Hue per trust type, for the badge's glyph and wash only — never its text.
- *
- * Every value is already in the measured palette: `va` is the verified emerald
- * (`colors.success`), the rest are category hues from `RESOURCE_CATEGORY_META`
- * (benefits indigo, education blue, legal pine, jobs ochre). The previous set
- * (`#3D8BC7`, `#5567C7`, `#3AA0B5`, `#C99A33`) was four bright blues and a gold
- * that existed nowhere else in the app and were drawn as 12px text, where none
- * of them cleared AA.
- */
+/** Hue per trust type, for the badge's glyph and wash only — never its text.
+ *  Borrowed from the measured palette rather than invented. */
 export const SOURCE_TRUST_COLORS: Record<SourceTrust, string> = {
-  va: '#2E7D32',
-  federal: '#4A5580',
-  state: '#47708A',
-  county: '#2F5550',
-  nonprofit: '#8A6B1C',
+  va: colors.success,
+  federal: RESOURCE_CATEGORY_META.benefits_help.color,
+  state: RESOURCE_CATEGORY_META.education.color,
+  county: RESOURCE_CATEGORY_META.legal.color,
+  nonprofit: RESOURCE_CATEGORY_META.jobs.color,
 };
 
 const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
@@ -145,12 +136,8 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       trust: 'federal',
     },
   ],
-  // Merged from the former `disability_benefits` + `general_benefits` blocks
-  // (2026-07-28). Claims-first, because that's the dominant intent, then VA
-  // benefits generally, then the humans who help with either. The accredited-rep
-  // link appeared in both blocks and is kept once, with the broader wording.
-  // Dropped in the merge: "Find VA forms", reachable from "Explore all VA
-  // benefits" and the weakest of the eight once the two lists were combined.
+  // Claims first (the dominant intent), then VA benefits generally, then the
+  // people who help with either.
   va_benefits: [
     {
       title: 'VA disability compensation',

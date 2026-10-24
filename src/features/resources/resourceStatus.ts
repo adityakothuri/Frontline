@@ -3,37 +3,37 @@ import type { ReminderSnapshot } from '@/services/reminders';
 import type { Resource, SourceType } from '@/types/resource';
 
 /**
- * Presentation helpers for a resource's live status and trust signals — shared by
- * the resource card and the detail page. Tones map to theme colors here so the
- * card, the status pill, and the detail trust row all read from one source
- * (never color alone — always paired with text).
+ * Presentation helpers for a resource's live status and trust signals, shared by
+ * card, preview and detail. Tone colour is always paired with text.
  */
 
 export type StatusTone = 'success' | 'warning' | 'muted';
 
-/** The single tone→color map for every status/trust surface. Warning uses the
- * text-grade amber — these strings are the trust layer and must stay legible. */
+/** Tone→colour for every status/trust surface; warning uses text-grade amber. */
 export const STATUS_TONE_COLOR: Record<StatusTone, string> = {
   success: colors.success,
   warning: colors.warningText,
-  muted: colors.textMuted,
+  muted: colors.textSecondary,
 };
 
 /** Days after which a `last_checked` date is treated as possibly outdated. */
 const STALE_AFTER_DAYS = 90;
 
-export function openNowStatus(isOpenNow: boolean | null): {
-  label: string;
-  tone: StatusTone;
-} {
-  if (isOpenNow === true) return { label: 'Open now', tone: 'success' };
-  if (isOpenNow === false) return { label: 'Closed now', tone: 'muted' };
-  return { label: 'Hours unknown', tone: 'muted' };
+/** The open-now line. Green only when open and from a verified, current source;
+ *  warning whenever hours are unknown or the source is doubtful. */
+export function openNowStatus(
+  isOpenNow: boolean | null,
+  resource: Resource,
+  now: Date = new Date(),
+): { label: string; tone: StatusTone } {
+  if (isOpenNow === null) return { label: 'Hours unknown', tone: 'warning' };
+  const doubtful = shortSourceLabel(resource, now).tone === 'warning';
+  if (isOpenNow) return { label: 'Open now', tone: doubtful ? 'warning' : 'success' };
+  return { label: 'Closed now', tone: doubtful ? 'warning' : 'muted' };
 }
 
-// "Official VA/gov data", not "verified by a human" — the label must only
-// claim what the pipeline actually did: pull from that kind of source.
-// Kept short enough to stay one line on a card at caption size.
+// Claims only what the pipeline did (pulled from that kind of source), and
+// stays one line on a card at caption size.
 const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
   official: 'Official VA/gov data',
   directory: 'Directory listing',
@@ -61,30 +61,9 @@ export function formatCheckedDate(iso: string): string {
 }
 
 /**
- * One hedged sentence of guidance when info is stale or not verified; null when
- * trusted. Derived from the same stale + verification check as `sourceStatus`,
- * so the warning and the badge tone can never disagree.
- */
-export function trustWarning(resource: Resource): string | null {
-  const stale = isStale(resource.last_checked);
-  if (!stale && resource.verification_status === 'verified') return null;
-  return stale
-    ? 'This info hasn’t been confirmed recently — call ahead or check the official source.'
-    : 'This info isn’t verified yet — call ahead or check the official source.';
-}
-
-/**
- * Licence attributions that must be VISIBLE TO THE USER, not merely recorded in
- * the repo, keyed by the provenance tag their rows carry.
- *
- * OpenStreetMap's ODbL 1.0 requires the credit wherever the data is shown, and
- * the clothing category is entirely OSM-derived. Putting it here rather than in a
- * component means the card, the map preview and the detail page all get it from
- * one place — `sourceStatus` is the only thing they share.
- *
- * Feed America (CC BY-SA) and CareerOneStop (DOL ETA + Minnesota DEED) carry
- * their attribution inside each row's `description` instead, because both landed
- * before this hook existed and the wording is longer than a badge can hold.
+ * Licence credits that must be shown to the user, keyed by provenance tag.
+ * ODbL requires the OSM credit wherever its data appears. Feed America and
+ * CareerOneStop carry theirs in each row's `description` instead.
  */
 const TAG_ATTRIBUTION: Record<string, string> = {
   osm: '© OpenStreetMap contributors',
@@ -104,31 +83,37 @@ export function sourceStatus(resource: Resource): { label: string; tone: StatusT
   const stale = isStale(resource.last_checked);
   const verified = resource.verification_status === 'verified' && !stale;
 
-  // "updated", not "checked" — last_checked is the last successful upstream
-  // fetch (or, for curated lists, the real manual-review date), not a visit.
+  // "updated", not "checked": last_checked is the last upstream fetch, not a visit.
   const base = SOURCE_TYPE_LABEL[resource.source_type];
   const dated = stale
     ? `${base} · may be outdated`
     : `${base} · updated ${formatCheckedDate(resource.last_checked)}`;
 
-  // The licence credit rides on the same line the user already reads for
-  // provenance, which is exactly where ODbL wants it.
   const credit = attribution(resource);
   const label = credit ? `${dated} · ${credit}` : dated;
 
   return { label, tone: verified ? 'success' : 'warning' };
 }
 
+/** The trust state in a few words for a one-line strip (`Verified 07/27`,
+ *  `May be outdated`, `Check the source`). The full line is `sourceStatus`. */
+export function shortSourceLabel(
+  resource: Resource,
+  now: Date = new Date(),
+): { label: string; tone: StatusTone } {
+  if (isStale(resource.last_checked, now)) return { label: 'May be outdated', tone: 'warning' };
+  if (resource.verification_status !== 'verified') {
+    return { label: 'Check the source', tone: 'warning' };
+  }
+  // Read the ISO date's own digits: `new Date('2026-07-27')` is UTC midnight,
+  // which renders as the 26th west of Greenwich.
+  const [, month, day] = resource.last_checked.split('-');
+  return { label: month && day ? `Verified ${month}/${day}` : 'Verified', tone: 'success' };
+}
+
 /**
- * What a reminder needs to remember about a resource.
- *
- * It lives here, beside `sourceStatus`, so the trust line a notification carries
- * is byte-for-byte the one the veteran read on the card — including the licence
- * credit. Composing it here also keeps `@/services/reminders` free of any
- * presentation import, which is the direction the layering runs.
- *
- * Captured rather than looked up live so the schedule can be rebuilt cold and
- * offline; callers refresh it wherever a full `Resource` is already in hand.
+ * What a reminder stores about a resource, so its trust line matches the card's
+ * exactly. Captured, not looked up, so schedules can be rebuilt offline.
  */
 export function toReminderSnapshot(resource: Resource): ReminderSnapshot {
   return {

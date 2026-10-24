@@ -1,3 +1,5 @@
+-- Note: shares the number 0035 with 0035_drop_school_based_health_centers.sql; the two are independent.
+--
 -- Keep the covering indexes usable after an ingest.
 --
 -- 0030/0031 added covering indexes so the hot browse/search path runs Index Only

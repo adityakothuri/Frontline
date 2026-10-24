@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PressableScale } from '@/components';
 import { colors, pressScale, radii, spacing, springs } from '@/theme';
 import { tapSelection } from '@/lib/haptics';
@@ -9,20 +8,15 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 export type ResultsView = 'list' | 'map';
 
-const OPTIONS: { value: ResultsView; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'list', label: 'List', icon: 'list-outline' },
-  { value: 'map', label: 'Map', icon: 'map-outline' },
+const OPTIONS: { value: ResultsView; label: string }[] = [
+  { value: 'list', label: 'List' },
+  { value: 'map', label: 'Map' },
 ];
 
 type Frame = { x: number; width: number };
 
-// Segmented control that flips Results between the list and the map. Both views
-// render the same result set, so this only swaps presentation.
-//
-// One olive pill slides between the two segments — the same mechanism as the
-// Discover shell row — instead of each segment painting its own background, so
-// the switch reads as one thing moving. Each segment is a real 44pt target; it
-// used to be ~26pt with no slop, the smallest control in the app.
+// Segmented control that flips Results between list and map (same result set).
+// One ink block slides between the two 44pt segments.
 export function ViewToggle({
   value,
   onChange,
@@ -74,8 +68,7 @@ export function ViewToggle({
           <PressableScale
             key={opt.value}
             accessibilityRole="tab"
-            // "List" / "Map" alone doesn't say what the control does; naming the
-            // action makes the segment self-explanatory out of context.
+            // Names the action, since "List" / "Map" alone is unclear out of context.
             accessibilityLabel={`Show results as ${opt.label.toLowerCase()}`}
             accessibilityState={{ selected }}
             onLayout={(e) => onFrame(opt.value, e)}
@@ -87,12 +80,7 @@ export function ViewToggle({
             scaleTo={pressScale.chip}
             style={styles.segment}
           >
-            <Ionicons
-              name={opt.icon}
-              size={16}
-              color={selected ? colors.textOnAccent : colors.textSecondary}
-            />
-            <AppText variant="label" color={selected ? 'textOnAccent' : 'textSecondary'}>
+            <AppText variant="data" color={selected ? 'surface' : 'textPrimary'}>
               {opt.label}
             </AppText>
           </PressableScale>
@@ -105,27 +93,17 @@ export function ViewToggle({
 const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.xs,
-    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
     borderRadius: radii.sm,
+    backgroundColor: colors.surface,
   },
   // Sits behind the segments, in the same coordinate space their onLayout reports.
-  pill: {
-    position: 'absolute',
-    top: spacing.xs,
-    bottom: spacing.xs,
-    left: 0,
-    borderRadius: radii.sm,
-    backgroundColor: colors.accent,
-  },
+  pill: { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: colors.textPrimary },
   segment: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
     minHeight: 44,
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.sm,
   },
 });

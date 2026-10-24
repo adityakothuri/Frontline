@@ -1,5 +1,5 @@
 // Three families, one job each: Barlow Condensed names things, Public Sans
-// carries prose, IBM Plex Mono carries data (labels, numbers, dates, statuses).
+// carries prose, Overpass Mono (Highway Gothic's descendant) carries data (labels, numbers, dates, statuses).
 // `fonts.*` are the @expo-google-fonts export names loaded in app/_layout.tsx.
 export const fonts = {
   regular: 'PublicSans_400Regular',
@@ -7,7 +7,7 @@ export const fonts = {
   semibold: 'PublicSans_600SemiBold',
   displaySemibold: 'BarlowCondensed_600SemiBold',
   display: 'BarlowCondensed_700Bold',
-  mono: 'IBMPlexMono_500Medium',
+  mono: 'OverpassMono_600SemiBold',
 } as const;
 
 export const textVariants = {
@@ -25,7 +25,7 @@ export const textVariants = {
     fontFamily: fonts.mono,
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 1,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   /** Distances, dates, counts, statuses, text actions. */
@@ -33,7 +33,7 @@ export const textVariants = {
     fontFamily: fonts.mono,
     fontSize: 13,
     lineHeight: 18,
-    letterSpacing: 0.6,
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
 } as const;

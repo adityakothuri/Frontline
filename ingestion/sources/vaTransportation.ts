@@ -2,11 +2,9 @@
  * VA Veterans Transportation Program — how a veteran without a car gets to an
  * appointment.
  *
- * `transportation` held 85 rows, all of them VA travel-reimbursement cross-lists.
- * None of them answered the actual question: *I have an appointment and no way to
- * get there.* The VA does answer it, per medical centre, on a page nobody had
- * read: 163 facilities each with a Veterans Transportation Program representative
- * and a number to ring for a ride.
+ * The VA answers "I have an appointment and no way to get there" per medical
+ * centre: ~163 facilities, each with a Veterans Transportation Program
+ * representative and a number to ring for a ride.
  *
  * THE PARSING TRAP
  *
@@ -24,6 +22,7 @@
  * already hold in `va-facilities`, so the Census geocoder resolves them cleanly.
  */
 import { fetchText } from '../lib/http.ts';
+import { decodeEntities, formatAddress, parseStateFilter, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -40,22 +39,6 @@ const MIN_FACILITIES = 80;
 
 /** `Birmingham, AL 35233` at the end of an address block. */
 const CITY_STATE_ZIP = /^(.+),\s*([A-Z]{2})\s+(\d{5})(?:-\d{4})?$/;
-
-const trimOrNull = (s: string | undefined | null): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const decodeEntities = (s: string): string =>
-  s
-    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&');
 
 const stripTags = (html: string): string[] =>
   decodeEntities(
@@ -127,15 +110,7 @@ function parseFacilities(html: string): Facility[] {
 
 function normalize(facility: Facility, today: string): NormalizedResource {
   const name = facility.site ?? facility.system;
-  const address =
-    [
-      facility.street,
-      [facility.city, [facility.state, facility.zip].filter(Boolean).join(' ')]
-        .filter(Boolean)
-        .join(', '),
-    ]
-      .filter(Boolean)
-      .join(', ') || null;
+  const address = formatAddress(facility.street, facility.city, facility.state, facility.zip);
 
   const howTo = facility.phone
     ? `Call ${facility.phone}, select 0, and ask for a VTP representative.`
@@ -201,15 +176,7 @@ export const createVaTransportationSource: SourceFactory = (
         );
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

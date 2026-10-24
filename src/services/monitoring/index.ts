@@ -1,5 +1,4 @@
 export {
-  crashReportingEnabled,
   initCrashReporting,
   captureException,
   reportDataError,

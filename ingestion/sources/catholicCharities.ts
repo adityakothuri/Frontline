@@ -1,31 +1,23 @@
 /**
- * Catholic Charities USA local agencies.
+ * Catholic Charities USA local agencies — ~168 agencies, nearly all with
+ * coordinates and a phone: rent and utility help, food, clothing, casework.
  *
- * 168 agencies covering every state and territory, and — unusually for a
- * scraped source — **100% with coordinates and 167 of 168 with a phone**. They run
- * the practical, unglamorous help a veteran in trouble needs: food, rent and
- * utility assistance, clothing, immigration and housing casework.
+ * The directory page embeds the whole national list server-side in one
+ * `<script type="application/json">` tag (no XHR, no key; robots.txt permits all).
  *
- * Previous audits missed this because the old URL moved: `/find-help/` **301s** to
- * `/about-us/find-a-local-agency/`, and that page embeds the whole national list
- * server-side in a single `<script type="application/json">` tag — no XHR, no
- * pagination, no key. `robots.txt` is `Disallow:` (empty), i.e. everything
- * permitted, and it advertises a sitemap.
- *
- * HONEST CATEGORISATION
- *
- * These are agency **headquarters** that run many programmes, not clothing closets
- * or pantries. So the primary row is `community_support` — "this organisation can
- * help with several things" — cross-listed into `clothing` and `food` because a
- * veteran searching either should find them, with copy that says plainly they must
- * ring to find out what that particular agency runs. Filing an agency HQ as a food
- * pantry would send someone to a front desk expecting groceries.
- *
- * `serviced_zip[]` is carried into `raw`: an explicit ZIP service area per agency,
- * which is better than radius maths and worth using if the app ever wants
- * "which agency covers me".
+ * These are agency offices running many programmes, not pantries or clothing
+ * closets, so the primary row is `community_support`, cross-listed into
+ * `clothing` and `food` with copy that says to call and ask what this agency runs.
  */
 import { fetchText } from '../lib/http.ts';
+import {
+  decodeEntities,
+  formatAddress,
+  isSaneCoord,
+  normalizeUrl,
+  parseStateFilter,
+  trimOrNull,
+} from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -53,33 +45,6 @@ interface Agency {
   website_url?: string | null;
   serviced_zip?: string[] | null;
 }
-
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const isSaneCoord = (lat: number, lng: number): boolean =>
-  Number.isFinite(lat) &&
-  Number.isFinite(lng) &&
-  Math.abs(lat) <= 90 &&
-  Math.abs(lng) <= 180 &&
-  !(lat === 0 && lng === 0);
-
-const normalizeUrl = (raw: string | null): string | null => {
-  if (!raw) return null;
-  return /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
-};
-
-const decodeEntities = (s: string): string =>
-  s
-    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&amp;/g, '&');
 
 /** The one embedded JSON island that holds the agency list. */
 function extractAgencies(html: string): Agency[] {
@@ -126,15 +91,12 @@ function normalize(agency: Agency, today: string): NormalizedResource | null {
       'area. Help is not limited to Catholics and there is no charge to ask. This is the agency ' +
       'office, and each one runs a different mix of programmes, so call and say what you need ' +
       'rather than turning up for something specific.',
-    address:
-      [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-        .filter(Boolean)
-        .join(', ') || null,
+    address: formatAddress(street, city, state, zip),
     latitude: hasCoords ? lat : null,
     longitude: hasCoords ? lon : null,
     geocode: hasCoords ? undefined : { street: street || null, city, state, zip },
     phone: trimOrNull(agency.phone),
-    website: normalizeUrl(trimOrNull(agency.website_url)),
+    website: normalizeUrl(agency.website_url),
     hours: null,
     eligibility:
       'Open to anyone who needs help, regardless of religion. Most assistance is income-based and ' +
@@ -153,18 +115,12 @@ function normalize(agency: Agency, today: string): NormalizedResource | null {
     external_id: `${state}-${name}`.slice(0, 200),
     source_provider: PROVIDER,
     ingested_at: today,
-    // `serviced_zip` is an explicit ZIP service area — better than radius maths if
-    // the app ever wants to answer "which agency covers my ZIP".
+    // `serviced_zip` is an explicit ZIP service area, kept for a future "who covers my ZIP".
     raw: { title: name, state, servicedZip: agency.serviced_zip ?? null },
   };
 }
 
-/**
- * Cross-listed into the two categories a veteran would actually search for this
- * kind of help under. `clothing` in particular went from one row to a real
- * category this cycle, and these agencies are among the few in it with a
- * caseworker on the other end of the phone.
- */
+/** A copy of the agency row under `clothing` or `food`, where veterans search for this help. */
 function crossList(base: NormalizedResource, category: 'clothing' | 'food'): NormalizedResource {
   return {
     ...base,
@@ -195,15 +151,7 @@ export const createCatholicCharitiesSource: SourceFactory = (
         );
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();

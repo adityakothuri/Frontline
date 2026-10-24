@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  actionPresentation,
   appendUserTurn,
   MAX_ASSISTANT_TURN_CHARS,
   MAX_CHAT_ACTIONS,
@@ -70,7 +69,16 @@ describe('sanitizeChatReply', () => {
   it('cleans follow-ups: strings only, trimmed, unique, bounded', () => {
     const out = sanitizeChatReply({
       reply: 'x',
-      followUps: [' I also need a ride ', 'I also need a ride', 7, '', 'a'.repeat(121), 'b', 'c', 'd'],
+      followUps: [
+        ' I also need a ride ',
+        'I also need a ride',
+        7,
+        '',
+        'a'.repeat(121),
+        'b',
+        'c',
+        'd',
+      ],
     });
     expect(out?.followUps).toEqual(['I also need a ride', 'b', 'c']);
   });
@@ -171,22 +179,5 @@ describe('withCrisisIfNeeded at the cap', () => {
       'I want to die',
     );
     expect(full.map((a) => a.kind)).toEqual(['crisis', 'map', 'profile']);
-  });
-});
-
-describe('actionPresentation', () => {
-  it('draws results with the category icon and the model label', () => {
-    expect(
-      actionPresentation({ kind: 'results', category: 'essentials', label: 'Food help near you' }),
-    ).toEqual({
-      icon: 'cart-outline',
-      label: 'Food help near you',
-      hint: 'Opens nearby places for Essentials',
-    });
-  });
-
-  it('gives map and profile fixed labels', () => {
-    expect(actionPresentation({ kind: 'map' }).label).toBe('Open the map');
-    expect(actionPresentation({ kind: 'profile' }).label).toBe('Update my profile');
   });
 });

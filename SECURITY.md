@@ -17,7 +17,7 @@ acknowledge and work on a fix before any public disclosure.
 ## Secrets
 
 - **Never commit secrets or real API keys.** `.env*` is git-ignored.
-- Use `.env.local` (or the deployment environment) for local/real values.
+- Use `.env` / `.env.seed` (both git-ignored) or the deployment environment for real values.
 - `.env.example` contains **placeholders only** and is safe to commit — keep it that way.
 - **Mobile apps ship their bundle**, so anything in the app is effectively public. Only
   **public client keys** (e.g. `EXPO_PUBLIC_*`) may live in app source.
@@ -54,13 +54,20 @@ acknowledge and work on a fix before any public disclosure.
   ever interpolated into a PostgREST path.
 - **Edge-function auth model (accepted, documented risk).** `ai` and `sync` run with `verify_jwt`
   off and gate on the project's **publishable anon key**, which is public by design (it ships in the
-  app). This is inherent to a no-account architecture. The controls that matter are therefore:
-  - **AI cost** — a per-IP rate limit (using the trusted right-most `x-forwarded-for` hop, not the
-    spoofable left-most one) plus a **global hourly spend budget**. Both are intentionally
+  app). This is inherent to a no-account architecture. **The `apikey` check deters casual
+  scanners, not abuse.** Anyone can read the publishable key out of the app bundle. The controls
+  that actually bound abuse are the per-IP rate limits and the hourly AI spend cap:
+  - **AI cost** — a per-IP hourly rate limit (30 requests for the resource tasks, plus a separate
+    bucket of 20 for Ask Frontline chat; the client also caps a chat session at 12 turns) keyed on a SHA-256 hash of the trusted right-most `x-forwarded-for`
+    hop (not the spoofable left-most one), plus a **global hourly spend budget**
+    (`AI_HOURLY_BUDGET_USD`, default $5). Both are intentionally
     *fail-open* (a database blip must never take AI down), so the **Anthropic console spend cap is
     the load-bearing hard backstop** — keep it set.
   - **Input abuse** — both functions bound caller-supplied payload size (AI prompt input, and the
-    `sync` saved/profile blobs) and reject oversized requests with `413` before doing work.
+    `sync` saved/profile blobs) and reject oversized requests with `413` before doing work. Chat
+    requests are validated server-side (`chatRequest.ts`): message count, per-turn length, role
+    alternation, and an allow-list for context fields. Every action in a reply is validated
+    on the client before it is rendered.
   - **Sync confidentiality** — backups are readable only with the exact device UUID (unguessable),
     and the monotonic `updated_at` write path means a stale/empty push can't clobber good data.
 - **Known limitation.** Community "found this helpful" votes take the `device_id` from the caller, so

@@ -15,18 +15,14 @@ type SkeletonProps = {
   width?: DimensionValue;
   height?: number;
   borderRadius?: number;
-  /** Offsets the start of the pulse, so a stack of bars ripples instead of
-   *  blinking in unison. */
+  /** Offsets the pulse start so stacked bars ripple instead of blinking together. */
   delay?: number;
-  /** Bar fill. The default reads on `background`/`surface`; pass a stronger
-   *  value on a tinted surface, where the muted default all but disappears. */
+  /** Bar fill; pass a stronger value on tinted surfaces. */
   color?: string;
 };
 
-// A pulsing placeholder block for content that is still loading. Compose a few
-// of these where the real lines will appear (instead of a centered spinner).
-// Purely visual: hidden from screen readers — the surrounding container keeps
-// a real accessibility loading label.
+// A pulsing placeholder bar. Hidden from screen readers; the surrounding
+// container carries the loading label.
 export function Skeleton({
   width = '100%',
   height = 14,
@@ -38,16 +34,13 @@ export function Skeleton({
   const reduced = useReducedMotion();
 
   useEffect(() => {
-    // A loop has no "finished frame" to snap to, so Reduce Motion is the one
-    // case the library default cannot handle for us: hold the bar at full
-    // strength and never start the pulse.
+    // A loop has no end frame for Reduce Motion to snap to, so hold it static.
     if (reduced) {
       cancelAnimation(opacity);
       opacity.set(1);
       return;
     }
-    // The delay runs once up front rather than inside the loop, so the bars stay
-    // permanently out of phase instead of re-syncing every cycle.
+    // Delay once, outside the loop, so bars stay out of phase.
     const start = setTimeout(() => {
       opacity.set(
         withRepeat(

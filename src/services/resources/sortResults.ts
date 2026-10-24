@@ -23,12 +23,9 @@ const RELEVANCE_RANK: Record<VeteranRelevance, number> = {
 };
 
 /**
- * A statewide/national veteran referral — a veteran resource with no pinpoint
- * location (a hotline, or an SSVF provider that serves whole counties). These
- * render in their own "Statewide & national veteran help" section instead of
- * competing on distance. Requires a null address too: a row with a street
- * address but no coordinates (e.g. an un-geocoded job posting) is a place, not
- * a referral, and stays in the normal list.
+ * A statewide/national veteran referral: a veteran resource with no location
+ * (a hotline, a county-wide provider). A row with an address but no coordinates
+ * is an un-geocoded place, not a referral.
  */
 export const isNationalReferral = (resource: Resource): boolean =>
   resource.latitude === null &&
@@ -37,11 +34,8 @@ export const isNationalReferral = (resource: Resource): boolean =>
   resource.veteran_relevance !== 'general';
 
 /**
- * Keep referrals relevant to where the veteran is: a referral tagged with one
- * or more `state:XX` (e.g. SSVF providers) shows only when it serves the
- * veteran's state; untagged referrals (national hotlines) always show. When the
- * veteran's state is unknown, drop state-scoped referrals rather than show
- * out-of-state ones.
+ * A `state:XX`-tagged referral shows only in the veteran's state; untagged ones
+ * (national hotlines) always show. With the state unknown, state-scoped ones drop.
  */
 export const filterReferralsByState = (
   referrals: ResourceSearchResult[],
@@ -53,14 +47,7 @@ export const filterReferralsByState = (
     return veteranState !== null && stateTags.includes(`state:${veteranState}`);
   });
 
-/**
- * Below this many local results, the statewide/national referrals are treated as
- * the answer and lead the list; at or above it they're backup and sit underneath.
- *
- * Two or fewer nearby places is not a real set of options — that's the case a
- * hotline genuinely helps with. Above that, leading with "call this national
- * number" buries the local help the veteran actually asked for.
- */
+/** Below this many local results, referrals lead the list; otherwise they follow it. */
 const THIN_LOCAL_RESULTS = 3;
 
 export interface SplitResults {
@@ -72,14 +59,7 @@ export interface SplitResults {
   referralsLead: boolean;
 }
 
-/**
- * Split search results into nearby places and statewide/national referrals.
- *
- * Shared by the Results and Discover screens, which previously each carried
- * their own copy of this logic — and both rendered the referral strip above the
- * local list unconditionally, so a veteran with 100 nearby VSO offices still led
- * with a national hotline. `referralsLead` makes that placement conditional.
- */
+/** Split search results into nearby places and statewide/national referrals. */
 export function splitLocalsAndReferrals(
   results: ResourceSearchResult[],
   veteranState: string | null,
@@ -93,28 +73,11 @@ export function splitLocalsAndReferrals(
 }
 
 /**
- * Places the veteran marked "Not helpful" sink below everything else, keeping
- * their order relative to each other and leaving the rest of the list untouched.
- *
- * This is what makes the Home review card's *"we'll show this one lower in your
- * results"* true. Until 2026-07-31 a vote was write-only — `submitVote`
- * incremented a counter that only ever came back as one string on that
- * resource's own detail page, and nothing in this module, the `search_resources`
- * RPC or the schema read it. Promising otherwise would have been a claim the app
- * had no machinery to keep.
- *
- * Deliberately **narrow**: it demotes the one place that was rated, not "places
- * like it". There is no category or provider preference model here, and the copy
- * is written to match exactly what this does.
- *
- * A stable partition rather than another key in `compareByDistanceThenVerification`
- * — the existing ordering (nearest, then veteran-first, then most-verified) has to
- * survive intact *within* each group, and a downvoted place must fall below even a
- * distant unverified one or "lower" would not be visible on a short list.
- *
- * Takes a lookup rather than the ratings map because `getRating` is already
- * `ActivityContext`'s public API; the raw map is not exported and does not need
- * to be. Ratings are on-device only and never leave it.
+ * Sinks places the veteran marked "Not helpful" below everything else — what
+ * makes the review card's "we'll show this one lower" true. Only the rated place,
+ * not "places like it". A stable partition rather than a sort key, so the normal
+ * ordering survives within each group and a downvote falls below even a distant
+ * unverified place.
  */
 export function demoteDownvoted(
   results: ResourceSearchResult[],
@@ -125,10 +88,6 @@ export function demoteDownvoted(
   for (const result of results) {
     (getRating(result.resource.id) === 'down' ? sunk : kept).push(result);
   }
-  // Either partition being empty means the order is already correct, so skip the
-  // copy. Purely avoiding an allocation on the overwhelmingly common path — the
-  // returned identity is not load-bearing anywhere, since both call sites are
-  // inside a `useMemo` keyed on the state and the rating lookup.
   if (sunk.length === 0 || kept.length === 0) return results;
   return [...kept, ...sunk];
 }

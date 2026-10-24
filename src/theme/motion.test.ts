@@ -126,28 +126,6 @@ describe('orchestration', () => {
     expect(timings.reviewAck).toBeGreaterThan(durations.base * 2);
   });
 
-  it('keeps the Home entrance inside its budget', () => {
-    // Home's real composition: the location pill, the greeting, then the needs
-    // block, which the page hands a start two steps in and which spends two beats
-    // of its own on its heading and its tab row. The review deck is deliberately
-    // absent — it is data-gated, so it reveals on hydration rather than taking a
-    // beat in this sequence.
-    //
-    // This is the guard on a regression that once ran the tail to 720ms, which is
-    // why it asserts the composition rather than the tokens.
-    const needsStart = stagger.step * 2;
-    const starts = [
-      0, // location pill
-      stagger.step, // greeting
-      needsStart, // "What do you need help with?"
-      needsStart + stagger.step, // the tab row, as one object
-    ];
-
-    const lastStart = Math.max(...starts);
-    expect(lastStart).toBeLessThanOrEqual(stagger.max);
-    expect(lastStart + durations.base).toBeLessThanOrEqual(durations.entrance);
-  });
-
   it('rises further the larger the element is', () => {
     expect(rise.sm).toBeLessThan(rise.md);
     expect(rise.md).toBeLessThan(rise.lg);

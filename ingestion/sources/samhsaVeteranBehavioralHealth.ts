@@ -1,40 +1,23 @@
 /**
- * SAMHSA FindTreatment.gov — facilities with a veterans program.
+ * SAMHSA FindTreatment.gov — behavioural-health facilities that report a
+ * veterans program: the app's only non-VA source of mental health and substance
+ * use treatment. A veteran filter (`sCodes=VET`) on a general dataset.
  *
- * Mental health and substance use treatment is the gap this app could least
- * afford. Before this source, `healthcare` was 1,982 rows and every one of them
- * was a VA facility, so a veteran more than a drive from a VA clinic had nothing
- * — and the two things veterans most often need help with, PTSD and addiction,
- * were only findable inside the VA.
+ * `sType=BOTH` unions the substance-use and mental-health directories, so a
+ * facility offering both appears twice and the `seen` guard collapses it.
  *
- * FindTreatment.gov is SAMHSA's national behavioural-health directory, and its
- * facilities carry a "Special Programs/Groups Offered" attribute whose values
- * include `Veterans`. That is the whole reason this source is here: it is a
- * *veteran filter on a general dataset*, so the facilities that survive it are
- * places that have said they run a veterans program.
- *
- * Measured 2026-07-28: the API reports 8,355 matches, which yield **6,253
- * distinct facilities**. `sType=BOTH` is a union of the substance-use (4,510) and
- * mental-health (3,845) directories, so a facility offering both is listed twice
- * and the `seen` guard collapses 1,682 such pairs; a further 420 have no street
- * address and are dropped.
- *
- * WHY THIS WAS TRIED BEFORE AND ABANDONED
- *
- * The 2026-07-22 rebuild dropped SAMHSA with the note that "`sCodes=VET` did not
- * filter". It does. The bug was elsewhere: `limitValue` is a radius in **metres**,
- * not miles (confirmed in the locator's own bundle,
- * `locator_common_bundle.js` — `t.distanceInMeters=parseFloat(limitValue)`), so
- * every geo-scoped request was searching a 10-metre circle and matching nothing.
- *
- * This adapter sidesteps radius entirely: omitting `sAddr` and `limitType`
- * returns the NATIONAL set, so the whole veteran slice arrives in five paginated
- * calls with coordinates already attached. No key, and robots.txt permits it
- * (empty `Disallow`).
- *
- * WHAT IT DOES NOT HAVE: hours. Nothing in this feed carries them.
+ * Omitting `sAddr`/`limitType` returns the national set, which sidesteps
+ * `limitValue` — a radius in METRES, not miles (per the locator's own bundle).
+ * Keyless; robots.txt permits it. The feed carries no hours.
  */
 import { fetchJson } from '../lib/http.ts';
+import {
+  formatAddress,
+  isSaneCoord,
+  normalizeUrl,
+  parseStateFilter,
+  trimOrNull,
+} from '../lib/normalize.ts';
 import { stableKey } from '../lib/stableKey.ts';
 import type {
   IngestionQuery,
@@ -109,32 +92,12 @@ interface LocatorPage {
   rows?: LocatorRow[];
 }
 
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-/** Reject the null island and out-of-range junk rather than pin a bad coord. */
-const isSaneCoord = (lat: number, lng: number): boolean =>
-  Number.isFinite(lat) &&
-  Number.isFinite(lng) &&
-  Math.abs(lat) <= 90 &&
-  Math.abs(lng) <= 180 &&
-  !(lat === 0 && lng === 0);
-
 function parseCoords(row: LocatorRow): { latitude: number; longitude: number } | null {
   const lat = Number(row.latitude);
   const lng = Number(row.longitude);
   if (row.latitude == null || row.longitude == null || !isSaneCoord(lat, lng)) return null;
   return { latitude: lat, longitude: lng };
 }
-
-const normalizeUrl = (raw: string | null | undefined): string | null => {
-  const url = trimOrNull(raw);
-  if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  return `https://${url.replace(/^\/+/, '')}`;
-};
 
 /** Look a service category up by its short code (`SG`, `TC`, `PAY`, …). */
 function serviceValues(row: LocatorRow, code: string): string[] {
@@ -152,11 +115,7 @@ const TYPE_OF_CARE = 'TC';
 const PAYMENT_ASSISTANCE = 'PYAS';
 const PAYMENT_ACCEPTED = 'PAY';
 
-/**
- * The API is asked for `sCodes=VET`, but this re-checks the returned record
- * rather than trusting the filter. It is exactly the assumption that went wrong
- * last time this source was attempted, and the check is one array lookup.
- */
+/** Re-check each record for the Veterans group rather than trusting the `sCodes=VET` filter. */
 const hasVeteranProgram = (row: LocatorRow): boolean =>
   serviceValues(row, SERVICE_GROUPS).some((v) => /^veterans$/i.test(v));
 
@@ -207,9 +166,7 @@ function normalize(row: LocatorRow, today: string): NormalizedResource | null {
     description:
       `Behavioural health provider with a program for veterans, listed in SAMHSA's national ` +
       `treatment directory. ${careLine}${affordability(row)}`,
-    address: [street, [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')]
-      .filter(Boolean)
-      .join(', '),
+    address: formatAddress(street, city, state, zip),
     latitude: coords?.latitude ?? null,
     longitude: coords?.longitude ?? null,
     // Rows without usable coordinates still have a full street address, so let
@@ -226,10 +183,7 @@ function normalize(row: LocatorRow, today: string): NormalizedResource | null {
     source_url: ATTRIBUTION_URL,
     source_type: 'directory',
     veteran_relevance: 'veteran_specific',
-    // SAMHSA rebuilds the directory annually from its facility survey and takes
-    // corrections weekly, so a listing is credible but not VA-authoritative —
-    // `needs_review` is what makes the app say "Directory listing" rather than
-    // "Official VA/gov data".
+    // Credible but not VA-authoritative: renders as "Directory listing", not "Official".
     verification_status: 'needs_review',
     last_checked: today,
     last_updated: today,
@@ -295,15 +249,7 @@ export const createSamhsaVeteranBehavioralHealthSource: SourceFactory = (
         );
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       const seen = new Set<string>();
@@ -322,11 +268,8 @@ export const createSamhsaVeteranBehavioralHealthSource: SourceFactory = (
         results.push(normalized, crossListCommunity(normalized));
       }
 
-      // The veterans filter is the entire point of this source. If SAMHSA renames
-      // the `SG`/"Veterans" value, `hasVeteranProgram` starts rejecting
-      // everything — fail rather than quietly ingest general facilities as
-      // veteran-specific, which is the mistake that got this source dropped in
-      // July 2026.
+      // If SAMHSA renames the `SG`/"Veterans" value, hasVeteranProgram rejects
+      // everything — fail loudly rather than ingest a sliver.
       if (!stateFilter && results.length / 2 < MIN_ROWS) {
         throw new Error(
           `SAMHSA: only ${results.length / 2} facilities carried a "Veterans" program ` +

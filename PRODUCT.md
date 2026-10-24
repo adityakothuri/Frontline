@@ -15,29 +15,37 @@ do next."
 ## Product Purpose
 
 Frontline is a resource navigator: pick a need, answer a few guided questions, share a ZIP, and get
-nearby vetted resources with plain-English explanations, next-step plans, and call scripts. AI is
-embedded in workflows (plans, scripts, summaries), never a chatbot, and never presented as legal,
-medical, financial, or government-certified advice. Success = a veteran leaves a session knowing
+nearby resources with their source and last-checked date, plain-English explanations, next-step
+plans, and call scripts. AI is embedded in workflows (plans, scripts, summaries). The one
+conversational surface, the **Ask Frontline** navigator, is bounded so that every reply ends in a
+concrete in-app action. AI output is never presented as legal, medical, financial, or
+government-certified advice. Success = a veteran leaves a session knowing
 their next concrete step. Tagline spirit: *Find your next step.*
 
 ## Brand Personality
 
-Calm, capable, trustworthy. A steady caseworker, not a startup. Warm "paper" surfaces
-(Granola-inspired light theme), characterful serif display type (Fraunces) over a neutral UI sans
-(Inter), one confident accent, semantic color that carries meaning (green = verified, amber =
-unverified, red = genuine emergency only). Motion is quiet and purposeful.
+Calm, capable, trustworthy. A steady caseworker, not a startup. The visual system is **"Field
+Manual"**: it should read like a well-made printed field guide. Manila paper, ink hairline rules,
+and numbered sections replace floating cards. Barlow Condensed is the display face, Public Sans
+(the US Web Design System face) carries the prose, and Overpass Mono caps set data and labels. One
+olive-drab action color owns every action. Semantic color carries meaning: green means verified,
+amber means check the source, and red is for genuine emergencies only. Motion is quiet and
+purposeful. Canonical spec:
+[UI Design System](docs/obsidian/02%20Design/UI%20Design%20System.md).
 
 ## Anti-references
 
 - Government-portal density (VA.gov form walls, dense legalese).
 - Alarmist or charity-poster tones; nothing that makes the veteran feel pitied.
 - Generic AI-slop SaaS: identical card grids, gradient text, glassmorphism, hero-metric tiles.
-- Chatbot-first apps; AI here supports a task, it is never the destination.
+- Chatbot-first apps. AI here supports a task and is never the destination. Even Ask Frontline
+  exists to route a veteran to an action.
+- The rounded-card, pill-button, gradient-sparkle "AI app" template.
 
 ## Design Principles
 
 1. **Obvious next action** — every screen answers "what do I do now?" in one glance.
-2. **Trust is visible** — source type, last-checked date, and simulated/demo labels are UI, not fine print.
+2. **Trust is visible** — source type, last-checked date, and verification status are UI, not fine print.
 3. **Low cognitive load** — short flows, plain language, one decision at a time.
 4. **Calm under stress** — quiet motion, generous tap targets, no urgency theater outside real emergencies.
 5. **Designed, not templated** — intentional hierarchy and spacing; no filler sections.

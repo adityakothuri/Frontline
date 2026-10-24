@@ -4,8 +4,8 @@
  * Veteran-focused, not just GI-Bill-approved: we keep only schools that do more
  * for veterans than accept the benefit — Yellow Ribbon funding, a Student
  * Veteran Group, or VET TEC (see `isVeteranFocused`). This narrows the raw list
- * from ~12.8k general colleges to ~2.8k genuinely veteran-supportive campuses
- * (decision 2026-07-24 — the unfiltered set was bloat). `veteran_benefit`.
+ * from ~12.8k general colleges to ~2.8k genuinely veteran-supportive campuses.
+ * `veteran_benefit`.
  *
  * Source: the keyless VA GI Bill Comparison Tool institutions API,
  * `https://api.va.gov/v0/gi/institutions/search?per_page=&page=` (JSON:API,
@@ -13,16 +13,13 @@
  * that are actual schools (`type` public / private / for profit), US-based,
  * not online-only, AND veteran-focused — excluding OJT (~19k), flight, foreign,
  * correspondence, and general colleges with no veteran commitment.
- * The list has full street addresses but **no coordinates** (and no phone; the
- * `insturl` website field is often absent from the current payload). Rows are
- * emitted with null coords + `geocode` address parts; the runner resolves them
- * to exact coordinates via the Census batch geocoder, and addresses that don't
- * match stay null — listed, never pinned at an approximate spot.
- *
- * Official → `source_type:'official'` / `verification_status:'verified'`.
- * Shapes verified against a live sample (via `--dry-run`) before any write.
+ * The search endpoint has street addresses but no coordinates, phone or website;
+ * the enrichment pass below adds them, and rows it cannot place go to the Census
+ * geocoder (unmatched addresses stay unpinned).
  */
-import { fetchJson } from '../lib/http.ts';
+import { titleCaseName } from '../lib/displayName.ts';
+import { fetchJson, sleep } from '../lib/http.ts';
+import { formatAddress, normalizeUrl, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -45,8 +42,6 @@ const THROTTLE_MS = 120;
 // Institution `type` values we keep — real schools a veteran attends. OJT,
 // flight, foreign, and correspondence are approved too but aren't campus schools.
 const SCHOOL_TYPES = new Set(['public', 'private', 'for profit']);
-
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface GiAttributes {
   name?: string | null;
@@ -72,12 +67,8 @@ interface GiAttributes {
 }
 
 /**
- * Veteran-specific gate: keep only schools that materially do more for veterans
- * than accept the benefit — Yellow Ribbon funding, an organized Student Veteran
- * Group, or a VET TEC program. Decision 2026-07-24: the raw GI Bill list (~12.8k
- * general colleges) was bloat; this narrows education to the ~2.8k campuses with
- * a real veteran commitment. (Weaker signals — Principles of Excellence, 8 Keys
- * — are deliberately excluded.)
+ * Keep schools that do more for veterans than accept the benefit. Weaker signals
+ * (Principles of Excellence, 8 Keys) are deliberately excluded.
  */
 function isVeteranFocused(a: GiAttributes): boolean {
   return Boolean(a.yr || a.student_veteran || a.vet_tec_provider);
@@ -88,30 +79,9 @@ interface GiResponse {
   meta?: { count?: number };
 }
 
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-/** VA data is ALL-CAPS; title-case for display, keeping small joining words low. */
-const SMALL = new Set(['of', 'the', 'and', 'at', 'in', 'for', 'a', 'an', 'on']);
-function titleCase(s: string): string {
-  const words = s.toLowerCase().split(/\s+/);
-  return words
-    .map((w, i) => {
-      if (i !== 0 && SMALL.has(w)) return w;
-      // Keep short all-caps acronyms uppercase (e.g. "UCLA" won't survive lowercasing,
-      // so this is best-effort); capitalize the first letter otherwise.
-      return w.charAt(0).toUpperCase() + w.slice(1);
-    })
-    .join(' ');
-}
-
-function normalizeUrl(raw: string | null | undefined): string | null {
-  const v = trimOrNull(raw);
-  if (!v) return null;
-  return (/^https?:\/\//i.test(v) ? v : `https://${v}`).replace(/\/+$/, '');
-}
+/** School site URL, without a trailing slash. */
+const schoolUrl = (raw: string | null | undefined): string | null =>
+  normalizeUrl(raw)?.replace(/\/+$/, '') ?? null;
 
 function describe(a: GiAttributes): string {
   // VA `type` is upper-case ("PUBLIC"/"PRIVATE"/"FOR PROFIT") — lower-case
@@ -149,20 +119,14 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
   const state = trimOrNull(a.physical_state) ?? trimOrNull(a.state);
   if (!street && !city) return null; // nothing the geocoder or a veteran can use
 
-  const address = [
-    street,
-    [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', '),
-  ]
-    .filter(Boolean)
-    .join(', ');
-  const website = normalizeUrl(a.insturl);
+  const website = schoolUrl(a.insturl);
 
   return {
     id: `gibill:${externalId}`,
-    name: titleCase(rawName),
+    name: titleCaseName(rawName),
     category: 'education',
     description: describe(a),
-    address: address || null,
+    address: formatAddress(street, city, state, zip),
     // Coordinates come from the Census geocoder in the runner; unmatched stays null.
     latitude: null,
     longitude: null,
@@ -197,23 +161,12 @@ function normalize(a: GiAttributes, today: string): NormalizedResource | null {
 }
 
 // ---------------------------------------------------------------------------
-// Enrichment: a phone number and a website, neither of which the search
-// endpoint returns
+// Enrichment — the search endpoint returns no phone or website:
+//  1. The detail endpoint (`/institutions/{facility_code}`) names the school's VA
+//     School Certifying Official — the person who handles GI Bill paperwork.
+//  2. College Scorecard supplies website + coordinates, joined on the detail
+//     endpoint's `cross` field (the IPEDS UNITID).
 // ---------------------------------------------------------------------------
-//
-// Before this, all 2,794 education rows had NO phone and NO website — the third
-// data pass measured the category at **zero** usable rows, because a school you
-// cannot ring or look up is not a resource. Two free sources fix it:
-//
-//  1. The GI Bill *detail* endpoint (`/institutions/{facility_code}`) returns 114
-//     attributes where search returns 60. Among them is the school's **VA School
-//     Certifying Official** — the person whose actual job is GI Bill paperwork.
-//     That is a better number than a switchboard. Measured 2026-07-28: 25 of 25
-//     sampled schools returned one.
-//  2. College Scorecard supplies the website and real coordinates, joined on the
-//     detail endpoint's `cross` field, which is the IPEDS UNITID.
-//
-// `insturl` is null for every record, so the website cannot come from VA.
 
 /** Detail-endpoint fields we use; the response carries ~114 we don't. */
 interface GiDetail {
@@ -327,7 +280,7 @@ async function fetchScorecard(
       for (const row of body.results ?? []) {
         if (row.id == null) continue;
         out.set(String(row.id), {
-          website: normalizeUrl(row['school.school_url']),
+          website: schoolUrl(row['school.school_url']),
           lat: typeof row['location.lat'] === 'number' ? row['location.lat'] : null,
           lon: typeof row['location.lon'] === 'number' ? row['location.lon'] : null,
         });
@@ -423,8 +376,6 @@ export const createVaGiBillSchoolsSource: SourceFactory = (
       }
 
       // --- Enrichment ---------------------------------------------------------
-      // Without this every row ends with phone: null and website: null, which is
-      // what made `education` measure zero usable rows.
       const codes = results.map((r) => r.external_id);
       console.log(
         `[ingest] gi-bill: fetching certifying-official contacts for ${codes.length} schools…`,

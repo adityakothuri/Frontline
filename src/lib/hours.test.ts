@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  closingTimeToday,
   dayWindows,
   describeHours,
   formatTimeOfDay,
@@ -32,16 +31,6 @@ describe('isOpenNow', () => {
   it('returns null for missing or unparseable hours', () => {
     expect(isOpenNow(null, monday3pm)).toBeNull();
     expect(isOpenNow('whenever we feel like it', monday3pm)).toBeNull();
-  });
-});
-
-describe('closingTimeToday', () => {
-  it('formats the closing time when currently open', () => {
-    expect(closingTimeToday('Mon-Fri 09:00-17:00', monday3pm)).toBe('5 PM');
-  });
-
-  it('is null when closed', () => {
-    expect(closingTimeToday('Mon-Fri 09:00-17:00', monday6pm)).toBeNull();
   });
 });
 

@@ -11,9 +11,7 @@ import {
 import { loadSaved, saveSaved, type SavedEntry } from './savedStorage';
 import { pushSaved, reconcileSaved, unionSaved } from '../sync/backupSync';
 
-// The app's on-device list of saved resources. A small Context mirroring
-// ProfileContext/ActivityContext — local-only, nothing sensitive. The context is
-// the API; there is no swappable service seam here.
+// The on-device list of saved resources, mirrored to the backup when sync is on.
 interface SavedContextValue {
   /** False until the stored list has been read on launch. */
   isHydrated: boolean;
@@ -29,14 +27,9 @@ const SavedContext = createContext<SavedContextValue | null>(null);
 export function SavedProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<SavedEntry[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
-  // The backup pull is a network call to a cold edge function. It used to sit in
-  // front of `isHydrated`, which put up to 12s of `sync` round trip between a
-  // cold launch and the first frame of the Saved tab. Hydration is now the disk
-  // read alone; the backup lands afterwards as a second, additive update.
+  // Hydration is the disk read alone; the backup (a slow cold call) lands after.
   const [reconciled, setReconciled] = useState(false);
-  // Ids the veteran has unsaved this session. Consulted once, when the backup
-  // lands: the union would otherwise hand back an id the veteran just removed,
-  // because the backup predates the removal and still lists it.
+  // Unsaved this session, so the older backup's union can't resurrect them.
   const unsavedIds = useRef(new Set<string>());
 
   useEffect(() => {
@@ -44,22 +37,18 @@ export function SavedProvider({ children }: { children: ReactNode }) {
     loadSaved()
       .then((stored) => {
         if (!active) return null;
-        // Local disk is the source of truth and it's already here: unblock the UI.
         setEntries(stored);
         setIsHydrated(true);
         return reconcileSaved(stored);
       })
       .then((merged) => {
         if (!active || !merged) return;
-        // Union against current state, not against `stored` — a save made while
-        // the pull was in flight is in `prev` only, and replacing wholesale used
-        // to drop it (and it had never been persisted, so it was gone for good).
+        // Union against current state: a save made while the pull was in flight
+        // is only in `prev`.
         setEntries((prev) => unionSaved(prev, merged).filter((e) => !unsavedIds.current.has(e.id)));
       })
       .catch(() => {
-        // Every leaf already swallows its own failures, so this is belt-and-braces
-        // — but `isHydrated` gates the whole app, and it must never be the thing
-        // an unexpected throw leaves stuck at false.
+        // `isHydrated` must never stay false.
         if (active) setIsHydrated(true);
       })
       .finally(() => {
@@ -70,22 +59,17 @@ export function SavedProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Persist locally as soon as the list changes. Safe the moment the disk read
-  // is back: the worst case is rewriting what we just read.
   useEffect(() => {
     if (isHydrated) saveSaved(entries);
   }, [entries, isHydrated]);
 
-  // Pushing waits for the reconcile. A reinstalled device is legitimately empty
-  // until the backup lands, and pushSaved stamps a fresh updated_at — so pushing
-  // that empty list would win the server's monotonicity check and destroy the
-  // very backup we were about to restore from.
+  // Pushing waits for the reconcile: a reinstalled device's empty list, freshly
+  // stamped, would otherwise overwrite the backup it is about to restore from.
   useEffect(() => {
     if (reconciled) pushSaved(entries);
   }, [entries, reconciled]);
 
-  // Lets toggleSave read the current list without depending on it (and so
-  // without being rebuilt on every change). Written in an effect, never in render.
+  // Lets toggleSave read the current list without being rebuilt on every change.
   const entriesRef = useRef(entries);
   useEffect(() => {
     entriesRef.current = entries;
@@ -93,8 +77,7 @@ export function SavedProvider({ children }: { children: ReactNode }) {
 
   const toggleSave = useCallback((id: string) => {
     const wasSaved = entriesRef.current.some((e) => e.id === id);
-    // Bookkeeping stays outside the updater: React may call an updater twice,
-    // and a state setter is the wrong place for a side effect.
+    // Outside the updater, which React may call twice.
     if (wasSaved) unsavedIds.current.add(id);
     else unsavedIds.current.delete(id);
     setEntries((prev) =>

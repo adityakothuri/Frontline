@@ -2,15 +2,12 @@ import { supabaseConfig } from './config';
 
 /**
  * Minimal typed fetch helper for Supabase (PostgREST + Edge Functions). No
- * supabase-js: the app only needs anon-key REST reads and one function call,
- * and the SDK's auth/realtime/storage baggage would be dead weight.
+ * supabase-js: the app only needs anon-key REST calls, and the SDK's
+ * auth/realtime/storage would be dead weight.
  */
 
-/** RN fetch has no timeout; without one a dead network outlives every loading state.
- *  12s rather than 8s: a cold launch stacks DNS, TLS and a cold database cache on
- *  top of the query itself, and 8s was tight enough that a first browse aborted
- *  and dropped the veteran on "Something went wrong". */
-const TIMEOUT_MS = 12000;
+/** RN fetch has no timeout; without one a dead network outlives every loading state. */
+const TIMEOUT_MS = 8000;
 
 /** The bundle shipped without EXPO_PUBLIC_SUPABASE_* — never worth a retry. */
 export class NotConfiguredError extends Error {
@@ -30,28 +27,20 @@ export class SupabaseRequestError extends Error {
   }
 }
 
-/** Backoff before each retry. The first is long enough for a radio or DNS lookup
- *  to finish waking up; the second gives a genuinely cold backend a moment more.
- *  Two entries = at most two retries. */
-const RETRY_DELAYS_MS = [400, 1200];
+/** Backoff before the one retry, long enough for a waking radio or DNS lookup. */
+const RETRY_DELAYS_MS = [400];
 
 type RequestOptions = {
   method?: 'GET' | 'POST';
   body?: unknown;
   /** Override the default timeout (the AI function can be slower than reads). */
   timeoutMs?: number;
-  /** Retry on a transient failure (see RETRY_DELAYS_MS). On by default — every
-   *  read here is idempotent. The AI function opts out: it is expensive, and its
-   *  30s timeout makes a second attempt a nearly two-minute wait. */
+  /** Retry once on a transient failure. On by default (reads are idempotent);
+   *  the AI function opts out because of its cost and long timeout. */
   retry?: boolean;
 };
 
-/**
- * Worth another attempt? Timeouts, dropped connections and 5xx are transient.
- * A 4xx is deterministic — retrying a bad key or a malformed filter just burns
- * another timeout and delays the error the caller needs to see. So is an
- * unconfigured backend: that is a property of the bundle, not of the network.
- */
+/** Timeouts, dropped connections and 5xx are transient; a 4xx or a missing config is not. */
 function isTransient(error: unknown): boolean {
   if (error instanceof SupabaseRequestError) return error.status >= 500;
   if (error instanceof NotConfiguredError) return false;
@@ -59,11 +48,7 @@ function isTransient(error: unknown): boolean {
   return error instanceof Error;
 }
 
-/**
- * The first request after a cold app launch is the one most likely to fail — the
- * radio, DNS and TLS are all warming up at once — and a single blip used to drop
- * the veteran straight onto "Something went wrong". Retrying absorbs that.
- */
+/** A typed Supabase request, retried once on a transient failure (common on cold launch). */
 export async function supabaseRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const delays = options.retry === false ? [] : RETRY_DELAYS_MS;
   for (let i = 0; ; i++) {
@@ -102,8 +87,6 @@ async function attempt<T>(path: string, options: RequestOptions): Promise<T> {
     });
 
     if (!response.ok) {
-      // PostgREST/function errors carry {message, ...}; surface it to the
-      // existing error/retry UI.
       let message = `HTTP ${response.status}`;
       try {
         const payload = (await response.json()) as { message?: string; error?: string };

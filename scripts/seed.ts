@@ -8,9 +8,8 @@
  *                    (shell env or a git-ignored .env.seed — never EXPO_PUBLIC_*)
  *
  * Resources are NOT seeded here — they come exclusively from the real ingestion
- * pipeline (`ingestion/run.ts`: VA Facilities, GI Bill, USAJOBS, HUD, SSVF,
- * VSO reps, Feeding America, and a curated national list). There is no
- * simulated resource data anywhere.
+ * pipeline (`ingestion/run.ts`; the full source list is in ingestion/README.md).
+ * There is no simulated resource data anywhere.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

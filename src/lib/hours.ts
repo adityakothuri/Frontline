@@ -1,13 +1,7 @@
 /**
- * Best-effort "open now" from a resource's `hours` string.
- *
- * Understands the controlled format used by our seed data:
+ * Parsing for the controlled hours format ingestion writes:
  *   `Mon-Fri 09:00-17:00; Sat 10:00-14:00`
- * - semicolon-separated groups
- * - each group: a day or day-range (Mon, Tue … Sun) then a 24h time range
- *
- * Anything it can't confidently parse returns `null` (unknown) rather than a
- * misleading guess — the UI shows "hours unknown" in that case.
+ * Anything not confidently parsed is `null` (unknown) rather than a guess.
  */
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
@@ -58,12 +52,7 @@ const parseDayRange = (token: string): number[] | null => {
   return days;
 };
 
-/**
- * Every window the resource is open during a week, or `null` when the hours are
- * missing or in a dialect we don't confidently understand. The single parse path
- * — `isOpenNow`, `closingTimeToday` and the reminder scheduler all read from it,
- * so knowledge of the format stays in exactly one place.
- */
+/** Every window the resource is open during a week, or `null` when unknown. The single parse path. */
 export function weeklyIntervals(hours: string | null): OpenInterval[] | null {
   if (!hours) return null;
 
@@ -128,13 +117,7 @@ export interface DayWindow {
   close: number;
 }
 
-/**
- * A week collapsed to one window per day: earliest opening, latest closing.
- *
- * The controlled format permits two windows in a day (a lunch closure), and
- * ingestion's `widen()` usually removes them — but when one survives, what
- * matters is when the doors first open and finally shut, not the gap.
- */
+/** A week collapsed to one window per day: earliest opening, latest closing (lunch gaps ignored). */
 export function dayWindows(hours: string | null): DayWindow[] {
   const intervals = weeklyIntervals(hours);
   if (!intervals) return [];
@@ -158,13 +141,8 @@ const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_LABEL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /**
- * Opening hours as lines a person can read: `['Mon–Fri · 8 AM – 4:30 PM']`.
- *
- * Consecutive days sharing a window collapse into a range, so the seven-group
- * strings the transit feeds produce don't turn into seven lines. Returns an
- * empty array when the hours are unknown — callers show nothing rather than a
- * placeholder, because an empty schedule and an unparsed one look identical to
- * a veteran and only one of them is safe to imply.
+ * Opening hours as readable lines, `['Mon–Fri · 8 AM – 4:30 PM']`, with
+ * consecutive matching days collapsed. Empty when the hours are unknown.
  */
 export function describeHours(hours: string | null): string[] {
   const windows = dayWindows(hours);
@@ -202,13 +180,7 @@ export function describeHours(hours: string | null): string[] {
   return lines;
 }
 
-/**
- * True when the resource is open every hour of every day — the `Mon-Sun
- * 00:00-23:59` encoding ingestion uses for 24/7 lines. Checked structurally
- * rather than by string match so any equivalent spelling is caught.
- *
- * These have nothing to remind anyone about, so the reminder bell skips them.
- */
+/** True when open every hour of every day (ingestion's `Mon-Sun 00:00-23:59`), checked structurally. */
 export function isAlwaysOpen(hours: string | null): boolean {
   const intervals = weeklyIntervals(hours);
   if (!intervals) return false;
@@ -219,20 +191,4 @@ export function isAlwaysOpen(hours: string | null): boolean {
         interval.day === day && interval.start === 0 && interval.end >= MINUTES_PER_DAY - 1,
     ),
   );
-}
-
-/**
- * If the resource is open right now, the time it closes today (e.g. "5 PM"),
- * else `null`. Reuses the same parser so time-format knowledge stays in one place.
- */
-export function closingTimeToday(hours: string | null, now: Date = new Date()): string | null {
-  const intervals = weeklyIntervals(hours);
-  if (!intervals) return null;
-
-  const day = now.getDay();
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  const current = intervals.find(
-    (interval) => interval.day === day && minutes >= interval.start && minutes < interval.end,
-  );
-  return current ? formatTimeOfDay(current.end) : null;
 }

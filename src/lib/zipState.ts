@@ -1,10 +1,7 @@
 /**
- * US ZIP → state, by the first three digits (USPS Sectional Center Facility
- * prefixes). Used to show a veteran the resources that serve THEIR state when a
- * resource has no coordinates and can't be radius-matched — e.g. SSVF veteran
- * housing providers, which serve whole counties/states and carry `state:XX`
- * tags. Approximate at prefix granularity (a handful of prefixes straddle a
- * state line), which is plenty for "which state am I in".
+ * US ZIP → state by the first three digits, for matching `state:XX`-tagged
+ * referrals that can't be radius-matched. Approximate where a prefix straddles a
+ * state line.
  */
 
 // [minPrefix, maxPrefix, state] over the first 3 ZIP digits, in order.

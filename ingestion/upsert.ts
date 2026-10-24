@@ -15,19 +15,12 @@ export interface AdminConfig {
 const BATCH = 500;
 
 /**
- * Providers whose upstream payload is worth archiving in `resource_sources.raw`.
+ * Providers whose upstream payload is archived in `resource_sources.raw`.
  *
- * `raw` is lineage only — nothing queries it (0022 revoked every client grant),
- * and by 2026-07-28 it had grown to 168 MB, more than the catalogue itself, and
- * became the binding constraint on how much veteran data fits in the free tier
- * (see 0026_reclaim_raw_payloads.sql).
- *
- * So it is now opt-in, and the bar is "would a snapshot actually help?". It
- * helps for the small, hand-maintained sources: a curated JSON file or a
- * scraped HTML table can drift in ways that are hard to reconstruct after the
- * fact, and there are only a few hundred rows of it. It does not help for the
- * big machine feeds — those are cheaper to re-fetch than to store, and they are
- * the entire size problem.
+ * `raw` is lineage only (nothing queries it) and was once larger than the
+ * catalogue itself (0026_reclaim_raw_payloads.sql), so it is opt-in: kept for
+ * the small hand-maintained or scraped sources whose drift is hard to
+ * reconstruct, not for big machine feeds that are cheaper to re-fetch.
  */
 const STORE_RAW_PROVIDERS = new Set([
   'curated-national',
@@ -46,13 +39,9 @@ async function upsertRows(
 ): Promise<void> {
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH);
-    // Postgres `text` cannot hold a NUL (U+0000); some provider records carry one
-    // (e.g. a stray null byte in a HUD field or raw payload) and PostgREST rejects
-    // the whole batch (22P05). JSON.stringify emits NUL as the six-character escape
+    // Postgres `text` cannot hold a NUL (U+0000) and PostgREST rejects the whole
+    // batch (22P05) if any field has one. JSON.stringify emits NUL as the escape
     // \\u0000, so strip that from the serialized body — every field, incl. raw.
-    //
-    // NB: this comment used to contain a literal NUL byte to illustrate the point,
-    // which made git treat the whole source file as binary and its diffs unreadable.
     const body = JSON.stringify(batch).replace(/\\u0000/g, '');
     const response = await fetch(`${config.url}/rest/v1/${table}?on_conflict=${onConflict}`, {
       method: 'POST',

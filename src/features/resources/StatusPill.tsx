@@ -1,16 +1,16 @@
 import { View, StyleSheet } from 'react-native';
 import { AppText } from '@/components';
-import { radii, spacing } from '@/theme';
+import { spacing } from '@/theme';
 import { STATUS_TONE_COLOR, type StatusTone } from './resourceStatus';
 
-// A small dot + label that reads a status tone (open-now on the card and the
-// detail header). Never color alone — the dot is always paired with its label.
+// A small square plus a mono label for a status tone (open now, hours unknown).
+// Never colour alone — the square always travels with its words.
 export function StatusPill({ label, tone }: { label: string; tone: StatusTone }) {
   const color = STATUS_TONE_COLOR[tone];
   return (
-    <View style={styles.pill}>
-      <View style={[styles.dot, { backgroundColor: color }]} />
-      <AppText variant="caption" style={{ color }} numberOfLines={1}>
+    <View style={styles.row}>
+      <View style={[styles.square, { backgroundColor: color }]} />
+      <AppText variant="data" style={{ color }} numberOfLines={1}>
         {label}
       </AppText>
     </View>
@@ -18,6 +18,6 @@ export function StatusPill({ label, tone }: { label: string; tone: StatusTone })
 }
 
 const styles = StyleSheet.create({
-  pill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dot: { width: 7, height: 7, borderRadius: radii.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  square: { width: 7, height: 7 },
 });

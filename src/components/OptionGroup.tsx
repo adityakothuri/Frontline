@@ -1,20 +1,16 @@
 import { View, StyleSheet } from 'react-native';
-import type Ionicons from '@expo/vector-icons/Ionicons';
-import { spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { Chip } from './Chip';
 import { SelectableOption } from './SelectableOption';
 
-type IconName = keyof typeof Ionicons.glyphMap;
 type Option<T> = {
   value: T;
   label: string;
   description?: string;
-  icon?: IconName;
-  iconColor?: string;
 };
 
 type OptionGroupProps<T> = {
-  /** `pill` = compact chips (default); `row` = full-width selectable rows. */
+  /** `pill` = compact square chips (default); `row` = full-width ruled rows. */
   variant?: 'pill' | 'row';
 } & (
   | { multiple?: false; options: Option<T>[]; value: T | undefined; onChange: (value: T) => void }
@@ -52,8 +48,6 @@ export function OptionGroup<T extends string | number>(props: OptionGroupProps<T
             key={String(opt.value)}
             label={opt.label}
             description={opt.description}
-            icon={opt.icon}
-            iconColor={opt.iconColor}
             multiple={props.multiple}
             selected={isSelected(opt.value)}
             onPress={() => toggle(opt.value)}
@@ -69,7 +63,6 @@ export function OptionGroup<T extends string | number>(props: OptionGroupProps<T
         <Chip
           key={String(opt.value)}
           label={opt.label}
-          icon={opt.icon}
           selected={isSelected(opt.value)}
           onPress={() => toggle(opt.value)}
         />
@@ -80,5 +73,5 @@ export function OptionGroup<T extends string | number>(props: OptionGroupProps<T
 
 const styles = StyleSheet.create({
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  rows: { gap: spacing.sm },
+  rows: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
 });

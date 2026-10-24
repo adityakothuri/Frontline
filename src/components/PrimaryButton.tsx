@@ -12,10 +12,8 @@ type PrimaryButtonProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-// One obvious primary action per screen. `secondary` is the quiet outline
-// variant. Presses get both a color shift and a slight spring-down — the spring
-// now comes from PressableScale rather than a second copy of it here, so a CTA
-// and a card feel identical under the thumb.
+// The one filled action on a screen: square olive block, caps label.
+// `secondary` is an ink outline for the quieter alternative.
 export function PrimaryButton({
   label,
   onPress,
@@ -31,6 +29,7 @@ export function PrimaryButton({
     <PressableScale
       accessibilityRole="button"
       accessibilityState={{ disabled: inactive }}
+      accessibilityLabel={label}
       disabled={inactive}
       onPress={onPress}
       style={style}
@@ -47,7 +46,11 @@ export function PrimaryButton({
           {loading ? (
             <ActivityIndicator color={isSecondary ? colors.textPrimary : colors.textOnAccent} />
           ) : (
-            <AppText variant="heading" color={isSecondary ? 'textPrimary' : 'textOnAccent'}>
+            <AppText
+              variant="label"
+              color={isSecondary ? 'textPrimary' : 'textOnAccent'}
+              style={styles.label}
+            >
               {label}
             </AppText>
           )}
@@ -66,13 +69,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: spacing.xl,
   },
+  label: { fontSize: 15, letterSpacing: 0.8, textTransform: 'uppercase' },
   primary: { backgroundColor: colors.accent },
   primaryPressed: { backgroundColor: colors.accentPressed },
-  secondary: {
-    backgroundColor: colors.transparent,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
+  secondary: { borderWidth: 1.5, borderColor: colors.textPrimary },
   secondaryPressed: { backgroundColor: colors.surfaceMuted },
-  disabled: { opacity: 0.5 },
+  disabled: { opacity: 0.45 },
 });

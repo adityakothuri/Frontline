@@ -1,17 +1,12 @@
 import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing } from '@/theme';
 import { AppText } from './AppText';
 
 const NAVIGATOR_TEXT =
   'Frontline helps you find resources. It is not the VA or a government agency. Always confirm details with the official source.';
 
-// The product-wide navigator disclaimer required by Trust, Safety & Privacy.
-// One component owns the copy so Home, Results, and the detail page can never
-// drift apart. Quiet by design — informative, not alarmist.
-//
-// `text` lets the AI surfaces carry their own line (`AI_NOT_ADVICE_DISCLAIMER`)
-// in exactly this register, rather than inventing a second disclaimer treatment.
+// The product-wide navigator disclaimer; one component owns the copy so screens
+// cannot drift. `text` lets AI surfaces pass `AI_NOT_ADVICE_DISCLAIMER` instead.
 export function NavigatorDisclaimer({
   text = NAVIGATOR_TEXT,
   style,
@@ -21,13 +16,7 @@ export function NavigatorDisclaimer({
 }) {
   return (
     <View style={[styles.row, style]}>
-      <Ionicons
-        name="information-circle-outline"
-        size={14}
-        color={colors.textMuted}
-        style={styles.icon}
-      />
-      <AppText variant="caption" color="textMuted" style={styles.text}>
+      <AppText variant="caption" color="textSecondary" style={styles.text}>
         {text}
       </AppText>
     </View>
@@ -35,8 +24,11 @@ export function NavigatorDisclaimer({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: spacing.xs },
-  // Optically align the icon with the first line of the caption.
-  icon: { marginTop: 1 },
+  // A fine-print block: hairline above, like the notes at the foot of a form.
+  row: {
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   text: { flex: 1 },
 });

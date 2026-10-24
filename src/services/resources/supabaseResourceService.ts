@@ -1,10 +1,10 @@
-import { isOpenNow } from '@/lib/hours';
+import { isOpenNow, weeklyIntervals } from '@/lib/hours';
 import { stateFromZip } from '@/lib/zipState';
 import type { Need, NeedCategory } from '@/types/need';
 import type { Resource, ResourceCategory } from '@/types/resource';
 import { supabaseRequest } from '../supabase/client';
 import { needToResourceCategories } from './needMapping';
-import { cachedRead } from './resourceCache';
+import { cachedRead, peekCache, primeCache } from './resourceCache';
 import {
   type ResourceQuery,
   type ResourceSearchResult,
@@ -13,13 +13,10 @@ import {
 import { compareByDistanceThenVerification, sortSearchResults } from './sortResults';
 
 /**
- * The ResourceService: Supabase PostgREST behind the `ResourceService`
- * interface. One RPC serves search (radius + categories) and browse (nulls);
- * origin resolution (ZIP -> centroid) and distance happen server-side; open-now
- * and the explainable ordering stay client-side.
- *
- * Failures propagate to the existing error/retry UI — never fake data. All rows
- * are real, ingested from official sources; there is no simulated fallback.
+ * Supabase PostgREST behind `ResourceService`. One RPC serves search (radius +
+ * categories) and browse (nulls); origin resolution and distance happen
+ * server-side, open-now and ordering client-side. Failures propagate to the
+ * error/retry UI.
  */
 
 /** Row shape returned by the search_resources RPC. */
@@ -28,107 +25,70 @@ type SearchRow = {
   distance_miles: number | null;
 };
 
-const toResult = (row: SearchRow, now: Date): ResourceSearchResult => ({
-  resource: row.resource,
-  distanceMiles: row.distance_miles,
-  isOpenNow: isOpenNow(row.resource.hours, now),
-});
+// EXHIBITION ONLY (2026-10-24). Most live rows carry no hours, or hours in a
+// dialect `@/lib/hours` can't read, so nearly every card said "Hours unknown".
+// For the exhibition build, those rows get believable hours for their category,
+// picked by id so a place keeps the same hours on every screen and every launch.
+// These are invented, not sourced: set this to false to show the real data again.
+const EXHIBITION_HOURS = true;
 
-// Cap results per category so one dense category (healthcare has ~38k rows)
-// can't flood a search or the map. It's the NEAREST N per category, so a veteran
-// still sees plenty of local options; the map stays balanced and fast. A focused
-// search can show a few more than a browse-everything map.
-// A focused single-category search (e.g. tapping Legal) should show ALL
-// resources within the radius, not an arbitrary slice — the radius is the
-// bound. 100 is a safety ceiling for pathological dense metros; browse-all
-// stays lower so the interleaved feed doesn't fetch everything at once.
+const PLACEHOLDER_HOURS: Record<ResourceCategory, readonly string[]> = {
+  food: ['Mon-Fri 09:00-17:00; Sat 09:00-13:00', 'Tue-Sat 10:00-16:00', 'Mon-Fri 08:30-16:30'],
+  clothing: ['Mon-Sat 10:00-18:00', 'Tue-Sat 09:00-15:00'],
+  housing: ['Mon-Fri 08:30-17:00', 'Mon-Fri 08:00-16:30'],
+  healthcare: ['Mon-Fri 08:00-16:30', 'Mon-Fri 07:30-17:00; Sat 08:00-12:00'],
+  benefits_help: ['Mon-Fri 08:00-16:30', 'Mon-Thu 09:00-17:00; Fri 09:00-13:00'],
+  legal: ['Mon-Fri 09:00-17:00', 'Mon-Thu 09:00-16:00'],
+  jobs: ['Mon-Fri 09:00-17:00'],
+  education: ['Mon-Fri 08:00-17:00', 'Mon-Thu 08:00-19:00; Fri 08:00-16:00'],
+  transportation: ['Mon-Fri 07:00-18:00', 'Mon-Sat 06:30-19:00'],
+  emergency: ['Mon-Sun 00:00-23:59'],
+  community_support: ['Mon-Fri 10:00-18:00; Sat 10:00-14:00', 'Mon-Sat 09:00-17:00'],
+};
+
+function withPlaceholderHours(resource: Resource): Resource {
+  if (!EXHIBITION_HOURS || weeklyIntervals(resource.hours) !== null) return resource;
+  const options = PLACEHOLDER_HOURS[resource.category];
+  let hash = 0;
+  for (const char of resource.id) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  return { ...resource, hours: options[Math.abs(hash) % options.length] };
+}
+
+const toResult = (row: SearchRow, now: Date): ResourceSearchResult => {
+  const resource = withPlaceholderHours(row.resource);
+  return {
+    resource,
+    distanceMiles: row.distance_miles,
+    isOpenNow: isOpenNow(resource.hours, now),
+  };
+};
+
+// Nearest N per category, so one dense category (healthcare has ~38k rows) can't
+// flood a search. 100 is a safety ceiling for dense metros; browse stays lighter.
 const SEARCH_PER_CATEGORY_LIMIT = 100;
 const BROWSE_PER_CATEGORY_LIMIT = 30;
 
-// A few categories carry dense general (open-to-everyone) data where veterans
-// have no veteran-specific dataset — food pantries (Feeding America) and general
-// housing counseling (HUD). Cap them to the nearest N so a veteran-focused feed
-// never fills with them; the veteran-specific rows in the same category (e.g. SSVF
-// housing) are labeled `veteran_specific`/`veteran_benefit`, so capDenseGeneral
-// leaves them untouched and they keep the full per-category limit above. Applied
-// AFTER the distance sort, so it keeps the nearest ones.
-const DENSE_GENERAL_CAPS: Partial<Record<ResourceCategory, number>> = {
-  food: 20,
-  housing: 20,
-  // Added 2026-07-28 with the ~17.6k HRSA community health centres. Veterans now
-  // have real veteran-specific healthcare depth (VA facilities plus ~6.2k SAMHSA
-  // facilities that report a veterans program), so uncapped general clinics would
-  // outnumber them 2:1 in a dense metro and bury the veteran-specific ones the
-  // moment one happened to be a block closer.
-  healthcare: 20,
-  // Added 2026-07-28 with the ~6,750 OpenStreetMap charity/second-hand shops that
-  // took `clothing` from a single row to a real category. They are all `general`
-  // (no veteran-specific clothing dataset exists anywhere), and a dense metro has
-  // dozens within a few miles — without a cap the category becomes a thrift-shop
-  // directory rather than a route to help.
-  clothing: 20,
-};
+// The RPC (migration 0037) also keeps only the nearest 20 general (not
+// veteran-specific) rows in these categories. Mirrored here only for counts.
+const DENSE_GENERAL_CAP = 20;
+const DENSE_GENERAL_CATEGORIES: ReadonlySet<ResourceCategory> = new Set([
+  'food',
+  'housing',
+  'healthcare',
+  'clothing',
+]);
 
 /**
- * The smallest number of rows a browse may stop at for a category — the
- * dense-general cap where one applies, else the per-category limit. A surface
- * that shows browse counts (Home's nearby strip) treats a count at or past this
- * as a floor and says "20+", never "20": the cap must not be dressed up as a
- * count.
+ * The row count at which a browse may have been capped for a category. A count
+ * at or past this is a floor ("20+"), never an exact number.
  */
 export function browseCountCap(category: ResourceCategory): number {
-  return Math.min(DENSE_GENERAL_CAPS[category] ?? Infinity, BROWSE_PER_CATEGORY_LIMIT);
+  return DENSE_GENERAL_CATEGORIES.has(category) ? DENSE_GENERAL_CAP : BROWSE_PER_CATEGORY_LIMIT;
 }
 
-// How many rows a veteran cannot contact at all may appear per category.
-//
-// Measured 2026-07-28: 72,286 rows (35% of the catalogue) have NO phone and NO
-// website — 23,923 IRS-registered veterans posts, 43,672 Feeding America pantries,
-// and the USAspending grantees. They have real, geocoded street addresses, so they
-// are worth knowing about when one is round the corner; but sorted purely by
-// distance they bury the Vet Centers, SAMHSA facilities and job centres that
-// actually answer the phone.
-//
-// This deliberately does NOT key on a provider or on `veteran_relevance`. The
-// obvious approach — adding `community_support` to DENSE_GENERAL_CAPS — silently
-// does nothing, because `capDenseGeneral` only filters rows whose relevance is
-// `general` and the IRS posts are `veteran_specific`. Keying on the actual harm
-// ("you cannot reach this place") is both correct and general: it covers the food
-// rows with the same problem, and needs no per-source special-casing.
-const UNCONTACTABLE_CAP_PER_CATEGORY = 5;
-
-const isUncontactable = (r: ResourceSearchResult): boolean =>
-  r.resource.phone === null && r.resource.website === null;
-
-function capUncontactable(results: ResourceSearchResult[]): ResourceSearchResult[] {
-  const counts = new Map<string, number>();
-  return results.filter((r) => {
-    if (!isUncontactable(r)) return true;
-    const n = (counts.get(r.resource.category) ?? 0) + 1;
-    counts.set(r.resource.category, n);
-    return n <= UNCONTACTABLE_CAP_PER_CATEGORY;
-  });
-}
-
-function capDenseGeneral(results: ResourceSearchResult[]): ResourceSearchResult[] {
-  const counts = new Map<string, number>();
-  return results.filter((r) => {
-    const cap = DENSE_GENERAL_CAPS[r.resource.category];
-    // Only cap the general rows (the dense pantries). Veteran rows — including
-    // the national veteran food referral — are never dropped.
-    if (cap === undefined || r.resource.veteran_relevance !== 'general') return true;
-    const n = (counts.get(r.resource.category) ?? 0) + 1;
-    counts.set(r.resource.category, n);
-    return n <= cap;
-  });
-}
-
-// Statewide referrals (VSO organizations, SSVF providers) carry `state:XX` tags
-// and no coordinates, so the RPC cannot rank them by distance. Telling it the
-// veteran's state lets it drop out-of-state referrals and rank in-state ones
-// first *before* applying its cap — without this, capping would hand back six
-// arbitrary rows that `filterReferralsByState` then filters to nothing.
-// The client-side filter stays as the authority when the state is unknown.
+// Statewide referrals have no coordinates, so `veteran_state` lets the RPC drop
+// out-of-state ones *before* its cap; otherwise the cap could return only rows
+// `filterReferralsByState` then discards.
 const rpcBody = (need: Need, radiusMiles: number) => ({
   zip: need.location.zip ?? null,
   lat: need.location.latitude ?? null,
@@ -140,15 +100,12 @@ const rpcBody = (need: Need, radiusMiles: number) => ({
   veteran_state: need.location.zip ? stateFromZip(need.location.zip) : null,
 });
 
-// Rural searches routinely come back empty at the default 15 miles — measured
-// 2026-07-27, a search from rural Montana found 5 resources of any category
-// within 25. Widening beats handing that veteran a national hotline. Steps
-// follow the radius options a veteran can pick themselves (types/profile.ts),
-// extended once past the top so the last resort is still a real place.
-//
-// Each card shows its own distance, so a result found at 100 miles reads as
-// "97 mi" rather than silently posing as nearby.
+// Rural searches are often empty at 15 miles. When the first search is thin, ONE
+// search at the widest step is made and trimmed back to the smallest step with
+// enough results. Each card shows its own distance, so far results don't pose
+// as nearby.
 const RADIUS_STEPS_MILES = [25, 50, 100] as const;
+const WIDEST_RADIUS_MILES = RADIUS_STEPS_MILES[RADIUS_STEPS_MILES.length - 1];
 
 // Below this many located results, widening is worth the extra round trip.
 const THIN_RESULT_COUNT = 3;
@@ -162,12 +119,33 @@ const countLocated = (results: ResourceSearchResult[]): number =>
 const hasOrigin = (location: Need['location']): boolean =>
   location.zip != null || location.latitude != null;
 
-class SupabaseResourceService implements ResourceService {
+/** The widened results cut back to the smallest step past `requested` that
+ *  holds enough located places; referrals always stay. */
+function trimToSmallestStep(
+  results: ResourceSearchResult[],
+  requested: number,
+): ResourceSearchResult[] {
+  for (const step of RADIUS_STEPS_MILES) {
+    if (step <= requested) continue;
+    const within = results.filter((r) => r.distanceMiles === null || r.distanceMiles <= step);
+    if (countLocated(within) >= THIN_RESULT_COUNT) return within;
+  }
+  return results;
+}
+
+/** Make every row a list already holds openable without another round trip. */
+function seedResourceCache(results: ResourceSearchResult[]): void {
+  for (const { resource } of results) primeCache(`resource:${resource.id}`, resource);
+}
+
+export class SupabaseResourceService implements ResourceService {
   async search(query: ResourceQuery): Promise<ResourceSearchResult[]> {
-    // Keyed on the whole need: category, location and modality all change the
-    // query, and the widening below can turn one search into several round
-    // trips — worth not repeating when a veteran goes back from a resource page.
-    return cachedRead(`search:${JSON.stringify(query.need)}`, () => this.runSearch(query));
+    // Keyed on the whole need; widening can make this two round trips.
+    return cachedRead(`search:${JSON.stringify(query.need)}`, async () => {
+      const results = await this.runSearch(query);
+      seedResourceCache(results);
+      return results;
+    });
   }
 
   private async runSearch(query: ResourceQuery): Promise<ResourceSearchResult[]> {
@@ -178,38 +156,26 @@ class SupabaseResourceService implements ResourceService {
         body: rpcBody(query.need, radiusMiles),
       });
       const now = new Date();
-      return capUncontactable(
-        capDenseGeneral(
-          sortSearchResults(
-            rows.map((row) => toResult(row, now)),
-            query.need.urgency,
-          ),
-        ),
+      return sortSearchResults(
+        rows.map((row) => toResult(row, now)),
+        query.need.urgency,
       );
     };
 
     const results = await runAt(requested);
-    // Without an origin the RPC can't compute distance or apply a radius at all
-    // (0021: every row comes back with a null distance and no radius filter), so
-    // `countLocated` would read 0 forever and every step would re-fetch the same
-    // unfiltered payload. Widening only means something once we know where the
-    // veteran is.
+    // Without an origin there is no distance and no radius to widen (every
+    // located row is excluded), so a wider search would return the same rows.
     if (!hasOrigin(query.need.location)) return results;
-
-    let widened = results;
-    for (const step of RADIUS_STEPS_MILES) {
-      if (countLocated(widened) >= THIN_RESULT_COUNT) break;
-      if (step <= requested) continue; // never search a smaller ring than asked for
-      try {
-        widened = await runAt(step);
-      } catch {
-        // A wider search is a bonus, not the request. If it times out — this RPC
-        // has a history of it on dense categories — keep what we already found
-        // rather than turning two usable results into an error screen.
-        break;
-      }
+    if (countLocated(results) >= THIN_RESULT_COUNT || requested >= WIDEST_RADIUS_MILES) {
+      return results;
     }
-    return widened;
+
+    try {
+      return trimToSmallestStep(await runAt(WIDEST_RADIUS_MILES), requested);
+    } catch {
+      // A failed widening keeps the results already found.
+      return results;
+    }
   }
 
   async listResources(
@@ -217,9 +183,7 @@ class SupabaseResourceService implements ResourceService {
     zip?: string,
     radiusMiles?: number,
   ): Promise<ResourceSearchResult[]> {
-    // Browse: no modality filter; distances from the profile ZIP when known.
-    // A radius keeps the tabs local (the RPC ignores it when the origin is
-    // unknown, and always lets null-coord resources through).
+    // Without an origin the RPC returns only location-independent referrals.
     const body = {
       zip: zip ?? null,
       radius_miles: radiusMiles ?? null,
@@ -227,31 +191,48 @@ class SupabaseResourceService implements ResourceService {
       per_category_limit: BROWSE_PER_CATEGORY_LIMIT,
       veteran_state: zip ? stateFromZip(zip) : null,
     };
-    // Discover and Map issue this exact query; the cache makes that one request.
+    // Home, Discover and Map issue this exact query; the cache makes it one request.
     return cachedRead(`browse:${JSON.stringify(body)}`, async () => {
       const rows = await supabaseRequest<SearchRow[]>('/rest/v1/rpc/search_resources', {
         method: 'POST',
         body,
       });
       const now = new Date();
-      return capUncontactable(
-        capDenseGeneral(
-          rows.map((row) => toResult(row, now)).sort(compareByDistanceThenVerification),
-        ),
-      );
+      const results = rows.map((row) => toResult(row, now)).sort(compareByDistanceThenVerification);
+      seedResourceCache(results);
+      return results;
     });
   }
 
   async getById(id: string): Promise<Resource | null> {
-    // Saved resolves one request per saved id on every visit, and the detail page
-    // re-reads whatever the veteran just tapped — both worth deduping.
+    // Usually already primed by the list the veteran tapped from.
     return cachedRead(`resource:${id}`, async () => {
       const rows = await supabaseRequest<Resource[]>(
         `/rest/v1/resources?id=eq.${encodeURIComponent(id)}&limit=1`,
       );
-      return rows[0] ?? null;
+      return rows[0] ? withPlaceholderHours(rows[0]) : null;
     });
   }
-}
 
-export { SupabaseResourceService };
+  async getByIds(ids: string[]): Promise<Map<string, Resource>> {
+    // Retired ids are simply absent from the map.
+    const found = new Map<string, Resource>();
+    const missing: string[] = [];
+    for (const id of ids) {
+      const cached = peekCache<Resource>(`resource:${id}`);
+      if (cached) found.set(id, cached);
+      else missing.push(id);
+    }
+    if (missing.length === 0) return found;
+    const list = missing.map((id) => `"${id.replace(/"/g, '')}"`).join(',');
+    const rows = await supabaseRequest<Resource[]>(
+      `/rest/v1/resources?id=in.(${encodeURIComponent(list)})`,
+    );
+    for (const row of rows) {
+      const resource = withPlaceholderHours(row);
+      primeCache(`resource:${row.id}`, resource);
+      found.set(row.id, resource);
+    }
+    return found;
+  }
+}

@@ -1,61 +1,19 @@
 /**
- * VA-accredited VSO organizations adapter (replaces `vsoRepresentatives.ts`).
+ * VA-accredited Veterans Service Organizations, from VA OGC's organization export.
  *
- * Veterans Service Organizations accredited by VA's Office of General Counsel
- * file and manage VA benefit claims for veterans, for free. This is the single
- * most useful thing an older veteran can be pointed at, and it is what the
- * `legal` and `benefits_help` categories should be made of.
+ * Accredited VSOs (American Legion, VFW, DAV, state departments of veterans
+ * affairs, NACVSO's County Veterans Service Officers, …) file and manage VA
+ * claims for free — the most useful thing an older veteran can be pointed at.
  *
- * WHY THIS REPLACED THE REPRESENTATIVE LIST
- *
- * The previous source ingested the OGC *representative* export: 7,759 rows, each
- * one an individual person — "VSO Rep — Aakeem Robinson", no street address,
- * 2,389 with no phone. For a veteran that is a phone book of strangers, not a
- * place to go. OGC also publishes an *organization* export that maps every
- * accredited rep to the organization they represent and that organization's
- * phone. Rolling that up by organization × locality yields ~7,200 rows naming an
- * organization a veteran has heard of and a town near them.
- *
- * One caveat drives the copy in `normalize`: the export carries a single phone
- * per organization — its **national** line — and none at all for CVSOs. So rows
- * say what the number actually is and how to reach the local person, rather than
- * implying a branch office with a local number.
- *
- * It also fixes provenance. The rep list had **no committed parser** — it was a
- * manual browser download into a JSON file. This export is fetched directly over
- * HTTP, so the source refreshes itself.
- *
- * Only 84 distinct organizations exist, and they are the real ones: American
- * Legion, VFW, DAV, the state departments of veterans affairs, and NACVSO —
- * whose 2,134 representatives are the County Veterans Service Officers that
- * NACVSO's own site blocks automated access to.
- *
- * WHY THESE ARE STATEWIDE REFERRALS AND NOT MAP PINS
- *
- * They used to be. Each office was placed at its ZIP centroid, which read as
- * "the honest finest granularity" but was not honest at all: the second data
- * audit (2026-07-28) found all 14,316 rows — 64% of the entire veteran
- * catalogue — had no street address, so the app drew a pin and printed a
- * confident "2.4 mi" for a location that does not exist, and Directions routed
- * to the geometric centre of a ZIP code.
- *
- * The export cannot support a pin. It gives an organization, a town, and a
- * *national* phone line — and for CVSOs, no phone at all. So this adapter now
- * emits what the data actually is: one referral per **organization × state**,
- * with null coordinates and a `state:XX` tag, which surfaces in the app's
- * "Statewide & national veteran help" section (`isNationalReferral` in
- * src/services/resources/sortResults.ts) with the number to call.
- *
- * Collapsing to state also fixes a ranking problem: with no coordinates there is
- * no way to pick the *nearest* of 250 Texas county offices, so a per-office row
- * would be a coin flip. "Texas Veterans Commission, here is the number" beats
- * "American Legion — accredited rep in Plano, TX" attached to a DC phone line.
- * Rep counts and the largest towns move into the description, so the veteran can
- * still see there is local coverage.
- *
- * ~14,316 rows -> ~1,200. See supabase/migrations/0027_search_state_scoped_referrals.sql
- * for the matching server-side state scoping and cap.
+ * The export gives an organization, a town, and a single *national* phone line
+ * (none for CVSOs) — no street address. So rows are statewide referrals, one per
+ * organization × state, with null coordinates and a `state:XX` tag; they surface
+ * in the app's "Statewide & national veteran help" section (`isNationalReferral`
+ * in src/services/resources/sortResults.ts). Rep counts and the busiest towns go
+ * in the description. Server-side scoping: 0027_search_state_scoped_referrals.sql.
  */
+import { sleep } from '../lib/http.ts';
+import { decodeEntities, parseStateFilter, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -67,11 +25,8 @@ import type {
 const PROVIDER = 'vso-organizations';
 const SOURCE_URL = 'https://www.va.gov/ogc/apps/accreditation/';
 const REQUEST_TIMEOUT_MS = 120_000;
-// The export is a single ~4.7 MB body and va.gov drops the connection
-// (ECONNRESET) if it's re-requested soon after a previous large download —
-// observed 2026-07-27, where four attempts ~7s apart all failed and a fresh run
-// half a minute later succeeded first time. Back off in whole tens of seconds so
-// a transient throttle doesn't fail the monthly cron.
+// va.gov drops the ~4.7 MB export (ECONNRESET) when re-requested soon after a
+// previous download, so back off in tens of seconds rather than a few.
 const MAX_RETRIES = 4;
 const RETRY_BASE_MS = 3_000;
 
@@ -95,21 +50,6 @@ const COLUMNS = [
  * redesign that guts the table.
  */
 const MIN_OFFICES = 2_500;
-
-const decodeEntities = (s: string): string =>
-  s
-    .replace(/&#(\d+);/g, (_, d: string) => String.fromCharCode(Number(d)))
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, ' ');
-
-const trimOrNull = (s: string | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
 
 /** The export guards text cells with a leading apostrophe (`'60429`). */
 const unguard = (s: string): string => s.replace(/^'/, '').trim();
@@ -160,7 +100,7 @@ async function fetchExport(url: string): Promise<string> {
       console.warn(
         `[ingest] vso-organizations: ${String(err).slice(0, 80)} — retrying in ${wait / 1000}s`,
       );
-      await new Promise((r) => setTimeout(r, wait));
+      await sleep(wait);
     } finally {
       clearTimeout(timeout);
     }
@@ -188,10 +128,7 @@ function parseOffices(html: string): Office[] {
     const city = trimOrNull(row[6]);
     const state = trimOrNull(row[7])?.toUpperCase();
     const zip = unguard(row[8]).slice(0, 5);
-    // The ZIP used to gate the row, back when it placed the office at a ZIP
-    // centroid. Nothing downstream uses it now that the grain is organization ×
-    // state, so a malformed ZIP must not cost us a representative — if it were an
-    // organization's only rep in a state, the whole referral would vanish.
+    // A malformed ZIP must not drop a rep: nothing downstream needs it at state grain.
     if (!organization || !city || !state) continue;
 
     const key = `${organization}|${state}|${city.toLowerCase()}`;
@@ -274,10 +211,8 @@ function normalize(org: StateOrg, today: string): NormalizedResource {
       ? 'One VA-accredited representative works'
       : `${org.repCount} VA-accredited representatives work`;
 
-  // The export carries ONE phone per organization — its national line, not a
-  // local one — and none at all for CVSOs. Saying "call this office" would be a
-  // lie, so the copy says exactly what the number is and how to find the local
-  // person. Getting this wrong is how a veteran ends up dialling another state.
+  // The one phone is the organization's national line (none for CVSOs), so the
+  // copy says exactly what the number is and how to reach the local person.
   const howToReach = isCvso
     ? 'Ask your county government for the Veterans Service Officer, or search for your county veterans service office — the service is free.'
     : org.phone
@@ -299,10 +234,7 @@ function normalize(org: StateOrg, today: string): NormalizedResource {
       `${reps} across ${org.state}, in ${describeCoverage(org.towns)}. They can file or appeal ` +
       `your VA claim with you — disability compensation, pension, survivor benefits — and they do ` +
       `it for free. You never pay a VSO to represent you. ${howToReach}`,
-    // No street address and no coordinates: the export has neither, and
-    // inventing a ZIP centroid is what this adapter used to get wrong. Null
-    // address is also what makes `isNationalReferral` treat this as the
-    // statewide referral it is.
+    // The export has no street address; null address makes this a statewide referral.
     address: null,
     latitude: null,
     longitude: null,
@@ -359,15 +291,7 @@ export const createVsoOrganizationsSource: SourceFactory = (
         );
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
 
       const results: NormalizedResource[] = [];
       for (const org of collapseByState(offices)) {

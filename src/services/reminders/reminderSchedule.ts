@@ -9,18 +9,12 @@ import {
 import type { ResourceCategory } from '@/types/resource';
 
 /**
- * Turns "remind me when this opens" into the exact set of weekly triggers the OS
- * should hold, and the words each one says.
+ * Turns "remind me when this opens" into the weekly triggers the OS should hold
+ * and the words each one says. Pure, so it is testable; the OS layer lives in
+ * `notificationScheduler`.
  *
- * Everything here is pure and takes its inputs explicitly, because this is where
- * the feature's judgment lives and it is the only part worth testing: the OS
- * layer around it (`notificationScheduler`) is untestable in vitest's node
- * environment, so anything that could be wrong belongs on this side of the line.
- *
- * Times are wall-clock, local to the device — the same simplification
- * `isOpenNow` already makes, because `resources` carries no timezone. A bell
- * that disagreed with the "Open now" pill three feet above it would be worse
- * than one that is uniformly device-local. See the Decision Log.
+ * Times are device-local wall-clock, matching `isOpenNow` (resources carry no
+ * timezone), so a bell never disagrees with the "Open now" pill.
  */
 
 const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
@@ -28,31 +22,25 @@ const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
 /** Minutes before opening that the reminder fires. */
 export type ReminderLead = 0 | 15 | 30 | 60;
 
-/** Offered in this order — the default leads, since most people keep it. */
+/** Every lead a stored preference may carry. */
 export const LEAD_OPTIONS: readonly ReminderLead[] = [30, 0, 15, 60];
 
 export const DEFAULT_LEAD: ReminderLead = 30;
 
 /** How long before closing the optional second reminder fires. */
-export const CLOSING_LEAD_MINUTES = 60;
+const CLOSING_LEAD_MINUTES = 60;
 
 /**
- * iOS silently discards local notifications past 64 pending requests, and a
- * repeating weekly trigger costs one slot for as long as it lives. A `Mon-Fri`
- * resource with closing warnings therefore costs ten. Budget in slots rather
- * than resources, because the data is bimodal: clinics cost 5–10 while the far
- * more numerous pantries (`Sat 09:00-11:00`) cost 1–2.
+ * iOS silently discards local notifications past 64 pending, and each weekly
+ * trigger holds a slot (a `Mon-Fri` resource with closing warnings costs ten).
+ * Budgeted in slots, not resources, with headroom under 64.
  */
 export const SLOT_BUDGET = 56;
 
 /**
- * What the planner needs to know about a resource, captured when we last had the
- * full record in hand.
- *
- * It is a snapshot rather than a live read so reminders keep working cold and
- * offline — rebuilding the schedule must never wait on the network. `sourceLabel`
- * arrives pre-composed from the feature layer (via `toReminderSnapshot`) so this
- * module stays free of presentation imports and the notification can never claim
+ * What the planner needs about a resource, captured when the full record was last
+ * loaded, so rebuilding the schedule never waits on the network. `sourceLabel`
+ * arrives pre-composed (`toReminderSnapshot`) so a notification never claims
  * more certainty than the card the veteran saw.
  */
 export interface ReminderSnapshot {
@@ -92,12 +80,8 @@ export interface PlannedNotification {
 }
 
 /**
- * Whether a resource can carry a reminder at all.
- *
- * Three exclusions, each earned: hours we can't parse (81% of live rows) have
- * nothing to schedule; a 24/7 crisis line has no opening to wait for, so a bell
- * there would be pure noise; and `jobs` has no visiting hours at all, which is
- * why `StatusPill` already hides for it.
+ * Whether a resource can carry a reminder: not unparseable hours, not 24/7 (no
+ * opening to wait for), and not `jobs` (no visiting hours).
  */
 export function isRemindable(hours: string | null, category: ResourceCategory): boolean {
   if (category === 'jobs') return false;
@@ -106,11 +90,9 @@ export function isRemindable(hours: string | null, category: ResourceCategory): 
 }
 
 /**
- * A minute-of-week resolved to the slot a weekly trigger needs.
- *
- * The modulo is load-bearing: a 60-minute lead on a place that opens Monday
- * 00:30 fires *Sunday* 23:30, and a naive subtraction would put it on a negative
- * weekday that the OS silently refuses.
+ * A minute-of-week resolved to a weekly trigger slot. The modulo wraps a lead
+ * before Sunday midnight back to Saturday instead of a negative weekday the OS
+ * silently refuses.
  */
 function slotFor(minuteOfWeek: number): { weekday: number; hour: number; minute: number } {
   const wrapped = ((minuteOfWeek % MINUTES_PER_WEEK) + MINUTES_PER_WEEK) % MINUTES_PER_WEEK;
@@ -129,13 +111,8 @@ function leadPhrase(minutes: number): string {
 }
 
 /**
- * The words a notification says.
- *
- * Every body carries the source line and ends in "call ahead to confirm" — the
- * same hedge `trustWarning` gives on the card, so a lock-screen banner can never
- * claim more than the app does. When the source is stale, `sourceLabel` already
- * degrades to "may be outdated", so the warning sharpens itself with no branch
- * here. Nothing states or implies advice.
+ * The words a notification says. Every body carries the source line and ends in
+ * "call ahead to confirm", so a banner never claims more than the app does.
  */
 function bodyFor(
   kind: ReminderKind,
@@ -154,11 +131,8 @@ function bodyFor(
 }
 
 /**
- * Every trigger a single reminder wants, before the budget gets a say.
- *
- * Openings and closings are returned separately because the budget treats them
- * differently: under pressure the app drops the nice-to-have and keeps the
- * reason the veteran set the reminder in the first place.
+ * Every trigger a single reminder wants, before the budget gets a say. Openings
+ * and closings are separate because under pressure closings are dropped first.
  */
 export function planForReminder(pref: ReminderPreference): {
   open: PlannedNotification[];
@@ -189,8 +163,7 @@ export function planForReminder(pref: ReminderPreference): {
 
     if (!pref.warnBeforeClosing) continue;
 
-    // A "closes in an hour" alert that would land before the doors open is a
-    // lie, so that day's warning is dropped rather than clamped forward.
+    // A closing warning that would land before opening is dropped, not clamped.
     if (window.close - CLOSING_LEAD_MINUTES <= window.open) continue;
 
     const closeAt = dayStart + window.close - CLOSING_LEAD_MINUTES;
@@ -216,13 +189,10 @@ export function slotCost(pref: ReminderPreference): number {
 }
 
 /**
- * The whole device schedule, clamped to what the OS will actually hold.
- *
- * Openings first, in the order they were set, so a squeeze drops the newest
- * closing warning rather than silently disarming someone's oldest reminder.
- * `droppedClosingFor` names every resource that asked for a closing warning and
- * ended up without one — whether the budget took it or the window was too short
- * — so the sheet can say so plainly instead of quietly doing less than it said.
+ * The whole device schedule, clamped to `SLOT_BUDGET`. Openings first, oldest
+ * first, so a squeeze drops closing warnings before any reminder.
+ * `droppedClosingFor` names resources that asked for a closing warning and
+ * didn't get one, so the sheet can say so.
  */
 export function planAll(prefs: ReminderPreference[]): {
   planned: PlannedNotification[];

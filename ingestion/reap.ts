@@ -1,32 +1,16 @@
 /**
  * Reaper — deletes a provider's rows that its latest run did not refresh, i.e.
- * the resources that have disappeared from the upstream feed.
- *
- * WHY THIS EXISTS
- *
- * `upsert.ts` only ever upserts. Nothing has ever removed a row that vanished
- * from a provider, so a closed VA clinic or a shut-down food pantry stays in the
- * catalogue forever, indistinguishable from an open one — the 2026-07-28 data
- * audit flagged this as the one data-integrity gap with no mechanism at all
- * behind it. Sending a veteran to a place that closed is worse than not listing
- * it, because they spend the trip finding out.
+ * the resources that disappeared upstream. `upsert.ts` only ever upserts, so
+ * without this a closed clinic would stay listed forever.
  *
  * Every adapter stamps `ingested_at` with the run date, so "not refreshed by the
  * latest run" is exactly `ingested_at < <run date>` scoped to one provider.
  *
- * THE SAFETY FLOOR IS THE WHOLE DESIGN
- *
- * A reaper that trusts its input is a data-loss bug waiting for a bad afternoon.
- * Providers in this pipeline fail *partially*: Feeding America 500s under
- * parallel load and the adapter tolerates losing up to 10% of its pages, va.gov
- * drops large downloads with ECONNRESET, and the Census geocoder times out in
- * 20-minute batches. Any of those can end a run holding a fraction of the real
- * dataset, and a naive delete would then wipe the rest of the category.
- *
- * So a reap that would remove more than MAX_REAP_FRACTION of a provider's rows
- * refuses and exits non-zero. A genuine mass removal — a provider changing its
- * id scheme, say — is then a deliberate migration a human writes, which is what
- * 0028_purge_zip_centroid_vso_rows.sql is.
+ * Providers fail *partially* (Feed America 500s under load, va.gov drops large
+ * downloads), and a naive delete after a partial fetch would wipe the rest of
+ * the category. So a reap that would remove more than the max fraction of a
+ * provider's rows refuses and exits non-zero; a genuine mass removal is a
+ * migration a human writes (e.g. 0028_purge_zip_centroid_vso_rows.sql).
  *
  *   node --experimental-strip-types ingestion/reap.ts <provider> \
  *     [--run-date=YYYY-MM-DD] [--max-fraction=0.2] [--dry-run]
@@ -35,13 +19,9 @@ import { resolve } from 'node:path';
 import { loadEnvFile } from './lib/env.ts';
 
 /**
- * Refuse to delete more than this share of a provider's rows in one reap.
- * A fifth is comfortably above real churn for a *directory of places* (providers
- * move a handful of sites a month) and far below any partial-fetch failure mode.
- *
- * A feed of postings rather than places — USAJOBS, where listings close
- * constantly and high turnover is the correct behaviour, not a symptom — needs a
- * looser floor, passed explicitly at the call site so the exception is visible.
+ * Refuse to delete more than this share of a provider's rows in one reap: well
+ * above real churn for a directory of places, well below a partial fetch. A
+ * high-churn feed must pass a looser `--max-fraction` explicitly at the call site.
  */
 const DEFAULT_MAX_REAP_FRACTION = 0.2;
 
@@ -90,16 +70,10 @@ async function countRows(rest: Rest, filter: string): Promise<number> {
   });
   if (!response.ok) throw new Error(`reap: count HTTP ${response.status}`);
 
-  // Content-Range is `<range>/<total>` — e.g. `0-999/17139`, or `*/0` when
-  // nothing matches. The total is `*` when the count was NOT computed, which
-  // happens if `Prefer: count=exact` is stripped by a proxy or dropped by a
-  // future PostgREST version.
-  //
-  // This parse is the floor's single point of failure, so it is strict.
-  // `Number('*')` is NaN, and every comparison against NaN is false — including
-  // `NaN > maxFraction`. An unchecked NaN therefore walks straight through the
-  // zero-rows check, the no-stale check AND the floor, and deletes the
-  // provider's entire row set with the safety guard silently off.
+  // Content-Range is `<range>/<total>` (`0-999/17139`, or `*/0` for no match);
+  // the total is `*` if the exact count was not computed. This parse is the
+  // floor's single point of failure: `Number('*')` is NaN, every comparison with
+  // NaN is false, and an unchecked NaN would walk past every guard and delete all.
   const total = response.headers.get('content-range')?.split('/')[1];
   if (total === undefined) throw new Error('reap: no content-range in count response');
   const count = Number(total);

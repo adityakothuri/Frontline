@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PressableScale } from '@/components';
+import { AppText, Glyph, PressableScale } from '@/components';
 import { colors, pressScale, spacing } from '@/theme';
 import { tapSelection } from '@/lib/haptics';
 import { humanizeDocument, VETERAN_DOCUMENT_LABELS, type VeteranDocument } from '@/types/need';
@@ -9,25 +8,17 @@ import { humanizeDocument, VETERAN_DOCUMENT_LABELS, type VeteranDocument } from 
 type DocumentChecklistProps = {
   /** Document keys the listing itself names (`dd214`, `photo_id`, …). */
   documents: string[];
-  /** Plain-language documents the AI plan suggests bringing. Merged in after the
-   *  listing's own, deduplicated by label. */
+  /** Documents the AI plan suggests; merged after the listing's, deduped by label. */
   suggested?: string[];
-  /** What the veteran told us they already have. Those rows arrive pre-ticked
-   *  and say so, which is the promise onboarding made when it asked. */
+  /** Documents the veteran said they have; those rows arrive pre-ticked. */
   onHand?: VeteranDocument[];
 };
 
 type Item = { key: string; label: string; have: boolean };
 
 /**
- * "What should I bring?" — checkable rows a veteran can tick off before they go.
- * State is local and intentionally not persisted (a packing aid, not saved data).
- *
- * Two inputs the first version threw away: the plan's `whatToBring`, generated
- * for exactly this list and never rendered, and the profile's documents on hand,
- * asked for at onboarding "so we can tell you what to bring" and never read. The
- * rows a veteran already has are ticked and labelled; the rest is what is left
- * to find, which is the only part of the list that is actually a job.
+ * "What should I bring?" — rows to tick off before going. State is local and not
+ * persisted (a packing aid, not saved data).
  */
 export function DocumentChecklist({
   documents,
@@ -69,9 +60,7 @@ export function DocumentChecklist({
         // An owned row starts ticked and un-ticks on tap ("not with me after
         // all"); every other row starts clear and ticks when packed.
         const checked = item.have ? !ticked.has(item.key) : ticked.has(item.key);
-        // Strike-through means "packed, done" and is earned only by a tick the
-        // veteran made. Owning a document is not the same as having packed it,
-        // so an owned row keeps its full-strength label and says why it is ticked.
+        // Strike-through only for the veteran's own ticks: owning is not packing.
         const packed = checked && !item.have;
         return (
           <PressableScale
@@ -85,15 +74,13 @@ export function DocumentChecklist({
             scaleTo={pressScale.subtle}
             style={styles.row}
           >
-            <Ionicons
-              name={checked ? 'checkbox' : 'square-outline'}
-              size={22}
-              color={checked ? colors.accent : colors.textMuted}
-            />
+            <View style={[styles.box, checked && styles.boxOn]}>
+              {checked ? <Glyph name="check" size={16} color={colors.surface} /> : null}
+            </View>
             <View style={styles.text}>
               <AppText
                 variant="body"
-                color={packed ? 'textMuted' : 'textPrimary'}
+                color={packed ? 'textSecondary' : 'textPrimary'}
                 style={packed ? styles.checkedText : undefined}
               >
                 {item.label}
@@ -111,18 +98,12 @@ export function DocumentChecklist({
   );
 }
 
-/**
- * One list from three sources. The listing's keys come first and keep their
- * canonical labels; the plan's suggestions follow, dropped where they repeat a
- * label already present (the model says "your DD-214" for a row the listing
- * calls `dd214`). Rows the veteran owns sink to the bottom: the top of the list
- * is the work.
- */
+/** Merges listing keys, then plan suggestions (minus repeats), with owned rows
+ *  sunk to the bottom so the top of the list is what is left to find. */
 function buildItems(documents: string[], suggested: string[], onHand: VeteranDocument[]): Item[] {
   const owned = onHand.map((doc) => VETERAN_DOCUMENT_LABELS[doc].toLowerCase());
-  // One direction only: the row's label has to contain the owned document's name
-  // ("your DD-214 discharge papers" ⊇ "dd-214"). The reverse let a one-word
-  // suggestion like "ID" claim to be the veteran's photo ID.
+  // One direction only: the label must contain the owned name, or a one-word
+  // suggestion like "ID" would match photo ID.
   const has = (label: string) => {
     const l = label.toLowerCase();
     return owned.some((o) => l.includes(o));
@@ -141,15 +122,25 @@ function buildItems(documents: string[], suggested: string[], onHand: VeteranDoc
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.xxs },
-  // A real 44pt row; it was ~30pt of text with 4pt of padding.
+  list: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: 44,
-    paddingVertical: spacing.xs,
+    gap: spacing.md,
+    minHeight: 52,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
+  box: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
+  },
+  boxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   text: { flex: 1, gap: spacing.xxs },
   checkedText: { textDecorationLine: 'line-through' },
 });

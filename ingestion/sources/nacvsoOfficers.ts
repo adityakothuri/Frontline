@@ -1,51 +1,21 @@
 /**
  * County Veterans Service Officers, via the NACVSO member directory.
  *
- * WHY THIS IS THE MOST IMPORTANT SOURCE IN THE CATALOGUE
+ * A CVSO is a county employee whose job is filing and appealing VA claims for
+ * local veterans, free. No central list exists; NACVSO's directory is the closest.
  *
- * A CVSO is a county-government employee whose entire job is filing and appealing
- * VA claims for local veterans, for free. For a veteran who needs to actually
- * *start* a claim, this is the front door — more useful than any hotline. And the
- * data exists nowhere centrally: the VA does not publish it, and most state
- * Departments of Veterans Affairs publish it only as a JS widget or behind a
- * bot wall.
+ * Robots: nacvso.org disallows the Novi AMS JSON backend (`/api/`, `/novi-api/`),
+ * which this never touches, but not the rendered profile pages — and robots.txt
+ * advertises the sitemap that lists them. Only that HTML is read, with low
+ * concurrency and a fixed delay (~2,900 pages against a small site).
  *
- * The third data pass measured `benefits_help` at 430 usable rows and `legal` at
- * **zero**. This source is the fix for both.
- *
- * WHY SCRAPING THIS IS PERMITTED — AND WHY I PREVIOUSLY GOT THAT WRONG
- *
- * The 2026-07-27 audit recorded NACVSO as "do not scrape", which was a mistake
- * born of conflating two different paths. `https://www.nacvso.org/robots.txt`
- * disallows `/api/`, `/novi-api/`, `/admin/`, `/login`, `/client-login`, `/*.php`
- * and `/*.axd` — that is the Novi AMS **JSON backend**, and it stays off limits.
- * It does *not* disallow `/county-veterans-service-officers/`, and robots.txt
- * itself advertises the sitemap that enumerates every one of those pages. So the
- * rendered HTML is fair game; the API is not. This adapter reads only the HTML.
- *
- * Sitemap (verified 2026-07-28): 2,764 county officer profiles + 173 state
- * officer profiles. Each page is one *officer*, and offices average ~4.4 of them,
- * so rows are collapsed by office — 2,931 profiles yield 673 offices.
- *
- * ON POLITENESS
- *
- * ~2,900 page fetches against a small association's site is the one place in this
- * pipeline where an impolite crawler would genuinely be felt. robots.txt sets no
- * Crawl-delay, so this uses a conservative fixed delay and low concurrency, and
- * it is fully resumable — a failed page is skipped, not retried into the ground.
- *
- * ON ADDRESSES
- *
- * The directory prints addresses as `<street> <city>, <ST> <ZIP>` with no comma
- * before the city ("600 West 4th Street Davenport, IA 52801"), so there is no
- * reliable way to tell where the street ends and a two-word city begins. Rather
- * than guess — and risk the ZIP-centroid class of error all over again — the full
- * string is kept for display, state and ZIP are parsed from the tail (which is
- * unambiguous), and the geocoder is given street+state+ZIP. A row that fails to
- * geocode still has a real address and a real phone number, which is the part a
- * veteran actually needs.
+ * Each profile is one officer; rows collapse by office (~4.4 officers each).
+ * Addresses print as "<street> <city>, <ST> <ZIP>" with no comma before the city,
+ * so the street/city split is ambiguous: the full string is displayed and the
+ * geocoder gets street + state + ZIP.
  */
-import { fetchText } from '../lib/http.ts';
+import { fetchText, sleep } from '../lib/http.ts';
+import { decodeEntities, parseStateFilter, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -69,15 +39,8 @@ const DELAY_MS = 350;
 const REQUEST_TIMEOUT_MS = 30_000;
 
 /**
- * Below this many offices, assume the directory or the page shape changed rather
- * than ingest a fraction.
- *
- * Measured on a full national run, not estimated: 2,931 officer profiles collapse
- * to **673 offices** — about 4.4 accredited officers per office. Planning assumed
- * 1.5 and projected 1,800-2,200, which was wrong by a factor of three; an earlier
- * floor of 900 sat *above* the true figure and failed a completed 25-minute run.
- * The floor is now set well under it, so ordinary churn cannot trip it while a
- * parser or layout break (which yields near-zero) still fails loudly.
+ * Below this many offices, assume the page shape changed. A full run yields ~673;
+ * a parser break yields near zero.
  */
 const MIN_OFFICES = 500;
 
@@ -87,24 +50,6 @@ const MIN_PROFILE_URLS = 1_500;
 /** `Fricke Bldg, 608 N Court St Carroll, IA 51401 United States` → parts. */
 const ADDRESS_TAIL = /^(.*?),?\s*([A-Z]{2})\.?\s+(\d{5})(?:-\d{4})?\s*(?:United States)?\s*$/;
 const PHONE = /(\(?\d{3}\)?[.\-\s]?\d{3}[.\-\s]?\d{4})/;
-
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
-const trimOrNull = (s: string | undefined | null): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-const decodeEntities = (s: string): string =>
-  s
-    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&');
 
 /** Rendered page → visible text lines, scripts and styles removed. */
 function textLines(html: string): string[] {
@@ -144,16 +89,12 @@ function parseProfile(html: string): Office | null {
   const organization = trimOrNull(lines[anchor + 1]);
   if (!organization) return null;
 
-  // The parent-member name embeds the state ("…Veteran Service Office-IA"). That
-  // is the most reliable signal on the page, and it is resolved FIRST because it
-  // is what validates the address below.
+  // The parent-member name embeds the state ("…Veteran Service Office-IA"); it
+  // validates the address below.
   const suffix = /-([A-Z]{2})$/.exec(organization);
 
-  // The office's address and phone follow the name within a few lines. The window
-  // is kept tight and the results validated, because the page footer carries
-  // NACVSO's own Washington DC address — a wider or unchecked scan cheerfully
-  // assigned "Washington, DC 20001" to a Polk County, Iowa office. Inventing a
-  // plausible-but-wrong location is the exact failure the ZIP-centroid bug was.
+  // Address and phone follow within a few lines. The window stays tight because
+  // the page footer carries NACVSO's own Washington DC address.
   const window = lines.slice(anchor + 2, anchor + 6);
   let address: string | null = null;
   let street: string | null = null;
@@ -223,9 +164,7 @@ function normalize(office: Office, today: string): NormalizedResource {
     address: office.address,
     latitude: null,
     longitude: null,
-    // The city cannot be split off the street reliably (see the header note), so
-    // the geocoder gets street + state + ZIP, which is enough for a match in
-    // most cases. Offices with no printed address stay unpinned but callable.
+    // Street + state + ZIP only (see header). No printed address → unpinned but callable.
     geocode: office.street
       ? { street: office.street, city: null, state: office.state, zip: office.zip }
       : undefined,
@@ -296,15 +235,7 @@ export const createNacvsoOfficersSource: SourceFactory = (
         );
       }
 
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
+      const stateFilter = parseStateFilter(query.state);
       // A state-scoped run is for spot-checks; the sitemap gives no state, so it
       // still has to fetch every page and filter after parsing. Cap the work.
       const targets = stateFilter ? urls.slice(0, 400) : urls;

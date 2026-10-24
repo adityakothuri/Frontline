@@ -16,11 +16,11 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, durations, pressScale, radii, shadows, spacing, springs } from '@/theme';
 import { easings } from '@/theme/motionPresets';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { AppText } from './AppText';
+import { Glyph } from './Glyph';
 import { PressableScale } from './PressableScale';
 
 /** Past this fraction of its own height, a release dismisses instead of springing back. */
@@ -30,8 +30,8 @@ const DISMISS_VELOCITY = 800;
 
 type BottomSheetProps = {
   visible: boolean;
-  /** Request to close (backdrop tap, close button, Android back, drag down).
-   * The sheet animates out and unmounts itself once `visible` flips false. */
+  /** Request to close (backdrop, close button, Android back, drag down). The
+   *  sheet animates out and unmounts once `visible` flips false. */
   onClose: () => void;
   title?: string;
   /** Portion of the window the sheet may grow to before its body scrolls. */
@@ -39,11 +39,9 @@ type BottomSheetProps = {
   children: ReactNode;
 };
 
-// A modal sheet that slides up from the bottom over a dimmed backdrop, and can
-// be dragged back down to dismiss. The drag is attached to the grabber and
-// header only, not the body — a pan over scrollable content has to scroll.
-// Content taller than `maxHeightRatio` scrolls inside the sheet. No text inputs
-// live in sheets yet; add KeyboardAvoidingView here the day one does.
+// A modal sheet over a dimmed backdrop, dragged down to dismiss. The drag is on
+// the grabber and header only, so the body can scroll. No KeyboardAvoidingView:
+// add one if a sheet ever hosts a text input.
 export function BottomSheet({
   visible,
   onClose,
@@ -54,9 +52,7 @@ export function BottomSheet({
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
-  // How far the sheet sits below its resting place: `windowHeight` when fully
-  // offscreen, 0 when open. One value covers both the entrance and the drag, so
-  // a release mid-animation has a single source of truth to spring from.
+  // Distance below the resting place (0 = open). Shared by entrance and drag.
   const offset = useSharedValue(windowHeight);
   const sheetHeight = useSharedValue(windowHeight);
   // Stays mounted through the exit animation, so closing never snaps.
@@ -64,9 +60,8 @@ export function BottomSheet({
 
   const unmount = useCallback(() => setMounted(false), []);
 
-  // Deliberately not keyed on `mounted`: setting it here would re-run this and
-  // restart the entrance a frame after it began. Closing while already closed
-  // is a no-op, so the exit branch is safe to run on first render.
+  // Not keyed on `mounted`, which would restart the entrance. The exit branch is
+  // a safe no-op on first render.
   useEffect(() => {
     if (visible) {
       setMounted(true);
@@ -91,8 +86,7 @@ export function BottomSheet({
     [sheetHeight],
   );
 
-  // Dragging is direct manipulation, not decoration, so it stays enabled under
-  // Reduce Motion — taking it away would remove a control, not calm one.
+  // Direct manipulation, so it stays enabled under Reduce Motion.
   const dragToDismiss = Gesture.Pan()
     .onUpdate((e) => {
       // Never past the resting position: the sheet does not drag upward.
@@ -117,15 +111,13 @@ export function BottomSheet({
 
   return (
     <Modal visible transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
-      {/* A `Modal` hosts its own native window, outside the app's gesture root.
-          On Android a `GestureDetector` inside it is inert without a root of its
-          own; iOS tolerates the omission, which is how it went unnoticed. */}
+      {/* A Modal is its own native window, outside the app's gesture root; on
+          Android a GestureDetector inside it needs its own root. */}
       <GestureHandlerRootView style={styles.root}>
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable
             accessibilityRole="button"
-            // Distinct from the header "Close" button so a screen reader doesn't
-            // announce two identical "Close" controls for the same sheet.
+            // Distinct from the header "Close" so screen readers don't hear two.
             accessibilityLabel="Dismiss"
             style={styles.fill}
             onPress={onClose}
@@ -147,9 +139,14 @@ export function BottomSheet({
             <View>
               <View style={styles.grabber} />
               <View style={styles.header}>
-                {title ? <AppText variant="title">{title}</AppText> : <View />}
-                {/* A real 44pt target. The 32pt disc stays the visible control;
-                    the Pressable around it is the full square. */}
+                {title ? (
+                  <AppText variant="title" style={styles.title}>
+                    {title}
+                  </AppText>
+                ) : (
+                  <View />
+                )}
+                {/* A real 44pt target around the 32pt visible square. */}
                 <PressableScale
                   accessibilityRole="button"
                   accessibilityLabel="Close"
@@ -158,7 +155,7 @@ export function BottomSheet({
                   containerStyle={styles.closeTarget}
                   style={styles.close}
                 >
-                  <Ionicons name="close" size={18} color={colors.textSecondary} />
+                  <Glyph name="close" size={20} />
                 </PressableScale>
               </View>
             </View>
@@ -196,6 +193,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginBottom: spacing.md,
   },
+  title: { flexShrink: 1, textTransform: 'uppercase' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,10 +212,10 @@ const styles = StyleSheet.create({
   close: {
     width: 32,
     height: 32,
-    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
   },
   body: { paddingBottom: spacing.sm },
 });

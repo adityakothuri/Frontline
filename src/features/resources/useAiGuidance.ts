@@ -11,23 +11,15 @@ export type AiGuidance<T> = {
 
 /**
  * One AI call's lifecycle: load on mount, expose a retry, cancel on unmount.
- *
- * The resource page fires two of these (a summary and a next-step plan) and they
- * resolve independently, so each block paints as soon as its own call lands
- * instead of both waiting on the slower one. Keeping the lifecycle here is what
- * makes that independence cheap — the screen holds two `useAiGuidance` calls
- * rather than two near-identical effects.
- *
  * `load` is read through a ref so callers can pass an inline closure; the call
- * re-runs when `resetKey` (the resource id) changes or `retry()` is tapped.
+ * re-runs when `resetKey` changes or `retry()` is called.
  */
 export function useAiGuidance<T>(load: () => Promise<T>, resetKey: string): AiGuidance<T> {
   const [data, setData] = useState<T | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
-  // Kept in sync in its own effect (declared first, so it lands before the load
-  // effect below re-runs) rather than during render, which React forbids.
+  // Synced in an effect declared before the load effect, so it updates first.
   const loadRef = useRef(load);
   useEffect(() => {
     loadRef.current = load;
@@ -43,10 +35,7 @@ export function useAiGuidance<T>(load: () => Promise<T>, resetKey: string): AiGu
         if (active) setData(result);
       })
       .catch((error) => {
-        // A real AI proxy can fail — surface a retry instead of skeletons forever.
-        // Reported as well as shown: every resource read goes to Sentry, and AI
-        // failing silently meant a broken proxy or an exhausted budget looked
-        // like nothing at all from the outside.
+        // Show a retry, and report so a broken proxy or exhausted budget is visible.
         reportDataError('AI guidance', error);
         if (active) setFailed(true);
       });

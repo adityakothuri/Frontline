@@ -3,9 +3,8 @@
  *
  * Ingestion is standalone backend tooling (run with Node's TS type-stripping,
  * like scripts/seed.ts) — NOT part of the app bundle. Adding a data source is
- * one new module under sources/ that exports a `SourceFactory`; everything else
- * (validation, upsert, provenance) is shared. See
- * `docs/obsidian/04 Build Roadmap/Backend to Production Master Plan.md` §WS-7.
+ * one new module under sources/ that exports a `SourceFactory`; validation,
+ * upsert and provenance are shared.
  */
 import type { Resource } from '../src/types/resource.ts';
 
@@ -47,10 +46,6 @@ export interface IngestionQuery {
   national?: boolean;
   /** Optional provider-specific type filters (e.g. VA 'health','benefits','vet_center'). */
   types?: string[];
-  /** Place name for providers that geo-filter by name (USAJOBS: "Dallas, Texas"). */
-  locationName?: string;
-  /** Free-text query for providers that support it (USAJOBS keyword). */
-  keyword?: string;
   perPage: number;
   maxPages: number;
 }
@@ -59,8 +54,6 @@ export interface IngestionQuery {
 export interface SourceConfig {
   apiKey: string;
   baseUrl: string;
-  /** Some providers (USAJOBS) require the registered email as the User-Agent. */
-  userAgent?: string;
   /** Delay between paged requests, to respect provider rate limits (the VA
    *  sandbox is strict). Omit to let the source pick a sensible default. */
   throttleMs?: number;

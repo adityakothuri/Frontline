@@ -1,36 +1,26 @@
 import type { ReactNode } from 'react';
 import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import Animated from 'react-native-reanimated';
-import { durations, spacing } from '@/theme';
-import { fadeIn } from '@/theme/motionPresets';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
+import { colors, durations, spacing } from '@/theme';
+import { fadeIn, ruleDraw } from '@/theme/motionPresets';
 import { AppText } from './AppText';
 import { LocationButton } from './LocationButton';
 
 type ScreenHeaderProps = {
   title: string;
+  /** One line that states a fact ("207 places near 78701"). */
   subtitle?: string;
-  /**
-   * Set when the subtitle is live (a count, a place). A new sentence then
-   * arrives with a short fade rather than being overwritten in place — the
-   * one change on a screen small enough to miss entirely otherwise.
-   */
+  /** Set when the subtitle is live, so changes fade in rather than swap. */
   subtitleKey?: string;
-  /** The location pill above the title, on screens where location scopes
-   *  what is shown. Omit on screens it does not apply to (Saved). */
+  /** The ZIP line above the title, where location scopes what is shown. */
   location?: { zip?: string; onPress: () => void };
-  /** Optional trailing control (e.g. an icon button) aligned to the title's right edge. */
+  /** Optional trailing control aligned to the title's right edge. */
   action?: ReactNode;
   style?: StyleProp<ViewStyle>;
 };
 
-/**
- * The masthead every tab opens with: the location pill where location
- * matters, the Fraunces title, and one live Inter line that states a fact
- * ("23 places near 78701", "3 places you want to come back to"). Discover and
- * Map used to hand-roll this block while Saved and Profile used a static
- * version; one implementation is what turns "they happen to look similar" into
- * the thing a veteran recognises on every screen.
- */
+// The masthead every tab opens with: ZIP line, condensed caps title, one live
+// fact, then the heavy rule that every screen's content hangs from.
 export function ScreenHeader({
   title,
   subtitle,
@@ -39,15 +29,12 @@ export function ScreenHeader({
   action,
   style,
 }: ScreenHeaderProps) {
+  const reduceMotion = useReducedMotion();
   return (
     <View style={[styles.root, style]}>
-      {location ? (
-        <View style={styles.location}>
-          <LocationButton zip={location.zip} onPress={location.onPress} />
-        </View>
-      ) : null}
+      {location ? <LocationButton zip={location.zip} onPress={location.onPress} /> : null}
       <View style={styles.titleRow}>
-        <AppText variant="title" accessibilityRole="header" style={styles.title}>
+        <AppText variant="display" accessibilityRole="header" style={styles.title}>
           {title}
         </AppText>
         {action}
@@ -62,19 +49,25 @@ export function ScreenHeader({
           </AppText>
         </Animated.View>
       ) : null}
+      <Animated.View entering={reduceMotion ? undefined : ruleDraw} style={styles.rule} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { marginBottom: spacing.xl },
-  location: { marginBottom: spacing.md },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  title: { flexShrink: 1 },
-  subtitle: { marginTop: spacing.sm },
+  title: { flexShrink: 1, textTransform: 'uppercase' },
+  subtitle: { marginTop: spacing.xs },
+  rule: {
+    height: 2,
+    backgroundColor: colors.rule,
+    marginTop: spacing.md,
+    transformOrigin: 'left',
+  },
 });

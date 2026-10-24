@@ -25,17 +25,17 @@ import {
   configureNotifications,
   getInitialResourceId,
   getPermissionState,
-  requestPermission,
+  requestPermission as requestOsPermission,
   type PermissionState,
 } from './notificationScheduler';
 
 /** What the veteran picked in the sheet, before we stamp the rest on. */
-export interface ReminderChoice {
+interface ReminderChoice {
   lead: ReminderLead;
   warnBeforeClosing: boolean;
 }
 
-export interface ReminderSnapshotUpdate {
+interface ReminderSnapshotUpdate {
   resourceId: string;
   snapshot: ReminderSnapshot;
 }
@@ -46,18 +46,16 @@ interface RemindersContextValue {
   permission: PermissionState;
   isReminded: (resourceId: string) => boolean;
   getPreference: (resourceId: string) => ReminderPreference | null;
+  /** How many resources have a reminder armed. */
+  reminderCount: number;
   /** Slots the OS can still hold. See `SLOT_BUDGET`. */
   slotsRemaining: number;
   /** Resources that asked for a closing warning and did not get one. */
   droppedClosingFor: string[];
   requestPermission: () => Promise<PermissionState>;
   /** Arms or updates a reminder. Saves the resource as a side effect. */
-  setReminder: (
-    resourceId: string,
-    snapshot: ReminderSnapshot,
-    choice: ReminderChoice,
-  ) => Promise<void>;
-  clearReminder: (resourceId: string) => Promise<void>;
+  setReminder: (resourceId: string, snapshot: ReminderSnapshot, choice: ReminderChoice) => void;
+  clearReminder: (resourceId: string) => void;
   /** Feed fresh resource data in wherever a full record is already loaded. */
   refreshSnapshots: (updates: ReminderSnapshotUpdate[]) => void;
 }
@@ -81,8 +79,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         setPrefs(stored);
       })
       .catch(() => {
-        // `loadReminders` already swallows its own failures; this only guards
-        // `isHydrated`, which must never be left stuck at false.
+        // Only guards `isHydrated`, which must never stay false.
       })
       .finally(() => {
         if (active) setIsHydrated(true);
@@ -95,16 +92,12 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Persist as soon as the list changes, once the disk read is back. Worst case
-  // is rewriting what we just read.
   useEffect(() => {
     if (isHydrated) saveReminders(prefs);
   }, [prefs, isHydrated]);
 
   // The OS schedule is a projection of `prefs`, rebuilt whenever they change.
-  // Reminders whose resource stopped being remindable simply fall out of the
-  // plan — `planAll` ignores them — so a pantry that lost its hours upstream
-  // stops alerting without anything having to notice explicitly.
+  // A resource that stopped being remindable simply falls out of the plan.
   useEffect(() => {
     if (!isHydrated || permission !== 'granted') return;
     const { planned, droppedClosingFor: dropped } = planAll(prefs);
@@ -112,8 +105,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     applyPlan(planned);
   }, [prefs, isHydrated, permission]);
 
-  // Re-sync on foreground. Not on a timer: the OS owns firing, the app only
-  // owns the plan — and permission can change in Settings while we're away.
+  // Permission can change in Settings while the app is backgrounded.
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
@@ -122,10 +114,8 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, []);
 
-  // A tapped reminder opens the resource it was about. The cold-start read is
-  // separate because a tap that launches the app resolves before any listener
-  // exists — and the root layout holds the whole tree behind the intro
-  // animation, so `router` is not usable until after that first render.
+  // A tapped reminder opens its resource. A tap that launched the app arrives
+  // before any listener exists, hence the separate cold-start read.
   useEffect(() => {
     let active = true;
     const open = (resourceId: string) => {
@@ -157,9 +147,8 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   );
 
   const setReminder = useCallback(
-    async (resourceId: string, snapshot: ReminderSnapshot, choice: ReminderChoice) => {
-      // Arming implies saving: a reminder you can't find again to turn off is a
-      // trap, and the Saved tab is the only place every bell is visible.
+    (resourceId: string, snapshot: ReminderSnapshot, choice: ReminderChoice) => {
+      // Arming implies saving: the Saved tab is where every bell can be turned off.
       if (!isSaved(resourceId)) toggleSave(resourceId);
 
       setPrefs((prev) => {
@@ -168,8 +157,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
           resourceId,
           lead: choice.lead,
           warnBeforeClosing: choice.warnBeforeClosing,
-          // Editing keeps the original arming time so a settings tweak can't
-          // push an established reminder to the back of the budget queue.
+          // Editing keeps its place in the budget queue.
           enabledAt: existing?.enabledAt ?? new Date().toISOString(),
           snapshot,
         };
@@ -181,7 +169,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     [isSaved, toggleSave],
   );
 
-  const clearReminder = useCallback(async (resourceId: string) => {
+  const clearReminder = useCallback((resourceId: string) => {
     setPrefs((prev) => prev.filter((pref) => pref.resourceId !== resourceId));
   }, []);
 
@@ -194,9 +182,8 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
       const next = prev.map((pref) => {
         const snapshot = byId.get(pref.resourceId);
         if (!snapshot) return pref;
-        // Compare the fields that actually drive the schedule and the copy.
-        // Without this, every Saved-tab render would rewrite `capturedAt`,
-        // re-persist, and re-run the whole plan for nothing.
+        // Compare only the fields that drive the schedule and copy, or every
+        // Saved-tab render would re-persist and re-plan.
         const current = pref.snapshot;
         if (
           current.hours === snapshot.hours &&
@@ -213,8 +200,8 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const requestPermissionAndSync = useCallback(async () => {
-    const state = await requestPermission();
+  const requestPermission = useCallback(async () => {
+    const state = await requestOsPermission();
     setPermission(state);
     return state;
   }, []);
@@ -225,9 +212,10 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
       permission,
       isReminded,
       getPreference,
+      reminderCount: prefs.length,
       slotsRemaining: Math.max(0, SLOT_BUDGET - slotsUsed),
       droppedClosingFor,
-      requestPermission: requestPermissionAndSync,
+      requestPermission,
       setReminder,
       clearReminder,
       refreshSnapshots,
@@ -237,9 +225,10 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
       permission,
       isReminded,
       getPreference,
+      prefs.length,
       slotsUsed,
       droppedClosingFor,
-      requestPermissionAndSync,
+      requestPermission,
       setReminder,
       clearReminder,
       refreshSnapshots,
