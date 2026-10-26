@@ -30,14 +30,13 @@ and numbered sections replace floating cards. Barlow Condensed is the display fa
 (the US Web Design System face) carries the prose, and Overpass Mono caps set data and labels. One
 olive-drab action color owns every action. Semantic color carries meaning: green means verified,
 amber means check the source, and red is for genuine emergencies only. Motion is quiet and
-purposeful. Canonical spec:
-[UI Design System](docs/obsidian/02%20Design/UI%20Design%20System.md).
+purposeful. The tokens live in [src/theme/](src/theme/).
 
 ## Anti-references
 
 - Government-portal density (VA.gov form walls, dense legalese).
 - Alarmist or charity-poster tones; nothing that makes the veteran feel pitied.
-- Generic AI-slop SaaS: identical card grids, gradient text, glassmorphism, hero-metric tiles.
+- Generic template SaaS: identical card grids, gradient text, glassmorphism, hero-metric tiles.
 - Chatbot-first apps. AI here supports a task and is never the destination. Even Ask Frontline
   exists to route a veteran to an action.
 - The rounded-card, pill-button, gradient-sparkle "AI app" template.

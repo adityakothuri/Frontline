@@ -11,8 +11,7 @@ import { resourceToNeedCategory } from '@/services/resources/needMapping';
  * and expensive to notice by eye, so they're checked here.
  *
  * Thresholds are the floor, not the target — the shipped palette clears them
- * with room (min ΔE 17.9, min contrast 4.06:1). See the "Category identity
- * hues" section of `docs/obsidian/02 Design/UI Design System.md`.
+ * with room (min ΔE 17.9, min contrast 4.06:1).
  */
 
 const srgb = (v: number) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));

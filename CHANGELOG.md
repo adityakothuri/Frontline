@@ -104,7 +104,7 @@ production-readiness pass that closed out release engineering.
   allocated a throwaway value on every render — converted to lazy `useState`.
 - iOS now declares only the location permission it uses; the `expo-location` plugin's unused
   "Always" and motion usage strings are suppressed.
-- Rewrote `README` and refreshed `CLAUDE.md` / `CONTRIBUTING` / `SECURITY` to describe the real,
+- Rewrote `README` and refreshed `CONTRIBUTING` / `SECURITY` to describe the real,
   shipped architecture (previously described a simulated/unbuilt MVP).
 - Hardened the Edge Functions: rate-limit on the trusted `x-forwarded-for` hop, caller payload size
   caps (→ 413), and `Allow: POST` on 405. Tightened `config.toml` auth defaults.

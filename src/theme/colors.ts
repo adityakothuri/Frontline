@@ -1,7 +1,7 @@
 // Field Manual palette: manila paper, ink, one olive-drab action colour.
 // Colour carries meaning (olive = action, emerald = verified, amber = check the
 // source, red = emergency) and is never decorative. Contrast figures are on
-// `background`. Spec: docs/obsidian/02 Design/UI Design System.md.
+// `background`.
 export const colors = {
   background: '#ECE9E0',
   surface: '#F6F4EE', // sheets and input fields

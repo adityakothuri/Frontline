@@ -9,7 +9,6 @@ import type { ResourceSearchResult } from '@/services/resources';
  *
  * Nothing a tap or the camera changes may go in: a key that changes on press
  * remounts the marker inside its own native press handler and crashes.
- * See `docs/obsidian/07 Bugs/` for both incidents.
  */
 export function pinKey(result: ResourceSearchResult): string {
   return `${result.resource.id}:${result.resource.category}`;

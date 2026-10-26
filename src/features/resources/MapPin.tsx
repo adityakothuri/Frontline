@@ -17,7 +17,7 @@ import type { Coordinates } from '@/lib/geo';
  * - `OpenPin` — a *separate* marker over the tapped dot; the only one that animates.
  *
  * Keep them separate. A field marker that changes hits these react-native-maps
- * (1.27, Apple Maps) quirks — see `docs/obsidian/07 Bugs/2026-10-22 Map dots switch colour and vanish.md`:
+ * (1.27, Apple Maps) quirks:
  *
  *   1. A marker's frame only grows: `AIRMapMarker` never shrinks it, so a dot
  *      that once drew a pin keeps an invisible pin-sized tap box.

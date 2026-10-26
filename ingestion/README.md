@@ -13,8 +13,7 @@ veteran-specific local dataset are backfilled with high-quality **general**
 sources, labeled `veteran_relevance: 'general'` and shown as "Open to everyone"
 in the app. Every row MUST carry a `veteran_relevance`
 (`veteran_specific` / `veteran_benefit` / `general`) — the DB rejects anything
-unlabeled. This supersedes the 2026-07-22 strict veteran-only rule (see
-`docs/obsidian/08 Decisions/Decision Log.md`).
+unlabeled. This supersedes the 2026-07-22 strict veteran-only rule.
 
 ## Sources
 

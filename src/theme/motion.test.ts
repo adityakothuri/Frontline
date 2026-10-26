@@ -13,8 +13,8 @@ import {
 /**
  * The motion scale makes promises that are cheap to check and expensive to
  * notice by eye. The important one is the damping floor: "no bounce/elastic
- * easing" is a rule in `docs/obsidian/02 Design/Anti-AI-Slop Design Rules.md`,
- * and a rule enforced only by taste is a rule that erodes. Here it is a number.
+ * easing" is a design rule, and a rule enforced only by taste is a rule that
+ * erodes. Here it is a number.
  *
  * Peak overshoot for a damping ratio z is exp(-pi*z / sqrt(1 - z^2)).
  */

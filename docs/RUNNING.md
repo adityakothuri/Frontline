@@ -94,5 +94,4 @@ npx expo-doctor      # Expo project sanity check
 
 Routes are in `app/`, shared UI in `src/components/`, feature UI in `src/features/`, data and AI
 clients in `src/services/`, and design tokens in `src/theme/`. The backend (migrations and Edge
-Functions) is in `supabase/`, and the data pipeline is in `ingestion/`. The guided tour is the
-[app_walkthrough](obsidian/10%20App%20Walkthrough/app_walkthrough.md).
+Functions) is in `supabase/`, and the data pipeline is in `ingestion/`.

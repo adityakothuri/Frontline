@@ -110,5 +110,4 @@ npx expo-doctor                              # config/asset sanity check
 ```
 
 ## Related
-[PRIVACY.md](PRIVACY.md) · [SECURITY.md](../SECURITY.md) · [BACKEND_SETUP.md](../BACKEND_SETUP.md) ·
-[docs/github/Release Process.md](github/Release%20Process.md)
+[PRIVACY.md](PRIVACY.md) · [SECURITY.md](../SECURITY.md) · [BACKEND_SETUP.md](../BACKEND_SETUP.md)

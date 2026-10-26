@@ -22,7 +22,6 @@
 -- location that does not exist, and Directions routed to the geometric centre of
 -- a ZIP. 64% of the entire veteran catalogue was affected — the
 -- highest-severity finding of the 2026-07-28 data audit. See
--- docs/obsidian/07 Bugs/ for the write-up and
 -- 0027_search_state_scoped_referrals.sql for the query-side half of the fix.
 --
 -- resource_sources rows are left alone: resource_id is ON DELETE SET NULL, so

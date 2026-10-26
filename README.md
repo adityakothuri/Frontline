@@ -120,7 +120,7 @@ Frontline/
 ├── supabase/             # migrations, Edge Functions (ai, sync), config.toml
 ├── ingestion/            # data pipeline: sources/, lib/, upsert, reap, freshness gate
 ├── scripts/              # seed.ts (ZIP centroid reference data)
-├── docs/                 # Obsidian project vault, runbooks, legal pages, GitHub guides
+├── docs/                 # runbooks and legal pages
 └── .github/              # CI, scheduled data refresh, PR template
 ```
 
@@ -161,8 +161,6 @@ Standing up your own backend is covered in [BACKEND_SETUP.md](BACKEND_SETUP.md).
 - [docs/PRIVACY.md](docs/PRIVACY.md) and [docs/TERMS.md](docs/TERMS.md): published legal pages
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): iOS release via EAS
 - [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md)
-- [docs/obsidian/](docs/obsidian/): the project brain. Start at the
-  [Frontline Command Center](docs/obsidian/00%20Start%20Here/Frontline%20Command%20Center.md).
 
 ## Notes
 

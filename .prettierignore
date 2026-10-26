@@ -1,18 +1,15 @@
 # Prettier formats Frontline app source only. Everything below is generated,
-# vendored, or intentionally hand-formatted (docs vault, CI, Claude/Codex tooling).
+# vendored, or hand-formatted.
 node_modules/
 .expo/
 dist/
 web-build/
 assets/
-.claude/
-.codex/
 .github/
 docs/
 
 # Generated / lock files
 package-lock.json
-skills-lock.json
 
-# Markdown is hand-authored (root docs + Obsidian vault), not auto-formatted
+# Markdown is hand-authored, not auto-formatted
 *.md

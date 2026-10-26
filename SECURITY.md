@@ -22,8 +22,8 @@ acknowledge and work on a fix before any public disclosure.
 - **Mobile apps ship their bundle**, so anything in the app is effectively public. Only
   **public client keys** (e.g. `EXPO_PUBLIC_*`) may live in app source.
 - **The AI / Anthropic API key must never ship in the client.** Real LLM calls go through a
-  server-side proxy; the app only holds the proxy URL. See
-  [Environment Variables](docs/obsidian/03%20Technical/Environment%20Variables.md).
+  server-side proxy; the app only holds the proxy URL. See [.env.example](.env.example) and
+  [BACKEND_SETUP.md](BACKEND_SETUP.md).
 
 ## Privacy & data minimization
 
@@ -81,11 +81,10 @@ acknowledge and work on a fix before any public disclosure.
 
 Changes touching **location, the AI proxy/keys, any new data collection, authentication, or
 permissions** require extra scrutiny in review — call them out explicitly in the PR (see the
-"Risks / Follow-ups" section of the PR template) and record notable decisions in the
-[Decision Log](docs/obsidian/08%20Decisions/Decision%20Log.md).
+"Risks / Follow-ups" section of the PR template).
 
 ## Related
 
-- [Environment Variables](docs/obsidian/03%20Technical/Environment%20Variables.md)
-- [Trust, Safety & Privacy](docs/obsidian/01%20Product/Trust%20Safety%20and%20Privacy.md)
-- [Product Principles](docs/obsidian/01%20Product/Product%20Principles.md)
+- [BACKEND_SETUP.md](BACKEND_SETUP.md)
+- [docs/PRIVACY.md](docs/PRIVACY.md)
+- [PRODUCT.md](PRODUCT.md)
