@@ -1,44 +1,103 @@
-import { View, Pressable, StyleSheet } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Card, CategoryMedallion, PressableScale } from '@/components';
+import { AppText, Card, Glyph, GlyphButton, PressableScale } from '@/components';
 import { formatDistance } from '@/lib/geo';
-import { colors, radii, spacing, surfaceTint } from '@/theme';
+import { colors, durations, pressScale, spacing, springs } from '@/theme';
+import { easings } from '@/theme/motionPresets';
+import { tapSelection } from '@/lib/haptics';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
 import { useSaved } from '@/services/saved';
-import { callPhone, openDirections } from './resourceActions';
+import { useReminders } from '@/services/reminders';
+import { ReminderBell, confirmUnsaveWithReminder } from './ReminderBell';
+import { callPhone, isOnMap, openDirections } from './resourceActions';
 import { openNowStatus } from './resourceStatus';
-import { SeeInMapButton } from './SeeInMapButton';
-import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
 import { VeteranBadge } from './VeteranBadge';
 
-type IoniconName = keyof typeof Ionicons.glyphMap;
-
 type ResourceCardProps = {
   result: ResourceSearchResult;
-  /** The need category the veteran searched — carried to the detail page so its
-   *  AI guidance keeps the same context. */
+  /** The searched need, carried to the detail page for its AI guidance. */
   needCategory: NeedCategory;
-  /** When set (Results screen), "See in map" focuses the pin in-place instead of
-   *  navigating to the Map tab. Omitted in Discover/Saved, which have no map view. */
+  /** When set (Results), the map action focuses the pin in place instead of
+   *  navigating to the Map tab. */
   onSeeInMap?: (id: string) => void;
 };
 
-// The scannable unit of the results list: what it is, how close, whether it's
-// open, how trustworthy the info is, the two actions that matter most, and a tap
-// anywhere else to open the full detail page.
+/**
+ * The bookmark: saving kicks the glyph and expands one olive ring; unsaving has
+ * no flourish. `burst` rests at 1 (invisible) and is reset to 0 to replay, so
+ * Reduce Motion shows no ring.
+ */
+function SaveButton({ saved, onToggle }: { saved: boolean; onToggle: () => void }) {
+  const scale = useSharedValue(1);
+  const burst = useSharedValue(1);
+  const wasSaved = useRef(saved);
+
+  useEffect(() => {
+    if (saved && !wasSaved.current) {
+      scale.set(
+        withSequence(
+          withTiming(1.25, { duration: durations.micro }),
+          withSpring(1, springs.settle),
+        ),
+      );
+      burst.set(0);
+      burst.set(withTiming(1, { duration: durations.base, easing: easings.out }));
+    }
+    wasSaved.current = saved;
+  }, [saved, scale, burst]);
+
+  const glyphStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(burst.get(), [0, 1], [0.35, 0]),
+    transform: [{ scale: interpolate(burst.get(), [0, 1], [0.6, 1]) }],
+  }));
+
+  return (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
+      accessibilityState={{ selected: saved }}
+      onPress={() => {
+        tapSelection();
+        onToggle();
+      }}
+      scaleTo={pressScale.control}
+      style={styles.bookmark}
+    >
+      <Animated.View style={[styles.saveRing, ringStyle]} pointerEvents="none" />
+      <Animated.View style={glyphStyle}>
+        <Glyph
+          name="bookmark"
+          filled={saved}
+          color={saved ? colors.accent : colors.textSecondary}
+        />
+      </Animated.View>
+    </PressableScale>
+  );
+}
+
+// One scannable result: what, how close, open status, trust, key actions; tap to open.
 export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardProps) {
   const router = useRouter();
   const { isSaved, toggleSave } = useSaved();
+  const { isReminded, clearReminder } = useReminders();
   const { resource, distanceMiles, isOpenNow } = result;
   const meta = RESOURCE_CATEGORY_META[resource.category];
-  const open = openNowStatus(isOpenNow);
+  const open = openNowStatus(isOpenNow, resource);
   const saved = isSaved(resource.id);
-  // "Open now / hours unknown" only makes sense for places you visit during
-  // hours. A job posting has no visiting hours, so the pill would just be noise.
+  // Open status only applies to places with visiting hours (not job postings).
   const showStatus = resource.category !== 'jobs';
   const hasDirections =
     resource.address !== null || (resource.latitude !== null && resource.longitude !== null);
@@ -49,8 +108,6 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
       params: { id: resource.id, category: needCategory },
     });
 
-  // Results passes onSeeInMap to focus the pin in its own map view; elsewhere
-  // (Discover/Saved) we switch to the Map tab and focus it there via ?focus=.
   const seeInMap = (id: string) => {
     if (onSeeInMap) {
       onSeeInMap(id);
@@ -60,76 +117,91 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
   };
 
   return (
-    <PressableScale
-      accessibilityRole="button"
-      accessibilityLabel={`View details for ${resource.name}`}
-      onPress={openDetail}
-    >
-      <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
-        <View style={styles.header}>
-          <CategoryMedallion icon={meta.icon} color={meta.color} size={44} />
-          <View style={styles.headerMeta}>
-            <AppText variant="caption" color="textSecondary" numberOfLines={1} style={styles.category}>
-              {meta.label}
-            </AppText>
-            <VeteranBadge relevance={resource.veteran_relevance} />
+    // `accessible={false}`: a Pressable collapses its subtree into one VoiceOver
+    // element, hiding the inner actions.
+    <PressableScale accessible={false} onPress={openDetail}>
+      <Card style={styles.card}>
+        {/* The category's colour as a bar down the row's left edge. */}
+        <View style={[styles.bar, { backgroundColor: meta.color }]} />
+        <View style={styles.body}>
+          <View style={styles.header}>
+            <View style={styles.headerMeta}>
+              <AppText variant="kicker" numberOfLines={1} style={styles.category}>
+                {meta.label}
+              </AppText>
+              <VeteranBadge relevance={resource.veteran_relevance} />
+            </View>
+            {/* The reminder bell appears only once the place is saved. */}
+            <View style={styles.headerActions}>
+              {saved ? <ReminderBell resource={resource} /> : null}
+              <SaveButton
+                saved={saved}
+                onToggle={() => {
+                  toggleSave(resource.id);
+                  if (saved && isReminded(resource.id)) {
+                    confirmUnsaveWithReminder(resource.name, () => clearReminder(resource.id));
+                  }
+                }}
+              />
+            </View>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={saved ? 'Remove from saved' : 'Save'}
-            onPress={() => toggleSave(resource.id)}
-            hitSlop={8}
-            style={({ pressed }) => pressed && styles.bookmarkPressed}
-          >
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={18}
-              color={saved ? colors.accent : colors.textMuted}
-            />
-          </Pressable>
-        </View>
 
-        <AppText variant="subtitle" numberOfLines={2} style={styles.name}>
-          {resource.name}
-        </AppText>
-
-        <View style={styles.subMeta}>
-          {/* textSecondary (not muted) so small text keeps AA on the tinted card. */}
-          <AppText variant="caption" color="textSecondary">
-            {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
+          <AppText variant="itemTitle" numberOfLines={2} style={styles.name}>
+            {resource.name}
           </AppText>
-          {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
-        </View>
 
-        <AppText variant="body" color="textSecondary" numberOfLines={2} style={styles.desc}>
-          {resource.description}
-        </AppText>
-
-        <SourceRow resource={resource} style={styles.sourceRow} />
-
-        <View style={styles.divider} />
-
-        <View style={styles.actions}>
-          {resource.phone ? (
-            <ActionButton
-              icon="call-outline"
-              label="Call"
-              onPress={() => callPhone(resource.phone as string)}
-            />
-          ) : null}
-          {hasDirections ? (
-            <ActionButton
-              icon="navigate-outline"
-              label="Directions"
-              onPress={() => openDirections(resource)}
-            />
-          ) : null}
-          <SeeInMapButton resource={resource} variant="card" onPress={seeInMap} />
-          <View style={styles.detailHint}>
-            <AppText variant="label" color="textSecondary">
-              View details
+          <View style={styles.meta}>
+            <AppText variant="data" color="textSecondary">
+              {distanceMiles !== null
+                ? formatDistance(distanceMiles)
+                : isOnMap(resource)
+                  ? 'Distance unknown'
+                  : 'Phone / online'}
             </AppText>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
+          </View>
+
+          <AppText variant="body" color="textSecondary" numberOfLines={2}>
+            {resource.description}
+          </AppText>
+
+          {/* The detail page owns the full action set. */}
+          <View style={styles.actions}>
+            {resource.phone ? (
+              <GlyphButton
+                name="call"
+                label={`Call ${resource.name}`}
+                accent
+                onPress={() => callPhone(resource.phone as string)}
+              />
+            ) : null}
+            {hasDirections ? (
+              <GlyphButton
+                name="directions"
+                label={`Directions to ${resource.name}`}
+                onPress={() => openDirections(resource)}
+              />
+            ) : null}
+            <GlyphButton
+              name="map"
+              label={
+                isOnMap(resource)
+                  ? `See ${resource.name} on the map`
+                  : 'Not on the map — reach this resource by phone or online'
+              }
+              disabled={!isOnMap(resource)}
+              onPress={() => seeInMap(resource.id)}
+            />
+            <View
+              style={styles.detailHint}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={`View details for ${resource.name}`}
+            >
+              <AppText variant="data" color="accent">
+                Details ▸
+              </AppText>
+            </View>
           </View>
         </View>
       </Card>
@@ -137,67 +209,31 @@ export function ResourceCard({ result, needCategory, onSeeInMap }: ResourceCardP
   );
 }
 
-function ActionButton({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: IoniconName;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-    >
-      <Ionicons name={icon} size={16} color={colors.accent} />
-      <AppText variant="label">{label}</AppText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
-  // A single header row: medallion · (category label + veteran badge) · bookmark.
-  // The name and everything below stay flush to the card's left edge, so the
-  // medallion + whisper tint carry the category identity without indenting the
-  // content (not a colored rail).
+  card: { flexDirection: 'row', gap: spacing.md },
+  bar: { width: 4, alignSelf: 'stretch' },
+  body: { flex: 1, gap: spacing.sm },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  headerMeta: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  // flexShrink so the (longest, variable) category label truncates before the
-  // fixed veteran badge, keeping the row on one line without overlap.
+  headerMeta: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  // flexShrink so the category label truncates before the veteran tag.
   category: { flexShrink: 1 },
-  name: { marginTop: spacing.xs },
-  subMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  bookmarkPressed: { opacity: 0.5 },
-  desc: { marginTop: spacing.xxs },
-  sourceRow: { marginTop: spacing.xxs },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginTop: spacing.xs },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  action: {
+  name: { textTransform: 'uppercase' },
+  meta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceMuted,
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
-  actionPressed: { opacity: 0.7 },
-  detailHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginLeft: 'auto',
+  // Two 44pt targets sitting flush; each carries its own internal padding.
+  headerActions: { flexDirection: 'row', alignItems: 'center', marginVertical: -spacing.md },
+  bookmark: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  saveRing: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
   },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
+  detailHint: { minHeight: 44, justifyContent: 'center', marginLeft: 'auto' },
 });

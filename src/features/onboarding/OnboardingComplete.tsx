@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Pressable, Animated, Easing, AccessibilityInfo, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PrimaryButton } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { AppText, DataRow, Glyph, PressableScale, PrimaryButton, ShieldTrace } from '@/components';
+import { colors, pressScale, rise, spacing, stagger, timings } from '@/theme';
+import { tapImpact } from '@/lib/haptics';
+import { riseIn } from '@/theme/motionPresets';
 import { VETERAN_ROLE_LABELS, type VeteranRole } from '@/types/profile';
 import type { VeteranDocument } from '@/types/need';
 
@@ -22,132 +24,108 @@ type OnboardingCompleteProps = {
   loading: boolean;
 };
 
-// The finale of setup: a warm confirmation + a recap, then "Create account" —
-// which saves the profile on-device. The celebratory moment of the flow.
+// The end of setup: a confirmation and recap, then "Finish setup", which saves
+// the profile on-device (there is no account).
 export function OnboardingComplete({ draft, onBack, onCreate, loading }: OnboardingCompleteProps) {
-  const [pop] = useState(() => new Animated.Value(0));
-
+  // The app's one celebration: the shield finale, with `hold` keeping the
+  // finished mark on screen.
+  const [markDone, setMarkDone] = useState(false);
   useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!active) return;
-      if (reduce) {
-        pop.setValue(1);
-      } else {
-        Animated.timing(pop, {
-          toValue: 1,
-          duration: 380,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }).start();
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [pop]);
+    const timer = setTimeout(() => setMarkDone(true), timings.introHold);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const checkStyle = {
-    opacity: pop,
-    transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }],
-  };
-
-  const recap: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
-    { icon: 'location-outline', text: draft.zip },
-    ...(draft.role ? [{ icon: 'ribbon-outline' as const, text: VETERAN_ROLE_LABELS[draft.role] }] : []),
+  const recap: { label: string; value: string }[] = [
+    { label: 'ZIP code', value: draft.zip },
+    ...(draft.role ? [{ label: 'Role', value: VETERAN_ROLE_LABELS[draft.role] }] : []),
     ...(draft.documentsOnHand.length
       ? [
           {
-            icon: 'documents-outline' as const,
-            text: `${draft.documentsOnHand.length} document${draft.documentsOnHand.length > 1 ? 's' : ''}`,
+            label: 'Documents',
+            value: `${draft.documentsOnHand.length} document${draft.documentsOnHand.length > 1 ? 's' : ''}`,
           },
         ]
       : []),
     ...(draft.preferredRadiusMiles
-      ? [{ icon: 'navigate-outline' as const, text: `${draft.preferredRadiusMiles} mi` }]
+      ? [{ label: 'Radius', value: `${draft.preferredRadiusMiles} miles` }]
       : []),
   ];
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Back"
           onPress={onBack}
-          hitSlop={10}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+          scaleTo={pressScale.control}
+          style={styles.backBtn}
         >
-          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-        </Pressable>
+          <Glyph name="back" size={22} />
+        </PressableScale>
       </View>
 
       <View style={styles.body}>
-        <Animated.View style={[styles.check, checkStyle]}>
-          <Ionicons name="checkmark" size={44} color={colors.success} />
+        <View
+          style={styles.mark}
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel="Setup complete"
+        >
+          <ShieldTrace size={72} color={colors.textPrimary} done={markDone} hold />
+        </View>
+
+        <Animated.View entering={riseIn(stagger.step)}>
+          <AppText variant="display" style={styles.title} accessibilityRole="header">
+            You&apos;re ready, {draft.firstName.trim()}.
+          </AppText>
+        </Animated.View>
+        <Animated.View entering={riseIn(stagger.step * 2)}>
+          <AppText variant="body" color="textSecondary" style={styles.subtitle}>
+            Here&apos;s what you told us. Finish setup and we&apos;ll start finding help near{' '}
+            {draft.zip}.
+          </AppText>
         </Animated.View>
 
-        <AppText variant="displayLarge" style={styles.title}>
-          You&apos;re ready, {draft.firstName.trim()}.
-        </AppText>
-        <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-          Here&apos;s your setup — create your account to save it and get your personalized help.
-        </AppText>
-
         <View style={styles.recap}>
-          {recap.map((r) => (
-            <View key={r.text} style={styles.recapChip}>
-              <Ionicons name={r.icon} size={13} color={colors.accent} />
-              <AppText variant="label" color="textSecondary">
-                {r.text}
-              </AppText>
-            </View>
+          {recap.map((r, i) => (
+            <DataRow key={r.label} label={r.label} value={r.value} last={i === recap.length - 1} />
           ))}
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <PrimaryButton label="Create account" onPress={onCreate} loading={loading} />
-        <View style={styles.reassure}>
-          <Ionicons name="phone-portrait-outline" size={13} color={colors.textMuted} />
-          <AppText variant="caption" color="textMuted">
-            Saved on this device · no sign-in
-          </AppText>
-        </View>
-      </View>
+      <Animated.View entering={riseIn(stagger.max, rise.md)} style={styles.footer}>
+        <PrimaryButton
+          label="Finish setup"
+          onPress={() => {
+            tapImpact();
+            onCreate();
+          }}
+          loading={loading}
+        />
+        <AppText variant="kicker" color="textSecondary" style={styles.reassure}>
+          Saved on this device · no sign-in
+        </AppText>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  topBar: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, height: 40, justifyContent: 'center' },
-  backBtn: { width: 32, height: 32, alignItems: 'flex-start', justifyContent: 'center' },
-  body: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
-  check: {
-    width: 92,
-    height: 92,
-    borderRadius: radii.pill,
-    alignItems: 'center',
+  topBar: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    height: 40,
     justifyContent: 'center',
-    backgroundColor: withAlpha(colors.success, 0.14),
-    marginBottom: spacing.xl,
   },
-  title: { textAlign: 'center', marginBottom: spacing.sm },
-  subtitle: { textAlign: 'center', maxWidth: 330, marginBottom: spacing.xl },
-  recap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
-  recapChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  footer: { paddingHorizontal: spacing.xl, gap: spacing.md },
-  reassure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  pressed: { opacity: 0.6 },
+  backBtn: { width: 44, height: 44, alignItems: 'flex-start', justifyContent: 'center' },
+  body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
+  // No tinted disc behind the mark: the shield draws its own silhouette.
+  mark: { marginBottom: spacing.xl },
+  title: { marginBottom: spacing.sm, textTransform: 'uppercase' },
+  subtitle: { maxWidth: 360, marginBottom: spacing.lg },
+  recap: { borderTopWidth: 2, borderTopColor: colors.rule },
+  footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.md },
+  reassure: { textAlign: 'center' },
 });

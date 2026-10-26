@@ -1,51 +1,38 @@
-import { Pressable, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, radii, spacing } from '@/theme';
+import { StyleSheet } from 'react-native';
+import { colors, pressScale, radii, spacing } from '@/theme';
+import { tapSelection } from '@/lib/haptics';
 import { AppText } from './AppText';
+import { Glyph } from './Glyph';
+import { PressableScale } from './PressableScale';
 
 type ChipProps = {
   label: string;
-  selected: boolean;
+  /** Omit for a one-shot chip (a starter prompt, a follow-up) that sends rather
+   *  than toggles — it then carries no selected state for a screen reader. */
+  selected?: boolean;
   onPress: () => void;
-  icon?: keyof typeof Ionicons.glyphMap;
 };
 
-// A selectable pill for single/multi-select questions. Selection is shown with
-// the accent tint plus a check — never color alone (accessibility).
-export function Chip({ label, selected, onPress, icon }: ChipProps) {
+// A square option tag. Selected is solid ink with a check, so the state never
+// rests on colour alone.
+export function Chip({ label, selected, onPress }: ChipProps) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
-      // Explicit, so the checkmark icon can never be announced ahead of (or
-      // instead of) the option text.
       accessibilityLabel={label}
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.base,
-        selected ? styles.selected : styles.unselected,
-        pressed && styles.pressed,
-      ]}
+      accessibilityState={selected === undefined ? undefined : { selected }}
+      onPress={() => {
+        tapSelection();
+        onPress();
+      }}
+      scaleTo={pressScale.chip}
+      style={[styles.base, selected && styles.selected]}
     >
-      {selected ? (
-        <Ionicons
-          name="checkmark"
-          size={16}
-          color={colors.accent}
-          style={styles.icon}
-        />
-      ) : icon ? (
-        <Ionicons
-          name={icon}
-          size={16}
-          color={colors.textSecondary}
-          style={styles.icon}
-        />
-      ) : null}
-      <AppText variant="label" color={selected ? 'textPrimary' : 'textSecondary'}>
+      {selected ? <Glyph name="check" size={14} color={colors.surface} /> : null}
+      <AppText variant="label" color={selected ? 'surface' : 'textPrimary'}>
         {label}
       </AppText>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -53,19 +40,12 @@ const styles = StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 44, // >= the 44pt minimum touch target
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.sm,
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
   },
-  unselected: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-  },
-  selected: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
-  },
-  pressed: { opacity: 0.7 },
-  icon: { marginRight: spacing.xs },
+  selected: { backgroundColor: colors.textPrimary },
 });

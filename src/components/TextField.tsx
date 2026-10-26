@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   field: { gap: spacing.sm },
   input: {
     minHeight: 48,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.surface,

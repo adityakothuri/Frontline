@@ -2,14 +2,12 @@ import type { Coordinates } from '@/lib/geo';
 import { supabaseRequest } from '../supabase/client';
 import { supabaseConfig } from '../supabase/config';
 
-/**
- * Resolve a US ZIP to its centroid from the backend `zip_centroids` table — the
- * SAME authoritative source `search_resources` uses server-side, so the map
- * recenters exactly where the results are centered. Returns null when the
- * backend isn't configured or the ZIP isn't a known ZCTA (caller falls back).
- */
 type CentroidRow = { latitude: number; longitude: number };
 
+/**
+ * A US ZIP's centroid from `zip_centroids`, the table `search_resources` uses,
+ * so the map centres where the results do. Null when unknown or unconfigured.
+ */
 export async function resolveZipCentroid(zip: string): Promise<Coordinates | null> {
   if (!supabaseConfig) return null;
   try {

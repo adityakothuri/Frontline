@@ -1,26 +1,24 @@
 import type { Ionicons } from '@expo/vector-icons';
 
-/**
- * The structured "need" produced by the "What do you need help with?" guided
- * flow (Phase 3). It is the query that drives resource discovery and every AI
- * output. See `docs/obsidian/02 Design/App Flow.md`.
- */
+/** The structured "need": the query behind resource discovery and every AI output. */
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
-/** The 11 user-facing need categories shown on the home grid. */
+/**
+ * The 10 user-facing need categories. `va_benefits` covers disability claims and
+ * VA benefits generally, since both map to the same `benefits_help` resources.
+ */
 export type NeedCategory =
   | 'essentials'
   | 'housing'
   | 'healthcare'
-  | 'disability_benefits'
+  | 'va_benefits'
   | 'education_benefits'
   | 'jobs'
   | 'legal'
   | 'transportation'
   | 'family_caregiver'
-  | 'emergency'
-  | 'general_benefits';
+  | 'emergency';
 
 /** How soon the veteran needs help — affects sorting and "open now" emphasis. */
 export type Urgency = 'today' | 'this_week' | 'info';
@@ -33,12 +31,7 @@ export type HelpType = 'call' | 'visit' | 'apply' | 'understand';
 
 /** Documents a veteran may already have on hand (checklist, never uploads). */
 export type VeteranDocument =
-  | 'veteran_id'
-  | 'va_card'
-  | 'dd214'
-  | 'photo_id'
-  | 'proof_of_address'
-  | 'proof_of_income';
+  'veteran_id' | 'va_card' | 'dd214' | 'photo_id' | 'proof_of_address' | 'proof_of_income';
 
 export interface NeedLocation {
   /** ZIP code entry (privacy-first — works without device location). */
@@ -59,66 +52,123 @@ export interface Need {
 
 export interface NeedCategoryMeta {
   label: string;
+  /** For narrow surfaces, only where the full label doesn't fit: `shortLabel ?? label`. */
+  shortLabel?: string;
   icon: IoniconName;
-  /** One-line helper shown under the label on the home cards. */
+  /** One-line helper, shown on Discover's list and used as the accessibility hint. */
   description: string;
   /** A category-coded accent used for its icon chip. */
   color: string;
 }
 
 /**
- * Display metadata for the 11 need categories — one source of truth for the home grid.
- * Category colors stay inside the app's olive/earth family (olives, sages, ochres,
- * warm browns) so category-coded UI reads as one palette; emergency alone leans
- * rust-red. Keep in sync with RESOURCE_CATEGORY_META in `types/resource.ts`.
+ * Display metadata for the 10 need categories. Hues match their counterparts in
+ * RESOURCE_CATEGORY_META, whose constraints `categoryMeta.test.ts` enforces.
  */
 export const NEED_CATEGORY_META: Record<NeedCategory, NeedCategoryMeta> = {
-  essentials: { label: 'Essentials', icon: 'basket-outline', description: 'Food, clothing, and everyday basics', color: '#A56E24' },
-  housing: { label: 'Housing', icon: 'home-outline', description: 'Shelter, rent, and homeless services', color: '#5F7326' },
-  healthcare: { label: 'Healthcare', icon: 'medkit-outline', description: 'Clinics, mental health, and VA care', color: '#4E7D5B' },
-  disability_benefits: { label: 'Disability benefits', icon: 'ribbon-outline', description: 'Claims, ratings, and compensation', color: '#77804C' },
-  education_benefits: { label: 'Education benefits', icon: 'school-outline', description: 'GI Bill, tuition, and training', color: '#87702A' },
-  jobs: { label: 'Job / employment', icon: 'briefcase-outline', description: 'Hiring, resumes, and job training', color: '#A98E2E' },
-  legal: { label: 'Legal help', icon: 'shield-outline', description: 'VA-accredited reps for your claims', color: '#587045' },
-  transportation: { label: 'Transportation', icon: 'bus-outline', description: 'Rides to appointments and errands', color: '#6F8F5A' },
-  family_caregiver: { label: 'Family / caregiver', icon: 'people-outline', description: 'Support for families and caregivers', color: '#7E9146' },
-  emergency: { label: 'Emergency help', icon: 'alert-circle-outline', description: 'Crisis lines and urgent support', color: '#B04A38' },
-  general_benefits: { label: 'General VA benefits', icon: 'document-text-outline', description: 'Explore other VA benefits', color: '#46602A' },
+  essentials: {
+    label: 'Essentials',
+    // A cart: food and clothing both, and legible at small sizes.
+    icon: 'cart-outline',
+    description: 'Food, clothing, and everyday basics',
+    color: '#B85C1E',
+  },
+  housing: {
+    label: 'Housing',
+    icon: 'home-outline',
+    description: 'Shelter, rent, and homeless services',
+    color: '#35521F',
+  },
+  healthcare: {
+    label: 'Healthcare',
+    icon: 'medkit-outline',
+    description: 'Clinics, mental health, and VA care',
+    color: '#1F7A7A',
+  },
+  va_benefits: {
+    label: 'Disability & VA benefits',
+    shortLabel: 'VA benefits',
+    // Claims are paperwork; a medal would just say "veteran".
+    icon: 'document-text-outline',
+    description: 'Claims, ratings, and other VA benefits',
+    color: '#4A5580',
+  },
+  education_benefits: {
+    label: 'Education benefits',
+    shortLabel: 'Education',
+    icon: 'school-outline',
+    description: 'GI Bill, tuition, and training',
+    color: '#47708A',
+  },
+  jobs: {
+    label: 'Job / employment',
+    shortLabel: 'Employment',
+    icon: 'briefcase-outline',
+    description: 'Hiring, resumes, and job training',
+    color: '#8A6B1C',
+  },
+  legal: {
+    label: 'Legal help',
+    icon: 'shield-outline',
+    description: 'VA-accredited reps for your claims',
+    color: '#2F5550',
+  },
+  transportation: {
+    label: 'Transportation',
+    shortLabel: 'Transport',
+    icon: 'bus-outline',
+    description: 'Rides to appointments and errands',
+    color: '#6A5266',
+  },
+  family_caregiver: {
+    label: 'Family / caregiver',
+    shortLabel: 'Family',
+    icon: 'people-outline',
+    description: 'Support for families and caregivers',
+    color: '#9C606E',
+  },
+  emergency: {
+    label: 'Emergency help',
+    icon: 'alert-circle-outline',
+    description: 'Crisis lines and urgent support',
+    color: '#B04A38',
+  },
 };
 
-/** Stable display order for the home grid. */
+/** Whether a route param names a real need category. Deep links and stale
+ *  routes can carry anything; the screens validate before trusting it. */
+export function isNeedCategory(value: unknown): value is NeedCategory {
+  // Own keys only: `'toString' in {}` is true, and a route param can say anything.
+  return (
+    typeof value === 'string' && Object.prototype.hasOwnProperty.call(NEED_CATEGORY_META, value)
+  );
+}
+
+/** Stable display order for Discover's full category list. */
 export const NEED_CATEGORIES: NeedCategory[] = [
   'essentials',
   'housing',
   'healthcare',
-  'disability_benefits',
+  'va_benefits',
   'education_benefits',
   'jobs',
   'legal',
   'transportation',
   'family_caregiver',
   'emergency',
-  'general_benefits',
 ];
 
-export const URGENCY_LABELS: Record<Urgency, string> = {
-  today: 'I need something today',
-  this_week: 'Sometime this week',
-  info: "Just looking for information",
-};
+/** The four needs a veteran reaches for most, in display order (Discover's shell row). */
+export const TOP_NEED_CATEGORIES = [
+  'essentials',
+  'housing',
+  'va_benefits',
+  'jobs',
+] as const satisfies readonly NeedCategory[];
 
-export const MODALITY_LABELS: Record<Modality, string> = {
-  in_person: 'In person',
-  online: 'Online',
-  either: 'Either is fine',
-};
-
-export const HELP_TYPE_LABELS: Record<HelpType, string> = {
-  call: 'Help calling',
-  visit: 'Help visiting',
-  apply: 'Help applying',
-  understand: 'Help understanding it',
-};
+/** One of the four common needs — narrower than `NeedCategory`, so a surface
+ *  that only handles the shortlist can say so in its types. */
+export type TopNeedCategory = (typeof TOP_NEED_CATEGORIES)[number];
 
 export const VETERAN_DOCUMENT_LABELS: Record<VeteranDocument, string> = {
   veteran_id: 'Veteran ID',
@@ -146,10 +196,8 @@ export const DOCUMENT_OPTIONS: { value: VeteranDocument; label: string }[] = (
 export const DEFAULT_RADIUS_MILES = 15;
 
 /**
- * Builds a `Need` from just a tapped category + the veteran's ZIP, filling the
- * rest with sensible defaults. Since Stage 4 removed the per-category questions,
- * both the results list and the resource detail page derive their `Need` this way
- * — keep it the single source so the two views always agree.
+ * Builds a `Need` from a tapped category + ZIP with default answers. The single
+ * source for results and resource detail, so the two always agree.
  */
 export function defaultNeedForCategory(
   category: NeedCategory,

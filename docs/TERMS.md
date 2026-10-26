@@ -1,6 +1,6 @@
 # Frontline — Terms of Use
 
-_Last updated: 2026-07-26_
+_Last updated: 2026-10-24_
 
 By using the Frontline app ("Frontline"), you agree to these terms. If you do not agree, please
 don't use the app. Plain version: **Frontline helps you find resources. It is not the VA, it does
@@ -17,8 +17,8 @@ English.
 - **Frontline is not the U.S. Department of Veterans Affairs**, any government agency, or any
   official representative of one. It is not affiliated with, endorsed by, or sponsored by the VA.
 - **Frontline does not provide legal, medical, financial, or benefits advice.** Summaries, next-step
-  plans, and call scripts are AI-generated, clearly labeled, simplified guidance — not professional
-  advice and not a determination of your eligibility for anything.
+  plans, call scripts, and Ask Frontline replies are AI-generated, clearly labeled, simplified
+  guidance, not professional advice and not a determination of your eligibility for anything.
 - **Frontline does not file claims, submit applications, or communicate with any agency on your
   behalf.**
 - **Frontline is not an emergency service.** If you are in crisis, call or text **988 and press 1**

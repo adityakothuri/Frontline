@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { View, StyleSheet } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { AppText } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { AppText, PressableScale } from '@/components';
+import { colors, pressScale, spacing } from '@/theme';
+import { tapImpact } from '@/lib/haptics';
 import { aiService } from '@/services/ai';
+import { reportDataError } from '@/services/monitoring';
 import type { CallScript, CallScriptTone } from '@/services/ai';
 import type { Need } from '@/types/need';
 import type { Resource } from '@/types/resource';
@@ -21,23 +22,36 @@ type CallScriptCardProps = {
 
 // The call-script workflow: one script, generated on mount (the veteran opts in
 // by opening the sheet), personalized by name, with one-tap copy.
-export function CallScriptCard({ need, resource, firstName, tone = 'standard' }: CallScriptCardProps) {
+export function CallScriptCard({
+  need,
+  resource,
+  firstName,
+  tone = 'standard',
+}: CallScriptCardProps) {
   const [script, setScript] = useState<CallScript | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Id of the request whose answer still matters, so a late or superseded
+  // response is ignored. Bumped on every generate and on unmount.
+  const request = useRef(0);
 
   const generate = useCallback(async () => {
+    const mine = ++request.current;
     setLoading(true);
     setFailed(false);
     try {
       const result = await aiService.buildCallScript({ need, resource, tone, firstName });
+      if (mine !== request.current) return;
       setScript(result);
-    } catch {
+    } catch (error) {
+      if (mine !== request.current) return;
+      // Reported as well as shown, as in useAiGuidance.
+      reportDataError('Call script', error);
       setFailed(true);
     } finally {
-      setLoading(false);
+      if (mine === request.current) setLoading(false);
     }
   }, [need, resource, tone, firstName]);
 
@@ -45,14 +59,25 @@ export function CallScriptCard({ need, resource, firstName, tone = 'standard' }:
     generate();
   }, [generate]);
 
-  // Clear any pending "Copied" reset on unmount (the sheet can be closed).
-  useEffect(() => () => {
-    if (copyTimer.current) clearTimeout(copyTimer.current);
-  }, []);
+  // On unmount (the sheet can be closed): retire any in-flight request and clear
+  // a pending "Copied" reset.
+  useEffect(
+    () => () => {
+      request.current += 1;
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    },
+    [],
+  );
 
   const copy = async () => {
     if (!script) return;
-    await Clipboard.setStringAsync(script.script);
+    try {
+      await Clipboard.setStringAsync(script.script);
+    } catch {
+      // A failed copy is not worth an alert; the script is still on screen.
+      return;
+    }
+    tapImpact();
     setCopied(true);
     if (copyTimer.current) clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(false), 1800);
@@ -60,49 +85,55 @@ export function CallScriptCard({ need, resource, firstName, tone = 'standard' }:
 
   if (failed) {
     return (
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
-        accessibilityLabel="Try generating the script again"
+        accessibilityLabel="Try writing the script again"
         onPress={generate}
-        style={({ pressed }) => [styles.retry, pressed && styles.retryPressed]}
+        scaleTo={pressScale.subtle}
+        style={styles.retry}
       >
-        <AppText variant="body" color="danger">
-          Couldn’t put the script together.
+        <AppText variant="body">Couldn’t write the script just now.</AppText>
+        <AppText variant="data" color="accent">
+          Try again ▸
         </AppText>
-        <AppText variant="label" color="accentPressed">
-          Tap to try again
-        </AppText>
-      </Pressable>
+      </PressableScale>
     );
   }
 
   return (
-    <AiContentBlock loading={loading}>
+    // No `title`: the sheet's header names the card.
+    <AiContentBlock loading={loading} loadingLabel="Writing your call script…">
       {script ? (
         <>
+          {/* Set like a printed script: a SAY label and the words to read. */}
           <View style={styles.scriptBlock}>
+            <AppText variant="kicker" color="textSecondary">
+              Say
+            </AppText>
             <AppText variant="body">{script.script}</AppText>
-            <Pressable
+            <PressableScale
               accessibilityRole="button"
               accessibilityLabel={copied ? 'Script copied' : 'Copy script'}
               onPress={copy}
-              hitSlop={8}
-              style={({ pressed }) => [styles.copy, pressed && styles.copyPressed]}
+              scaleTo={pressScale.chip}
+              containerStyle={styles.copySlot}
+              style={styles.copy}
             >
-              <Ionicons
-                name={copied ? 'checkmark' : 'copy-outline'}
-                size={14}
-                color={copied ? colors.success : colors.accent}
-              />
-              <AppText variant="label" color={copied ? 'success' : 'textSecondary'}>
-                {copied ? 'Copied' : 'Copy'}
+              <AppText variant="data" color={copied ? 'success' : 'accent'}>
+                {copied ? 'Copied ✓' : 'Copy ▸'}
               </AppText>
-            </Pressable>
+            </PressableScale>
           </View>
-          {script.tips.map((tip) => (
-            <View key={tip} style={styles.tipRow}>
+          {script.tips.length > 0 ? (
+            <AppText variant="kicker" color="textSecondary">
+              If it helps
+            </AppText>
+          ) : null}
+          {/* Index-qualified: the model can repeat a tip verbatim. */}
+          {script.tips.map((tip, i) => (
+            <View key={`${i}-${tip}`} style={styles.tipRow}>
               <AppText variant="body" color="textSecondary">
-                •
+                —
               </AppText>
               <AppText variant="body" color="textSecondary" style={styles.tipText}>
                 {tip}
@@ -116,26 +147,17 @@ export function CallScriptCard({ need, resource, firstName, tone = 'standard' }:
 }
 
 const styles = StyleSheet.create({
-  retry: {
-    gap: spacing.xs,
-    padding: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
-  },
-  retryPressed: { opacity: 0.6 },
+  retry: { gap: spacing.xs, minHeight: 44, paddingVertical: spacing.md },
   scriptBlock: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    padding: spacing.md,
+    backgroundColor: colors.background,
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
+    padding: spacing.lg,
     gap: spacing.sm,
   },
-  copy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-end',
-  },
-  copyPressed: { opacity: 0.6 },
-  tipRow: { flexDirection: 'row', gap: spacing.xs },
+  copySlot: { alignSelf: 'flex-end' },
+  // A real 44pt target that hugs its label.
+  copy: { minHeight: 44, justifyContent: 'center' },
+  tipRow: { flexDirection: 'row', gap: spacing.sm },
   tipText: { flex: 1 },
 });

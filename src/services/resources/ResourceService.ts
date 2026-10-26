@@ -1,12 +1,7 @@
 import type { Need, NeedCategory } from '@/types/need';
 import type { Resource } from '@/types/resource';
 
-/**
- * The contract screens depend on. Implemented by `SupabaseResourceService`
- * against the real backend — resources come exclusively from the live ingestion
- * pipeline; there is no simulated implementation. See
- * `docs/obsidian/03 Technical/Technical Architecture.md`.
- */
+/** The contract screens depend on, implemented by `SupabaseResourceService`. */
 
 export interface ResourceQuery {
   need: Need;
@@ -25,13 +20,9 @@ export interface ResourceService {
   /** Nearby resources matching the need, sorted by relevance then distance. */
   search(query: ResourceQuery): Promise<ResourceSearchResult[]>;
   /**
-   * Browse opportunities without a full need — all of them, or one category —
-   * for the Discover and Map tabs. Sorted by distance then verification, no
-   * modality filter. `zip` is the browse origin (the profile ZIP); distances
-   * are null without one. When `radiusMiles` and an origin are both known,
-   * browse is scoped to that radius so the tabs stay "near you" instead of
-   * returning every resource nationwide; location-independent resources (crisis
-   * lines) always pass through. Without an origin, everything is returned.
+   * Browse without a full need (all categories, or one), sorted by distance then
+   * verification. `zip` is the origin; with `radiusMiles` too, browse is scoped
+   * to that radius. Location-independent resources (crisis lines) always pass.
    */
   listResources(
     category?: NeedCategory,
@@ -40,4 +31,6 @@ export interface ResourceService {
   ): Promise<ResourceSearchResult[]>;
   /** A single resource by id, or null if not found. */
   getById(id: string): Promise<Resource | null>;
+  /** Several resources in one request, keyed by id; retired ids are absent. */
+  getByIds(ids: string[]): Promise<Map<string, Resource>>;
 }

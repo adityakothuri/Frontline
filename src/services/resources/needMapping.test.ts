@@ -23,7 +23,7 @@ describe('resourceToNeedCategory', () => {
   });
 
   it('maps benefits/community resource categories to their best-fit need', () => {
-    expect(resourceToNeedCategory('benefits_help')).toBe('general_benefits');
+    expect(resourceToNeedCategory('benefits_help')).toBe('va_benefits');
     expect(resourceToNeedCategory('community_support')).toBe('family_caregiver');
   });
 });

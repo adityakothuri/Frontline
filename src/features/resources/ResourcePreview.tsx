@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Animated, View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Card, CategoryMedallion, PrimaryButton } from '@/components';
+import { AppText, Card, Glyph, PressableScale } from '@/components';
 import { formatDistance } from '@/lib/geo';
-import { colors, spacing, surfaceTint } from '@/theme';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { colors, pressScale, spacing, swatchStyle } from '@/theme';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { NeedCategory } from '@/types/need';
 import type { ResourceSearchResult } from '@/services/resources';
+import { useActivity } from '@/services/activity';
+import { useSaved } from '@/services/saved';
+import { ActionPill } from './ActionPill';
+import { callPhone, openDirections } from './resourceActions';
 import { openNowStatus } from './resourceStatus';
 import { SourceRow } from './SourceRow';
 import { StatusPill } from './StatusPill';
@@ -19,74 +20,131 @@ type ResourcePreviewProps = {
   onClose: () => void;
 };
 
-// The compact card that floats over the map when a pin is tapped: just enough to
-// recognize the resource, then a tap through to the full detail page.
+// The compact card over the map when a pin is tapped: recognise the place, call
+// or get directions directly, or tap through to the detail page. Its motion is
+// owned by the wrapper in `ResourceMap`.
 export function ResourcePreview({ result, needCategory, onClose }: ResourcePreviewProps) {
   const router = useRouter();
+  const { recordEngagement } = useActivity();
+  const { isSaved, toggleSave } = useSaved();
   const { resource, distanceMiles, isOpenNow } = result;
   const meta = RESOURCE_CATEGORY_META[resource.category];
-  const open = openNowStatus(isOpenNow);
+  const open = openNowStatus(isOpenNow, resource);
   // No visiting hours for a job posting → skip the open-now pill.
   const showStatus = resource.category !== 'jobs';
+  const saved = isSaved(resource.id);
+  const hasDirections =
+    resource.address !== null || (resource.latitude !== null && resource.longitude !== null);
 
-  // Spring up + fade in when a pin is tapped, so the card doesn't just snap in.
-  // Respects reduce-motion (snaps in instead).
-  const reduced = useReducedMotion();
-  const [anim] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    if (reduced) {
-      anim.setValue(1);
-      return;
-    }
-    Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 18, bounciness: 8 }).start();
-  }, [anim, reduced]);
+  // Recorded as engagements, like the detail page, for the Home review prompt.
+  const recordAnd = (action: 'called' | 'directions', run: () => void) => () => {
+    recordEngagement({
+      resourceId: resource.id,
+      resourceName: resource.name,
+      category: resource.category,
+      action,
+    });
+    run();
+  };
 
+  const openDetail = () =>
+    router.push({
+      pathname: '/resource/[id]',
+      params: { id: resource.id, category: needCategory },
+    });
+
+  // The whole card opens the detail page; a quiet `Details ▸` hint keeps Call the
+  // strongest control. `accessible={false}` keeps the pills individually
+  // reachable; the hint is the accessible target.
   return (
-    <Animated.View
-      style={{
-        opacity: anim,
-        transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-      }}
-    >
-      <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
-      <View style={styles.topRow}>
-        <CategoryMedallion icon={meta.icon} color={meta.color} size={38} />
-        <AppText variant="caption" color="textSecondary" style={styles.category} numberOfLines={1}>
-          {meta.label}
-        </AppText>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close preview" onPress={onClose} hitSlop={8}>
-          <Ionicons name="close" size={20} color={colors.textMuted} />
-        </Pressable>
-      </View>
+    <PressableScale accessible={false} onPress={openDetail}>
+      <Card variant="panel">
+        <View style={styles.body}>
+          <View style={styles.topRow}>
+            <View style={swatchStyle(meta.color)} />
+            <AppText variant="kicker" style={styles.category} numberOfLines={1}>
+              {meta.label}
+            </AppText>
+            {/* Real 44x44 geometry rather than hitSlop. */}
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="Close preview"
+              onPress={onClose}
+              scaleTo={pressScale.control}
+              containerStyle={styles.close}
+            >
+              <Glyph name="close" color={colors.textPrimary} />
+            </PressableScale>
+          </View>
 
-      <AppText variant="subtitle">{resource.name}</AppText>
+          {/* Clamped so a long name cannot grow the card over the map. */}
+          <AppText variant="itemTitle" numberOfLines={2}>
+            {resource.name}
+          </AppText>
 
-      <View style={styles.metaRow}>
-        <AppText variant="caption" color="textMuted">
-          {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
-        </AppText>
-        {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
-      </View>
+          <View style={styles.metaRow}>
+            <AppText variant="data" color="textSecondary">
+              {distanceMiles !== null ? formatDistance(distanceMiles) : 'Phone / online'}
+            </AppText>
+            {showStatus ? <StatusPill label={open.label} tone={open.tone} /> : null}
+          </View>
 
-      <SourceRow resource={resource} />
+          <SourceRow resource={resource} />
 
-      <PrimaryButton
-        label="View details"
-        variant="secondary"
-        onPress={() =>
-          router.push({ pathname: '/resource/[id]', params: { id: resource.id, category: needCategory } })
-        }
-        style={styles.cta}
-      />
+          <View style={styles.actions}>
+            {resource.phone ? (
+              <ActionPill
+                label="Call"
+                primary
+                onPress={recordAnd('called', () => callPhone(resource.phone as string))}
+              />
+            ) : null}
+            {hasDirections ? (
+              <ActionPill
+                label="Directions"
+                onPress={recordAnd('directions', () => openDirections(resource))}
+              />
+            ) : null}
+            <ActionPill
+              label={saved ? 'Saved' : 'Save'}
+              active={saved}
+              selected={saved}
+              onPress={() => toggleSave(resource.id)}
+            />
+          </View>
+
+          {/* Affordance only: the card itself is the press target. */}
+          <View
+            style={styles.detailHint}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`View details for ${resource.name}`}
+          >
+            <AppText variant="data" color="accent">
+              Details ▸
+            </AppText>
+          </View>
+        </View>
       </Card>
-    </Animated.View>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
+  body: { gap: spacing.sm },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   category: { flex: 1 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cta: { minHeight: 44, marginTop: spacing.xs },
+  // Negative margins so the 44pt target adds no row height.
+  close: {
+    width: 44,
+    height: 44,
+    marginTop: -spacing.md,
+    marginBottom: -spacing.md,
+    marginRight: -spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  detailHint: { alignSelf: 'flex-end' },
 });

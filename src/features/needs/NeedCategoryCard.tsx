@@ -1,11 +1,11 @@
 import { View, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Card, CategoryMedallion, PressableScale } from '@/components';
-import { colors, spacing, surfaceTint } from '@/theme';
+import { AppText, PressableScale } from '@/components';
+import { colors, spacing } from '@/theme';
 import { NEED_CATEGORY_META, type NeedCategory } from '@/types/need';
 
-// A single need-category row: color-coded icon chip + label + one-line
-// description + chevron. One source of truth for the Home and Discover lists.
+// One entry in Discover's full category index ("Other"): the category's bar,
+// its name, one line of description, and ▸. The only place in the app that
+// lists every category.
 export function NeedCategoryCard({
   category,
   onPress,
@@ -20,26 +20,34 @@ export function NeedCategoryCard({
       accessibilityLabel={meta.label}
       accessibilityHint={meta.description}
       onPress={onPress}
+      style={styles.row}
     >
-      <Card style={[styles.card, { backgroundColor: surfaceTint(meta.color) }]}>
-        <CategoryMedallion icon={meta.icon} color={meta.color} size={48} />
-        <View style={styles.cardText}>
-          <AppText variant="subtitle">{meta.label}</AppText>
-          <AppText variant="caption" color="textSecondary">
-            {meta.description}
-          </AppText>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </Card>
+      <View style={[styles.bar, { backgroundColor: meta.color }]} />
+      <View style={styles.text}>
+        <AppText variant="itemTitle" style={styles.name}>
+          {meta.label}
+        </AppText>
+        <AppText variant="caption" color="textSecondary">
+          {meta.description}
+        </AppText>
+      </View>
+      <AppText variant="data" color="textSecondary">
+        ▸
+      </AppText>
     </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  cardText: { flex: 1, gap: spacing.xxs },
+  bar: { width: 4, alignSelf: 'stretch' },
+  text: { flex: 1, gap: spacing.xxs },
+  name: { textTransform: 'uppercase' },
 });

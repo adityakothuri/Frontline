@@ -20,26 +20,34 @@
 import { resolve } from 'node:path';
 import { loadEnvFile } from './lib/env.ts';
 import { createVaFacilitiesSource } from './sources/vaFacilities.ts';
-import { createUsaJobsSource } from './sources/usaJobs.ts';
 import { createVaGiBillSchoolsSource } from './sources/vaGiBillSchools.ts';
 import { createCuratedNationalSource } from './sources/curatedNational.ts';
 import { createHudCounselingSource } from './sources/hudCounseling.ts';
 import { createSsvfProvidersSource } from './sources/ssvfProviders.ts';
 import { createFeedAmericaFoodSource } from './sources/feedAmericaFood.ts';
-import { createVsoRepresentativesSource } from './sources/vsoRepresentatives.ts';
+import { createAmericanJobCentersSource } from './sources/americanJobCenters.ts';
+import { createFisherHousesSource } from './sources/fisherHouses.ts';
+import { createHrsaHealthCentersSource } from './sources/hrsaHealthCenters.ts';
+import { createHudPublicHousingAuthoritiesSource } from './sources/hudPublicHousingAuthorities.ts';
+import { createNacvsoOfficersSource } from './sources/nacvsoOfficers.ts';
+import { createCatholicCharitiesSource } from './sources/catholicCharities.ts';
+import { createNtdTransitAgenciesSource } from './sources/ntdTransitAgencies.ts';
+import { createOsmCharityShopsSource } from './sources/osmCharityShops.ts';
+import { createVaTransportationSource } from './sources/vaTransportation.ts';
+import { createLscLegalAidSource } from './sources/lscLegalAid.ts';
+import { createSamhsaVeteranBehavioralHealthSource } from './sources/samhsaVeteranBehavioralHealth.ts';
+import { createStateVeteransHomesSource } from './sources/stateVeteransHomes.ts';
+import { createUsaspendingVaGranteesSource } from './sources/usaspendingVaGrantees.ts';
+import { createVsoOrganizationsSource } from './sources/vsoOrganizations.ts';
 import { geocodeResources } from './censusGeocode.ts';
 import { upsertResources, type AdminConfig } from './upsert.ts';
 import type { IngestionQuery, NormalizedResource, SourceConfig, SourceFactory } from './types.ts';
 
 const root = resolve(import.meta.dirname, '..');
-// VA Facilities is a PUBLIC dataset, so the sandbox host mirrors real production
-// facility data — it is NOT a truncated demo. Verified 2026-07-24: sandbox returns
-// the full national set (health 1,399, benefits 444, vet_center 417), matching the
-// live table. The free developer.va.gov key is sandbox-scoped (production 401s), so
-// sandbox is the correct, complete source here — do not "upgrade" the default to
-// api.va.gov without first provisioning a production key, or ingestion will break.
+// VA facility data is public, so the sandbox host mirrors production in full. The
+// free developer.va.gov key is sandbox-scoped (api.va.gov 401s it), so do not
+// change this default without provisioning a production key.
 const VA_SANDBOX_BASE = 'https://sandbox-api.va.gov/services/va_facilities/v1';
-const USAJOBS_BASE = 'https://data.usajobs.gov/api';
 const VA_GIBILL_BASE = 'https://api.va.gov/v0/gi/institutions/search';
 const HUD_HCS_BASE = 'https://data.hud.gov/Housing_Counselor';
 
@@ -59,27 +67,154 @@ const SOURCES: Record<string, SourceDef> = {
       throttleMs: numberArg(process.env.VA_THROTTLE_MS),
     }),
   },
-  usajobs: {
-    factory: createUsaJobsSource,
-    resolveConfig: () => ({
-      apiKey: requireEnv(process.env.USAJOBS_API_KEY, 'USAJOBS_API_KEY', 'a free key from developer.usajobs.gov'),
-      baseUrl: process.env.USAJOBS_BASE_URL ?? USAJOBS_BASE,
-      userAgent: requireEnv(process.env.USAJOBS_USER_AGENT, 'USAJOBS_USER_AGENT', 'the email the USAJOBS key is registered to'),
-    }),
-  },
   'gi-bill': {
     factory: createVaGiBillSchoolsSource,
-    // VA GI Bill Comparison Tool institutions API — keyless.
-    resolveConfig: () => ({ apiKey: '', baseUrl: process.env.VA_GIBILL_BASE_URL ?? VA_GIBILL_BASE }),
+    // VA GI Bill Comparison Tool institutions API — keyless. `apiKey` here is the
+    // optional free api.data.gov key used ONLY for the College Scorecard
+    // enrichment pass (website + coordinates); without it the adapter still runs
+    // and still gets each school's VA certifying-official phone, it just skips
+    // websites. Get one at https://api.data.gov/signup/.
+    resolveConfig: () => ({
+      apiKey: process.env.DATA_GOV_API_KEY ?? '',
+      baseUrl: process.env.VA_GIBILL_BASE_URL ?? VA_GIBILL_BASE,
+    }),
   },
   'hud-housing': {
     factory: createHudCounselingSource,
-    // HUD's housing-counselor locator is public and keyless. The ONE kept
-    // general source: veterans navigating HUD-VASH use HUD-approved counselors,
-    // and veteran SSVF providers still rank above it. General (hybrid rule).
+    // HUD's housing-counselor locator: public, keyless, `general`.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.HUD_HCS_BASE_URL ?? HUD_HCS_BASE,
+    }),
+  },
+  'vso-organizations': {
+    factory: createVsoOrganizationsSource,
+    // VA OGC's accredited-organization export, rolled up to organization × state. Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.VA_OGC_ORGS_URL ??
+        'https://www.va.gov/ogc/apps/accreditation/orgsexcellist.asp',
+    }),
+  },
+  'state-veterans-homes': {
+    factory: createStateVeteransHomesSource,
+    // NASVH's WordPress `veterans-homes` collection. Keyless; addresses only, so geocoded.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.NASVH_BASE_URL ?? 'https://nasvh.org/wp-json/wp/v2/veterans-homes',
+    }),
+  },
+  'samhsa-veteran-bh': {
+    factory: createSamhsaVeteranBehavioralHealthSource,
+    // FindTreatment.gov filtered to facilities with a veterans program. Keyless, geocoded.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.SAMHSA_LOCATOR_URL ?? 'https://findtreatment.gov/locator/exportsAsJson/v2',
+    }),
+  },
+  'american-job-centers': {
+    factory: createAmericanJobCentersSource,
+    // CareerOneStop's bulk AJC workbook. Keyless; needs lib/http.ts's browser User-Agent.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.CAREERONESTOP_AJC_URL ??
+        'https://www.careeronestop.org/TridionMultimedia/tcm24-51446_XLS_AJC_Data_ACC.xlsx',
+    }),
+  },
+  'hud-pha': {
+    factory: createHudPublicHousingAuthoritiesSource,
+    // HUD's public ArcGIS layer of housing authorities (LAT/LON + phone). Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.HUD_PHA_URL ??
+        'https://services.arcgis.com/VTyQ9soqVukalItT/ArcGIS/rest/services/Public_Housing_Authorities/FeatureServer/0/query',
+    }),
+  },
+  'catholic-charities': {
+    factory: createCatholicCharitiesSource,
+    // The directory page embeds the whole agency list in one JSON tag. Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.CCUSA_DIRECTORY_URL ??
+        'https://www.catholiccharitiesusa.org/about-us/find-a-local-agency/',
+    }),
+  },
+  'fta-ntd': {
+    factory: createNtdTransitAgenciesSource,
+    // FTA National Transit Database on Socrata (transit.dot.gov 403s non-browsers). Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.NTD_AGENCIES_URL ?? 'https://data.transportation.gov/resource/ccvf-fykn.json',
+    }),
+  },
+  'va-transportation': {
+    factory: createVaTransportationSource,
+    // The VA's Veterans Transportation Program representatives page. Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.VA_VTP_URL ??
+        'https://www.va.gov/resources/veterans-transportation-program-representatives/',
+    }),
+  },
+  'osm-clothing': {
+    factory: createOsmCharityShopsSource,
+    // Charity and second-hand shops from OpenStreetMap (Overpass). Keyless; ODbL.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.OVERPASS_URL ?? 'https://overpass-api.de/api/interpreter',
+    }),
+  },
+  'nacvso-cvso': {
+    factory: createNacvsoOfficersSource,
+    // NACVSO's member directory, read from its sitemap at low concurrency. Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.NACVSO_SITEMAP_URL ?? 'https://www.nacvso.org/sitemap.xml',
+    }),
+  },
+  'lsc-legal-aid': {
+    factory: createLscLegalAidSource,
+    // LSC grantees — free civil legal aid, as state-scoped referrals. Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.LSC_PROGRAMS_URL ??
+        'https://www.lsc.gov/themes/lsc/scripts/find-legal-aid-leaflet/Programs.json',
+    }),
+  },
+  'hrsa-health-centers': {
+    factory: createHrsaHealthCentersSource,
+    // HRSA health-centre site file (~14 MB CSV, streamed). Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.HRSA_SITES_URL ??
+        'https://data.hrsa.gov/DataDownload/DD_Files/Health_Center_Service_Delivery_and_LookAlike_Sites.csv',
+    }),
+  },
+  'fisher-houses': {
+    factory: createFisherHousesSource,
+    // The undocumented but stable JSON behind Fisher House's directory. Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl: process.env.FISHER_HOUSE_URL ?? 'https://www.fisherhouse.org/api/houses/current',
+    }),
+  },
+  'usaspending-va-grants': {
+    factory: createUsaspendingVaGranteesSource,
+    // USAspending award search by CFDA number (VA/DOL veteran-services grants). Keyless.
+    resolveConfig: () => ({
+      apiKey: '',
+      baseUrl:
+        process.env.USASPENDING_SEARCH_URL ??
+        'https://api.usaspending.gov/api/v2/search/spending_by_award/',
     }),
   },
   'curated-national': {
@@ -98,21 +233,9 @@ const SOURCES: Record<string, SourceDef> = {
       baseUrl: resolve(root, 'ingestion/data/ssvf-providers.json'),
     }),
   },
-  'vso-representatives': {
-    factory: createVsoRepresentativesSource,
-    // VA-accredited VSO reps (real veteran legal help). Exported list, no API —
-    // quarterly manual refresh, ZIP-centroid placement.
-    resolveConfig: () => ({
-      apiKey: '',
-      baseUrl: resolve(root, 'ingestion/data/vso-representatives.json'),
-    }),
-  },
   'feed-america': {
     factory: createFeedAmericaFoodSource,
-    // Food pantries (open to everyone, labeled). Veterans face food insecurity
-    // and no veteran-specific food dataset exists; kept scoped (8 states, and
-    // capped to the nearest ~20 in the app) so it never dominates. Keyless;
-    // hard-fails without --state. Decision 2026-07-24.
+    // Feed America's HSDS feed. Keyless; national, `--state` narrows it for spot-checks.
     resolveConfig: () => ({
       apiKey: '',
       baseUrl: process.env.FEEDAM_BASE_URL ?? 'https://feedam.org/hsds/v3',
@@ -122,7 +245,6 @@ const SOURCES: Record<string, SourceDef> = {
 
 /** Per-source paging defaults (overridable with --per-page / --max-pages). */
 const PAGE_DEFAULTS: Record<string, { perPage: number; maxPages: number }> = {
-  usajobs: { perPage: 25, maxPages: 4 },
   // VA GI Bill: ~13.8k schools; the API hard-caps per_page at 10 → ~1,380 pages.
   'gi-bill': { perPage: 10, maxPages: 1500 },
 };
@@ -207,8 +329,6 @@ async function main(): Promise<void> {
     state: typeof args.state === 'string' ? args.state : undefined,
     national,
     types: typeof args.type === 'string' ? args.type.split(',') : undefined,
-    locationName: typeof args.location === 'string' ? args.location : undefined,
-    keyword: typeof args.keyword === 'string' ? args.keyword : undefined,
     perPage: numberArg(args['per-page']) ?? pageDefaults?.perPage ?? 100,
     // Nationwide VA needs enough pages for the largest type (~1,400 health rows).
     maxPages: numberArg(args['max-pages']) ?? pageDefaults?.maxPages ?? (national ? 20 : 5),

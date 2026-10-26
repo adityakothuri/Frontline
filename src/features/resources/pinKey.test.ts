@@ -1,0 +1,41 @@
+import { describe, expect, it } from 'vitest';
+import { makeResult } from '@/test/factories';
+import { pinKey } from './pinKey';
+
+/**
+ * These assertions look almost too small to write down. They are here because
+ * the bug they prevent — every pin on the map drawing the food icon — shipped
+ * once already, is invisible in code review, and cannot be caught by any other
+ * test in this suite: it lives in the native annotation-view recycle path, which
+ * vitest does not run. See `pinKey.ts` for the full account.
+ */
+describe('pinKey', () => {
+  it('carries the category, so two pins that look different can never share a key', () => {
+    const food = makeResult({ id: 'same-id', category: 'food' });
+    const housing = makeResult({ id: 'same-id', category: 'housing' });
+
+    expect(pinKey(food)).not.toBe(pinKey(housing));
+  });
+
+  it('includes the category verbatim', () => {
+    // Asserted directly rather than only via inequality above: a key built from,
+    // say, a hash of the category would satisfy the first test while being much
+    // harder to debug from a screenshot of a map full of wrong glyphs.
+    expect(pinKey(makeResult({ id: 'res-9', category: 'legal' }))).toBe('res-9:legal');
+  });
+
+  it('distinguishes two different places in the same category', () => {
+    const a = makeResult({ id: 'res-1', category: 'food' });
+    const b = makeResult({ id: 'res-2', category: 'food' });
+
+    expect(pinKey(a)).not.toBe(pinKey(b));
+  });
+
+  it('takes no selection input at all, so a tap cannot change a marker key', () => {
+    // The signature *is* the guarantee, and it is the one that matters most here:
+    // there is no argument a tap can move. A key that changed on selection would
+    // remount the marker from inside its own press handler — a red screen on
+    // every tap. That shipped once. See `pinKey.ts`.
+    expect(pinKey.length).toBe(1);
+  });
+});

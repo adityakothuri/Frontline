@@ -62,14 +62,14 @@ body:
     id: area
     attributes:
       label: Affected feature
-      options: [app-shell, cameras, ai-detection, review, alerts, map, profile, docs, other]
+      options: [home, discover, results, resource-detail, map, saved, profile, ask, onboarding, data, docs, other]
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
       label: Related logs / references
-      description: Link any Obsidian build log, decision, or prior bug note.
+      description: Link any related issue, PR, or log output.
   - type: textarea
     id: cause
     attributes:

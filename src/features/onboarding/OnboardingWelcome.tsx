@@ -1,105 +1,51 @@
-import { useEffect, useState } from 'react';
-import { View, Animated, Easing, AccessibilityInfo, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppText, PrimaryButton } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { colors, spacing } from '@/theme';
+import { ruleDraw } from '@/theme/motionPresets';
 
-// The first thing a new veteran sees: a warm, confident welcome that sets the
-// tone before the setup questions. One driver animates a staggered entrance.
+// The first thing a new veteran sees, set like the title page of a field guide:
+// the name, what it does, one rule, one way forward.
 export function OnboardingWelcome({ onStart }: { onStart: () => void }) {
-  const [t] = useState(() => new Animated.Value(0));
-
-  useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!active) return;
-      if (reduce) {
-        t.setValue(1);
-      } else {
-        Animated.timing(t, {
-          toValue: 1,
-          duration: 720,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }).start();
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [t]);
-
-  // Staggered reveal from a single 0→1 driver: each element eases over its own slice.
-  const slice = (from: number, to: number) => {
-    const opacity = t.interpolate({ inputRange: [from, to], outputRange: [0, 1], extrapolate: 'clamp' });
-    const translateY = t.interpolate({ inputRange: [from, to], outputRange: [18, 0], extrapolate: 'clamp' });
-    return { opacity, transform: [{ translateY }] };
-  };
-  const markStyle = {
-    opacity: t.interpolate({ inputRange: [0, 0.45], outputRange: [0, 1], extrapolate: 'clamp' }),
-    transform: [
-      { scale: t.interpolate({ inputRange: [0, 0.45], outputRange: [0.85, 1], extrapolate: 'clamp' }) },
-    ],
-  };
-
+  const reduceMotion = useReducedMotion();
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.body}>
-        <View style={styles.markWrap}>
-          <View style={styles.halo} />
-          <Animated.View style={[styles.mark, markStyle]}>
-            <Ionicons name="compass" size={42} color={colors.textOnAccent} />
-          </Animated.View>
-        </View>
-
-        <Animated.View style={slice(0.15, 0.6)}>
-          <AppText variant="displayLarge" style={styles.title}>
-            Welcome to Frontline
-          </AppText>
-        </Animated.View>
-
-        <Animated.View style={slice(0.3, 0.75)}>
-          <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-            Find your next step — benefits, local resources, and a clear plan for what to do next.
-          </AppText>
-        </Animated.View>
+        <AppText variant="kicker" color="textSecondary">
+          Frontline
+        </AppText>
+        <AppText variant="display" accessibilityRole="header" style={styles.title}>
+          Find your next step.
+        </AppText>
+        <Animated.View entering={reduceMotion ? undefined : ruleDraw} style={styles.rule} />
+        <AppText variant="body" color="textSecondary" style={styles.subtitle}>
+          Benefits, local help, and a clear next step — found for you, explained in plain English.
+          You served; this part should be simpler.
+        </AppText>
       </View>
 
-      <Animated.View style={[styles.footer, slice(0.5, 1)]}>
+      <View style={styles.footer}>
         <PrimaryButton label="Let's get started" onPress={onStart} />
-        <View style={styles.reassure}>
-          <Ionicons name="lock-closed-outline" size={13} color={colors.textMuted} />
-          <AppText variant="caption" color="textMuted">
-            No sign-in · nothing sensitive · about 2 minutes
-          </AppText>
-        </View>
-      </Animated.View>
+        <AppText variant="kicker" color="textSecondary" style={styles.reassure}>
+          No sign-in · nothing sensitive · 2 min
+        </AppText>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  body: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
-  markWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xxl },
-  halo: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: radii.pill,
-    backgroundColor: withAlpha(colors.accent, 0.12),
+  body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.sm },
+  title: { fontSize: 52, lineHeight: 52, textTransform: 'uppercase' },
+  rule: {
+    height: 2,
+    backgroundColor: colors.rule,
+    marginVertical: spacing.sm,
+    transformOrigin: 'left',
   },
-  mark: {
-    width: 88,
-    height: 88,
-    borderRadius: radii.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-  },
-  title: { textAlign: 'center', marginBottom: spacing.md },
-  subtitle: { textAlign: 'center', maxWidth: 320 },
-  footer: { paddingHorizontal: spacing.xl, gap: spacing.md },
-  reassure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  subtitle: { maxWidth: 360 },
+  footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.md },
+  reassure: { textAlign: 'center' },
 });

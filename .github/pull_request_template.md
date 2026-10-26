@@ -32,12 +32,9 @@
 - [ ] Not a UI change
 - [ ] UI reviewed for spacing, hierarchy, states, and consistency
 
-## Obsidian Updates
+## Docs
 
-- [ ] Build log updated
-- [ ] `app_walkthrough.md` updated, if meaningful feature/code was added
-- [ ] Decision log updated, if needed
-- [ ] Bug log updated, if needed
+- [ ] README / CHANGELOG updated, if behavior or setup changed
 
 ## Screenshots / Videos
 
@@ -45,5 +42,5 @@
 
 ## Risks / Follow-ups
 
-<!-- Anything reviewers should scrutinize — especially camera/video, location, auth,
+<!-- Anything reviewers should scrutinize — especially location, AI output, data
      permissions, or anything affecting what becomes public. -->

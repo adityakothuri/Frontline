@@ -1,64 +1,91 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { EmptyState, ErrorState, Loading, ScreenContainer } from '@/components';
-import { resourceService } from '@/services/resources';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { EmptyState, ErrorState, Loading, useLoadingGate, ScreenContainer } from '@/components';
+import { resourceService, resourceToNeedCategory } from '@/services/resources';
+import { reportDataError } from '@/services/monitoring';
 import { ResourceDetail } from '@/features/resources/ResourceDetail';
-import type { Resource } from '@/types/resource';
-import type { NeedCategory } from '@/types/need';
+import { RESOURCE_CATEGORY_META, type Resource } from '@/types/resource';
+import { isNeedCategory } from '@/types/need';
 
 type LoadState =
   | { status: 'loading' }
-  | { status: 'error' }
+  // Kept so `ErrorState` can say which failure it was (offline, timeout, …).
+  | { status: 'error'; error: unknown }
   | { status: 'notFound' }
   | { status: 'ready'; resource: Resource };
 
-// Detail route for a single resource. Reached by tapping a card; the `category`
-// param carries the veteran's original need so the AI guidance keeps its context.
-// Save lives in the page's action row, not the header.
+// Detail route for one resource. The `category` param carries the veteran's
+// original need so the AI guidance keeps its context.
 export default function ResourceDetailScreen() {
-  const { id, category } = useLocalSearchParams<{ id: string; category?: NeedCategory }>();
-  const needCategory: NeedCategory = category ?? 'general_benefits';
+  const router = useRouter();
+  const params = useLocalSearchParams<{ id?: string | string[]; category?: string }>();
+  // A route can hand us an array or nothing; neither is a resource.
+  const id = typeof params.id === 'string' && params.id.length > 0 ? params.id : null;
+  // Without a valid route category, it's derived from the resource once loaded.
+  const routeCategory = isNeedCategory(params.category) ? params.category : null;
 
   const [state, setState] = useState<LoadState>({ status: 'loading' });
-
-  const load = useCallback(async () => {
-    setState({ status: 'loading' });
-    try {
-      const resource = await resourceService.getById(id);
-      setState(resource ? { status: 'ready', resource } : { status: 'notFound' });
-    } catch {
-      // A real backend can fail here — distinct from "not found", and retryable.
-      setState({ status: 'error' });
-    }
-  }, [id]);
+  // Bumped by retry; the fetch stays inside the effect for its `active` guard.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (id === null) {
+      setState({ status: 'notFound' });
+      return;
+    }
+    let active = true;
+    setState({ status: 'loading' });
+    resourceService
+      .getById(id)
+      .then((resource) => {
+        if (active) setState(resource ? { status: 'ready', resource } : { status: 'notFound' });
+      })
+      .catch((error) => {
+        reportDataError('Resource detail', error);
+        if (active) setState({ status: 'error', error });
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, attempt]);
 
-  const title = state.status === 'ready' ? state.resource.name : 'Resource';
+  const retry = useCallback(() => {
+    setAttempt((n) => n + 1);
+  }, []);
 
-  if (state.status === 'ready') {
+  const gate = useLoadingGate(state.status === 'loading');
+  // Titled by category: the page's hero already shows the name.
+  const title =
+    state.status === 'ready' ? RESOURCE_CATEGORY_META[state.resource.category].label : '';
+
+  // `holding` lets a visible shield finish before the page cuts in.
+  if (state.status === 'ready' && !gate.holding) {
     return (
       <>
         <Stack.Screen options={{ title }} />
-        <ResourceDetail resource={state.resource} needCategory={needCategory} />
+        <ResourceDetail
+          resource={state.resource}
+          needCategory={routeCategory ?? resourceToNeedCategory(state.resource.category)}
+        />
       </>
     );
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer edges={['bottom']}>
       <Stack.Screen options={{ title }} />
-      {state.status === 'loading' ? (
-        <Loading label="Loading resource…" />
+      {gate.holding ? (
+        gate.showShield ? (
+          <Loading label="Loading resource…" />
+        ) : null
       ) : state.status === 'error' ? (
-        <ErrorState onRetry={load} />
+        <ErrorState error={state.error} onRetry={retry} />
       ) : (
         <EmptyState
-          icon="help-circle-outline"
-          title="Resource not found"
-          message="We couldn’t find this resource. It may have been removed."
+          title="This place isn’t listed any more"
+          message="It may have closed or been removed from our sources. Nearby help is one step back."
+          actionLabel="Go back"
+          onAction={() => (router.canGoBack() ? router.back() : router.replace('/discover'))}
         />
       )}
     </ScreenContainer>

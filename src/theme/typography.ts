@@ -1,31 +1,41 @@
-// Granola-inspired type system: Fraunces (characterful serif) for big display
-// headers, Inter (neutral UI sans) for everything else. `fonts.*` values are the
-// @expo-google-fonts export names (loaded in app/_layout.tsx); reference them via
-// these tokens, never as raw strings in screens. `textVariants` is a real
-// hierarchy, not random sizes.
+// Three families, one job each: Barlow Condensed names things, Public Sans
+// carries prose, Overpass Mono (Highway Gothic's descendant) carries data (labels, numbers, dates, statuses).
+// `fonts.*` are the @expo-google-fonts export names loaded in app/_layout.tsx.
 export const fonts = {
-  // Body / UI — Inter
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semibold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
-  // Display — Fraunces serif (headlines only)
-  serifSemibold: 'Fraunces_600SemiBold',
-  serifBold: 'Fraunces_700Bold',
+  regular: 'PublicSans_400Regular',
+  medium: 'PublicSans_500Medium',
+  semibold: 'PublicSans_600SemiBold',
+  displaySemibold: 'BarlowCondensed_600SemiBold',
+  display: 'BarlowCondensed_700Bold',
+  mono: 'OverpassMono_600SemiBold',
 } as const;
 
 export const textVariants = {
-  // The largest statement header — reserved for onboarding welcome/complete hero
-  // titles. Line height stays proportional (~1.17×) so descenders never clip.
-  displayLarge: { fontFamily: fonts.serifBold, fontSize: 36, lineHeight: 42 },
-  display: { fontFamily: fonts.serifBold, fontSize: 32, lineHeight: 40 },
-  title: { fontFamily: fonts.serifBold, fontSize: 24, lineHeight: 32 },
-  heading: { fontFamily: fonts.semibold, fontSize: 20, lineHeight: 26 },
-  subtitle: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22 },
-  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
-  bodyStrong: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 22 },
-  label: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 18 },
-  caption: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16 },
+  display: { fontFamily: fonts.display, fontSize: 34, lineHeight: 36 },
+  title: { fontFamily: fonts.display, fontSize: 26, lineHeight: 30 },
+  /** The name of a place or category. */
+  itemTitle: { fontFamily: fonts.displaySemibold, fontSize: 21, lineHeight: 24 },
+  heading: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 24 },
+  body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 },
+  bodyStrong: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 24 },
+  label: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 20 },
+  caption: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  /** Section numbers and small headers: `01  NEAR YOU`. */
+  kicker: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  /** Distances, dates, counts, statuses, text actions. */
+  data: {
+    fontFamily: fonts.mono,
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
 } as const;
 
 export type TextVariant = keyof typeof textVariants;

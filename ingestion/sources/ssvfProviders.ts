@@ -55,7 +55,9 @@ function describeAreas(raw: string): string | null {
   if (areas.length === 0) return null;
   const shown = areas.slice(0, 4);
   const rest = areas.length - shown.length;
-  return rest > 0 ? `${shown.join(', ')}, and ${rest} more area${rest === 1 ? '' : 's'}` : shown.join(', ');
+  return rest > 0
+    ? `${shown.join(', ')}, and ${rest} more area${rest === 1 ? '' : 's'}`
+    : shown.join(', ');
 }
 
 /** Distinct 2-letter state codes an SSVF provider serves — from `states` and

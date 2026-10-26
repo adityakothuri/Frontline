@@ -1,33 +1,54 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import MapView, { Marker, type Region } from 'react-native-maps';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, EmptyState, PressableScale } from '@/components';
-import { colors, radii, shadows, spacing } from '@/theme';
-import { RESOURCE_CATEGORY_META } from '@/types/resource';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, ActivityIndicator, LayoutChangeEvent, Platform, StyleSheet } from 'react-native';
+import MapView, { type Region } from 'react-native-maps';
+import Animated, {
+  LayoutAnimationConfig,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+} from 'react-native-reanimated';
+import { useFocusEffect } from 'expo-router';
+import { AppText, EmptyState, Glyph, PressableScale } from '@/components';
+import { colors, durations, pressScale, radii, spacing, springs, stagger, timings } from '@/theme';
+import { fadeIn, fadeOut, settleIn, sinkOut } from '@/theme/motionPresets';
+import { mapStyle, MAP_CHROME_EDGE, MAP_PAPER } from '@/theme/mapStyle';
+import { tapSelection } from '@/lib/haptics';
 import { resourceToNeedCategory, type ResourceSearchResult } from '@/services/resources';
 import { useProfile } from '@/services/profile';
 import { useUserLocation, geocodeZip, resolveZipCentroid } from '@/services/location';
 import type { Coordinates } from '@/lib/geo';
 import type { NeedCategory } from '@/types/need';
+import { CategoryDot, OpenPin, UserPuck } from './MapPin';
+import { pinKey } from './pinKey';
 import { ResourcePreview } from './ResourcePreview';
 
 // Zoom limits (map region deltas, in degrees): how far the +/- buttons can go.
 const MIN_DELTA = 0.004; // closest zoom-in
 const MAX_DELTA = 80; // widest zoom-out
 
-type ResourceMapProps = {
+/** The span the camera flies to when a pin is focused — unless the veteran is
+ *  already closer, in which case it keeps their zoom. */
+const FOCUS_DELTA = 0.05;
+
+export type ResourceMapProps = {
   results: ResourceSearchResult[];
   /** The searched need category, when the map is scoped to one (Results). Omitted
    *  on the general Map tab, where each pin's category is derived from its resource. */
   needCategory?: NeedCategory;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** Height of chrome floating over the top of the map; the camera and map furniture stay clear of it. */
+  topInset?: number;
+  /** Height of chrome floating over the bottom of the map. Excludes the preview
+   *  card, which measures itself and stacks on top of this inset. */
+  bottomInset?: number;
+  /** Bump to re-fit the camera to the current pins, e.g. after the ZIP changes
+   *  under a mounted map. Otherwise the camera is framed once, on ready. */
+  fitToken?: number;
 };
 
-// Wide-US fallback for the instant before any pin exists (with zero located
-// results the map isn't rendered at all, so this is rarely seen). The real
-// first-paint region derives from the data — no seed-city dependency.
+// Wide-US fallback for the instant before any pin exists.
 const FALLBACK_REGION: Region = {
   latitude: 39.8283,
   longitude: -98.5795,
@@ -35,23 +56,87 @@ const FALLBACK_REGION: Region = {
   longitudeDelta: 40,
 };
 
-// The map view of the same result set as the list. Located resources become
-// category pins; phone/online-only resources (no coordinates) can't be pinned,
-// so they're surfaced as a note instead of silently dropped.
-export function ResourceMap({ results, needCategory, selectedId, onSelect }: ResourceMapProps) {
+/** Breathing room around the pins when the camera fits them all, on top of
+ *  whatever chrome the screen reports. */
+const FIT_PADDING = { top: 40, right: 60, bottom: 120, left: 60 };
+
+/** Three 48pt cells in one housing; bounds how far the stack may lift. */
+const CONTROL_CELL = 48;
+const CONTROL_STACK_HEIGHT = CONTROL_CELL * 3;
+
+// Map view of the same result set as the list: one pin per located resource,
+// with phone/online-only resources counted in a note instead.
+//
+// Several hundred markers stay cheap only while no state changes as the camera
+// moves (the region lives in a ref) and `CategoryDot` gets a stable `onSelect`
+// and no selection prop. Break either and every marker re-renders on every pan.
+export function ResourceMap({
+  results,
+  needCategory,
+  selectedId,
+  onSelect,
+  topInset = 0,
+  bottomInset = 0,
+  fitToken = 0,
+}: ResourceMapProps) {
   const mapRef = useRef<MapView>(null);
   const { profile } = useProfile();
-  const { status, locate } = useUserLocation(profile?.zip);
+  // Track position only while focused: expo-router keeps tabs mounted, so the
+  // GPS watch would otherwise keep running behind other tabs.
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  const { status, locate, coordinates } = useUserLocation(profile?.zip, focused);
   const [hint, setHint] = useState<string | null>(null);
   const [recentering, setRecentering] = useState(false);
-  // Gate the focus animation: an animateToRegion issued before the native map is
-  // ready can be dropped (notably on Android), so we wait for onMapReady.
-  const [mapReady, setMapReady] = useState(false);
-  const located = useMemo(
-    () => results.filter((r) => r.resource.latitude !== null && r.resource.longitude !== null),
-    [results],
-  );
+  // Two readiness signals, deliberately separate.
+  // `ready`: the native map is up. Pins, the puck and camera commands must wait
+  // for it — on Android a Marker added earlier is a native crash, and camera
+  // calls are silently dropped. Never let a timer set it.
+  // `revealed`: the paper veil has lifted — with `ready`, or after
+  // `timings.mapReadyBudget` so a slow map is shown standing up, not hidden.
+  const [ready, setReady] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  // Bounds the control lift; also gates the reveal fallback and the first fit.
+  const [mapHeight, setMapHeight] = useState(0);
+  // Located results, deduplicated by id. `search_resources` unions in referrals,
+  // so the same resource can arrive twice — two markers with one React key.
+  const located = useMemo(() => {
+    const seen = new Set<string>();
+    return results.filter((r) => {
+      if (r.resource.latitude === null || r.resource.longitude === null) return false;
+      if (seen.has(r.resource.id)) return false;
+      seen.add(r.resource.id);
+      return true;
+    });
+  }, [results]);
   const offMapCount = results.length - located.length;
+
+  // Pins raised over tapped dots: the open one plus any still sinking. Kept
+  // apart from the dots so selection never changes the marker field.
+  const [pins, setPins] = useState<string[]>([]);
+  const locatedById = useMemo(() => new Map(located.map((r) => [r.resource.id, r])), [located]);
+  // The selected place gets a pin; every other pin sinks. Returns `prev` when
+  // nothing changed so a refetch does not reorder the pin markers.
+  useEffect(() => {
+    setPins((prev) => {
+      const onMap = prev.filter((id) => locatedById.has(id));
+      const wantsPin = selectedId !== null && locatedById.has(selectedId);
+      if (wantsPin && onMap[onMap.length - 1] === selectedId) {
+        return onMap.length === prev.length ? prev : onMap;
+      }
+      const sinking = onMap.filter((id) => id !== selectedId);
+      return wantsPin ? [...sinking, selectedId as string] : sinking;
+    });
+  }, [selectedId, locatedById]);
+  const dropPin = useCallback(
+    (id: string) => setPins((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : prev)),
+    [],
+  );
 
   // First paint centers on the first pinned result; fitToPins refines on ready.
   const initialRegion = useMemo<Region>(() => {
@@ -65,78 +150,129 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
     };
   }, [located]);
 
-  // Custom marker children re-rasterize while tracking; let them paint once, then
-  // stop tracking to avoid continuous redraw jank.
-  const [tracksChanges, setTracksChanges] = useState(true);
-  useEffect(() => {
-    setTracksChanges(true);
-    const t = setTimeout(() => setTracksChanges(false), 800);
-    return () => clearTimeout(t);
-  }, [located]);
-
-  // The live map region, kept fresh by onRegionChangeComplete so the +/- zoom
-  // buttons scale the *current* view (not a stale initial region).
+  // Live map region as a ref, not state: the zoom buttons read it synchronously,
+  // and keeping it out of state means camera moves re-render nothing.
   const regionRef = useRef<Region>(initialRegion);
 
-  // When a pin is selected from outside (a card's "See in map", or the Map tab's
-  // ?focus= param), glide the camera to it. The preview for `selected` renders
-  // below, so the veteran lands on the pin with its card already open.
+  // Fly the camera to a selected pin, once per id. `located` must stay in the
+  // deps (a focus id can arrive before its results), and `focusedRef` stops a
+  // filter toggle or refetch from snapping the camera back.
+  const focusedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!mapReady || !selectedId) return;
+    if (!selectedId) {
+      focusedRef.current = null;
+      return;
+    }
+    if (!ready || focusedRef.current === selectedId) return;
     const target = located.find((r) => r.resource.id === selectedId);
     if (!target) return;
+    focusedRef.current = selectedId;
+    // Zoom in to street level, never out, so a closer user zoom is kept.
+    const span = Math.min(regionRef.current.latitudeDelta, FOCUS_DELTA);
     mapRef.current?.animateToRegion(
       {
         latitude: target.resource.latitude as number,
         longitude: target.resource.longitude as number,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
+        latitudeDelta: span,
+        longitudeDelta: span,
       },
-      350,
+      timings.mapFocus,
     );
-  }, [selectedId, located, mapReady]);
+  }, [selectedId, located, ready]);
 
-  const fitToPins = () => {
-    // A pre-selected pin *that exists in this set* owns the camera (the focus
-    // effect zooms to it); don't fight it by fitting all pins on map-ready. But
-    // if the focus id isn't in this dataset, still fit everything — never leave
-    // the map parked on an arbitrary initial region.
+  const fitToPins = ({ animated = false }: { animated?: boolean } = {}) => {
+    // A selected pin in this set owns the camera (the focus effect handles it).
     if (located.length === 0) return;
     const hasSelectedPin = selectedId !== null && located.some((r) => r.resource.id === selectedId);
     if (hasSelectedPin) return;
+    // A single pin is a zero-area fit on both platforms, which zooms to maximum.
+    const first = located[0].resource;
+    if (located.length === 1) {
+      mapRef.current?.animateToRegion(
+        {
+          latitude: first.latitude as number,
+          longitude: first.longitude as number,
+          latitudeDelta: FOCUS_DELTA,
+          longitudeDelta: FOCUS_DELTA,
+        },
+        timings.mapFocus,
+      );
+      return;
+    }
     mapRef.current?.fitToCoordinates(
       located.map((r) => ({
         latitude: r.resource.latitude as number,
         longitude: r.resource.longitude as number,
       })),
-      { edgePadding: { top: 80, right: 60, bottom: 220, left: 60 }, animated: false },
+      {
+        edgePadding: {
+          ...FIT_PADDING,
+          top: FIT_PADDING.top + topInset,
+          bottom: FIT_PADDING.bottom + bottomInset,
+        },
+        animated,
+      },
     );
   };
+
+  // Re-frame when the token changes. Skipped on the first run, which would race
+  // the initial fit below.
+  const fitTokenRef = useRef(fitToken);
+  useEffect(() => {
+    if (fitTokenRef.current === fitToken) return;
+    fitTokenRef.current = fitToken;
+    if (!ready) return;
+    fitToPins({ animated: true });
+    // The token is the trigger; `fitToPins` is deliberately not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitToken, ready]);
+
+  // Lift the veil with readiness, or on the budget once the container has a
+  // size (a mount-time timer could fire over a zero-height map).
+  useEffect(() => {
+    if (revealed) return;
+    if (ready) {
+      setRevealed(true);
+      return;
+    }
+    if (mapHeight === 0) return;
+    const timer = setTimeout(() => setRevealed(true), timings.mapReadyBudget);
+    return () => clearTimeout(timer);
+  }, [ready, revealed, mapHeight]);
+
+  // First framing, once, when the map is ready *and* measured:
+  // `fitToCoordinates` against an unmeasured frame fits nothing.
+  const framedRef = useRef(false);
+  useEffect(() => {
+    if (framedRef.current || !ready || mapHeight === 0) return;
+    framedRef.current = true;
+    fitToPins();
+    // Same reasoning as the token effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, mapHeight]);
 
   // Zoom by scaling the current region's span (factor < 1 zooms in), clamped.
   const zoomBy = (factor: number) => {
     const r = regionRef.current;
     const clamp = (d: number) => Math.min(MAX_DELTA, Math.max(MIN_DELTA, d * factor));
-    mapRef.current?.animateToRegion(
-      {
-        latitude: r.latitude,
-        longitude: r.longitude,
-        latitudeDelta: clamp(r.latitudeDelta),
-        longitudeDelta: clamp(r.longitudeDelta),
-      },
-      180,
-    );
+    const next = {
+      latitude: r.latitude,
+      longitude: r.longitude,
+      latitudeDelta: clamp(r.latitudeDelta),
+      longitudeDelta: clamp(r.longitudeDelta),
+    };
+    // Record the target now: `animateToRegion` emits no region changes until
+    // the flight ends, so a quick second tap would otherwise repeat this target.
+    regionRef.current = next;
+    mapRef.current?.animateToRegion(next, timings.mapZoom);
   };
 
   const recenter = async () => {
     setHint(null);
     setRecentering(true);
     try {
-      // The ZIP the veteran chose is the map's frame of reference — every pin is
-      // near it — so center on the ZIP centroid, not device GPS (which on a
-      // simulator or a stale fix can be a different city). Prefer the backend
-      // zip_centroids table (exactly what search uses), then the OS geocoder,
-      // then GPS only when there's no ZIP at all.
+      // Center on the ZIP the search used, not GPS (a stale fix can be another
+      // city): backend centroid, then OS geocoder, then GPS only without a ZIP.
       let target: Coordinates | null = null;
       if (profile?.zip) {
         target = await resolveZipCentroid(profile.zip);
@@ -144,7 +280,10 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
       }
       if (!target) target = await locate();
       if (target) {
-        mapRef.current?.animateToRegion({ ...target, latitudeDelta: 0.08, longitudeDelta: 0.08 }, 350);
+        mapRef.current?.animateToRegion(
+          { ...target, latitudeDelta: 0.08, longitudeDelta: 0.08 },
+          timings.mapFocus,
+        );
       } else {
         setHint(
           profile?.zip
@@ -159,26 +298,84 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
 
   const selected = results.find((r) => r.resource.id === selectedId) ?? null;
 
-  if (located.length === 0) {
+  // Stable callback so `CategoryDot`'s memo holds; never inline it at the marker.
+  const selectPin = useCallback(
+    (id: string) => {
+      tapSelection();
+      onSelect(id);
+    },
+    [onSelect],
+  );
+
+  // The controls ride above the preview card, lifted by its measured height.
+  const [previewHeight, setPreviewHeight] = useState(0);
+  // Whether the control stack can actually clear the chrome below it.
+  const [controlsClear, setControlsClear] = useState(true);
+  const lift = useSharedValue(0);
+  // So the lift's delay applies only to a card arriving.
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    // Clamped so the controls never lift behind the top chrome.
+    const headroom = mapHeight - topInset - CONTROL_STACK_HEIGHT - spacing.xl * 2;
+    // A sum: the card stacks on top of the bottom chrome.
+    const wanted = selected ? bottomInset + previewHeight + spacing.md : bottomInset;
+    // Reanimated resolves this straight to the end value under Reduce Motion.
+    const opening = selected !== null && !wasOpenRef.current;
+    wasOpenRef.current = selected !== null;
+    if (wanted > headroom) {
+      // Docked top corner (lift unused). Park at the closed position unanimated
+      // so it reappears in place when the card closes.
+      lift.set(Math.max(0, Math.min(bottomInset, headroom)));
+    } else {
+      // Delayed one `stagger.step` when a card opens, to move with the card.
+      const to = Math.max(0, Math.min(wanted, headroom));
+      lift.set(withDelay(opening ? stagger.step : 0, withSpring(to, springs.settle)));
+    }
+    // If it cannot clear the chrome it would sit untappable behind the card, so
+    // it docks to the top corner instead.
+    setControlsClear(wanted <= headroom);
+  }, [selected, previewHeight, mapHeight, topInset, bottomInset, lift]);
+  const liftStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -lift.get() }] }));
+
+  // Once mounted, keep the MapView even with zero pins: remounting throws away
+  // the user's camera. The empty state only shows before a map has existed.
+  if (located.length === 0 && !ready) {
     return (
+      // No action: Results has the list toggle; the Map tab handles this upstream.
       <EmptyState
-        icon="call-outline"
         title="Phone & online only"
-        message="These resources don’t have a map location — reach them by phone or online. Switch to the list to see them."
+        message="These resources don’t have a map location — reach them by phone or online."
       />
     );
   }
 
   return (
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      onLayout={(e: LayoutChangeEvent) => setMapHeight(e.nativeEvent.layout.height)}
+    >
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
-        onMapReady={() => {
-          setMapReady(true);
-          fitToPins();
+        // Muted cartography so markers carry the colour; Android uses the JSON
+        // style, which MapKit ignores.
+        mapType={Platform.OS === 'ios' ? 'mutedStandard' : 'standard'}
+        customMapStyle={Platform.OS === 'android' ? mapStyle : undefined}
+        // The app is light-only; keep the map light in device dark mode.
+        userInterfaceStyle="light"
+        // Keeps the legal link and compass clear of floating chrome.
+        mapPadding={{
+          top: topInset,
+          right: 0,
+          bottom: bottomInset + (selected ? previewHeight + spacing.md : 0),
+          left: 0,
         }}
+        // Either marks the map usable. `onMapLoaded` is Google-only (no-op on
+        // Apple Maps).
+        onMapReady={() => setReady(true)}
+        onMapLoaded={() => setReady(true)}
+        // Ref only — no state, so panning re-renders no markers.
         onRegionChangeComplete={(r) => {
           regionRef.current = r;
         }}
@@ -186,182 +383,208 @@ export function ResourceMap({ results, needCategory, selectedId, onSelect }: Res
           onSelect(null);
           setHint(null);
         }}
-        showsUserLocation={status === 'granted'}
+        // Drawn by `UserPuck` instead; the OS blue dot clashes with the pins.
+        showsUserLocation={false}
         showsPointsOfInterests={false}
+        // Android extras: we ship our own recenter button and don't want the
+        // Google directions toolbar taking over on a marker tap.
+        showsMyLocationButton={false}
+        toolbarEnabled={false}
       >
-        {located.map((r) => {
-          const meta = RESOURCE_CATEGORY_META[r.resource.category];
-          const isSelected = r.resource.id === selectedId;
-          return (
-            <Marker
-              key={r.resource.id}
-              coordinate={{
-                latitude: r.resource.latitude as number,
-                longitude: r.resource.longitude as number,
-              }}
-              tracksViewChanges={tracksChanges}
-              onPress={(e) => {
-                e.stopPropagation();
-                onSelect(r.resource.id);
-              }}
-            >
-              <View
-                style={[
-                  styles.pin,
-                  { borderColor: meta.color },
-                  isSelected && { backgroundColor: meta.color },
-                ]}
-              >
-                <Ionicons
-                  name={meta.icon}
-                  size={16}
-                  color={isSelected ? colors.background : meta.color}
+        {/* Gated on `ready` (Android crash otherwise). Read `pinKey.ts` before
+            changing the key. */}
+        {ready
+          ? located.map((result) => (
+              <CategoryDot key={pinKey(result)} result={result} onSelect={selectPin} />
+            ))
+          : null}
+
+        {/* Keyed by place, so re-selecting a sinking pin reverses it. */}
+        {ready
+          ? pins.map((id) => {
+              const result = locatedById.get(id);
+              return result ? (
+                <OpenPin
+                  key={`pin:${id}`}
+                  result={result}
+                  open={id === selectedId}
+                  onClosed={dropPin}
                 />
-              </View>
-            </Marker>
-          );
-        })}
+              ) : null;
+            })
+          : null}
+
+        {ready && coordinates ? <UserPuck coordinate={coordinates} /> : null}
       </MapView>
 
+      {/* Paper veil over the map until it is revealed. An overlay, not an
+          entering animation: an MKMapView mounted inside a layout animation can
+          paint blank on first open. */}
+      {revealed ? null : (
+        <Animated.View
+          exiting={fadeOut(durations.reveal)}
+          pointerEvents="none"
+          style={styles.veil}
+        />
+      )}
+
       {offMapCount > 0 ? (
-        <View style={styles.note}>
-          <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
-          <AppText variant="caption" color="textSecondary">
-            {offMapCount} phone/online {offMapCount === 1 ? 'resource' : 'resources'} not shown on the map
+        <View style={[styles.note, { top: topInset + spacing.sm }]}>
+          {/* Bounded and clamped so large type cannot run off both edges. */}
+          <AppText
+            variant="caption"
+            color="textSecondary"
+            numberOfLines={2}
+            style={styles.noteText}
+          >
+            {offMapCount} phone/online {offMapCount === 1 ? 'resource' : 'resources'} not shown on
+            the map
           </AppText>
         </View>
       ) : null}
 
+      {/* Bottom-right, lifted clear of the chrome; docks under the top chrome
+          when there is no room. Keyed by position so a move crossfades;
+          `skipEntering` keeps the fade off first paint. */}
+      <LayoutAnimationConfig skipEntering>
+        <Animated.View
+          key={controlsClear ? 'lifted' : 'docked'}
+          entering={fadeIn()}
+          exiting={fadeOut()}
+          style={[styles.controls, controlsClear ? liftStyle : { top: topInset + spacing.lg }]}
+          pointerEvents="box-none"
+        >
+          <>
+            {hint ? (
+              <View style={styles.hint}>
+                <AppText variant="caption" color="textSecondary">
+                  {hint}
+                </AppText>
+              </View>
+            ) : null}
+            {/* Recenter is olive: the only one of the three that is an action. */}
+            <View style={styles.controlStack}>
+              <PressableScale
+                accessibilityRole="button"
+                accessibilityLabel="Zoom in"
+                onPress={() => zoomBy(0.5)}
+                scaleTo={pressScale.control}
+                style={styles.controlCell}
+              >
+                <Glyph name="plus" size={22} />
+              </PressableScale>
+              <View style={styles.controlDivider} />
+              <PressableScale
+                accessibilityRole="button"
+                accessibilityLabel="Zoom out"
+                onPress={() => zoomBy(2)}
+                scaleTo={pressScale.control}
+                style={styles.controlCell}
+              >
+                <Glyph name="minus" size={22} />
+              </PressableScale>
+              <View style={styles.controlDivider} />
+              <PressableScale
+                accessibilityRole="button"
+                accessibilityLabel="Recenter the map on your ZIP code"
+                onPress={recenter}
+                disabled={status === 'locating' || recentering}
+                scaleTo={pressScale.control}
+                style={styles.controlCell}
+              >
+                {status === 'locating' || recentering ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <Glyph name="locate" size={22} color={colors.accent} />
+                )}
+              </PressableScale>
+            </View>
+          </>
+        </Animated.View>
+      </LayoutAnimationConfig>
+
       {selected ? (
-        <View style={styles.preview}>
+        // Animated on this wrapper because it is the node that unmounts; one
+        // `stagger.step` behind the pin's bloom.
+        <Animated.View
+          entering={settleIn().delay(stagger.step)}
+          exiting={sinkOut()}
+          style={[styles.preview, { bottom: bottomInset + spacing.md }]}
+          onLayout={(e: LayoutChangeEvent) => setPreviewHeight(e.nativeEvent.layout.height)}
+          // Without this, VoiceOver must swipe past every marker to reach the card.
+          accessibilityViewIsModal
+        >
+          {/* Unkeyed: switching pins swaps the contents in place. */}
           <ResourcePreview
-            key={selected.resource.id}
             result={selected}
             needCategory={needCategory ?? resourceToNeedCategory(selected.resource.category)}
             onClose={() => onSelect(null)}
           />
-        </View>
-      ) : (
-        <View style={styles.recenterWrap}>
-          {hint ? (
-            <View style={styles.hint}>
-              <AppText variant="caption" color="textSecondary">
-                {hint}
-              </AppText>
-            </View>
-          ) : null}
-          {/* Zoom sits directly above the recenter, same corner */}
-          <View style={styles.zoomWrap}>
-            <PressableScale
-              accessibilityRole="button"
-              accessibilityLabel="Zoom in"
-              onPress={() => zoomBy(0.5)}
-              scaleTo={0.9}
-              style={styles.zoomBtn}
-            >
-              <Ionicons name="add" size={22} color={colors.textPrimary} />
-            </PressableScale>
-            <View style={styles.zoomDivider} />
-            <PressableScale
-              accessibilityRole="button"
-              accessibilityLabel="Zoom out"
-              onPress={() => zoomBy(2)}
-              scaleTo={0.9}
-              style={styles.zoomBtn}
-            >
-              <Ionicons name="remove" size={22} color={colors.textPrimary} />
-            </PressableScale>
-          </View>
-          <PressableScale
-            accessibilityRole="button"
-            accessibilityLabel="Recenter the map on your ZIP code"
-            onPress={recenter}
-            disabled={status === 'locating' || recentering}
-            scaleTo={0.92}
-            style={styles.recenter}
-          >
-            {status === 'locating' || recentering ? (
-              <ActivityIndicator size="small" color={colors.accent} />
-            ) : (
-              <Ionicons name="locate" size={22} color={colors.accent} />
-            )}
-          </PressableScale>
-        </View>
-      )}
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Fills whatever container the screen gives it (framed card on the Map tab).
   root: { flex: 1 },
-  pin: {
-    width: 34,
-    height: 34,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.accent,
+  veil: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.background,
+  },
+  controlStack: {
+    borderRadius: radii.sm,
+    backgroundColor: MAP_PAPER,
+    borderWidth: 1,
+    borderColor: MAP_CHROME_EDGE,
+    overflow: 'hidden',
+  },
+  controlCell: {
+    width: CONTROL_CELL,
+    height: CONTROL_CELL,
     alignItems: 'center',
     justifyContent: 'center',
-    // A soft ground shadow so pins read as lifted cartography, not flat stickers.
-    ...shadows.sm,
   },
-  zoomWrap: {
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    overflow: 'hidden',
-    ...shadows.md,
-  },
-  zoomBtn: { width: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
-  zoomDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  controlDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   note: {
     position: 'absolute',
-    top: spacing.sm,
     alignSelf: 'center',
+    maxWidth: 300,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.background,
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    backgroundColor: MAP_PAPER,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: MAP_CHROME_EDGE,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
   },
+  noteText: { flexShrink: 1 },
+  // `bottom` is set at the render site from `bottomInset`.
   preview: {
     position: 'absolute',
-    left: spacing.md,
-    right: spacing.md,
-    bottom: spacing.md,
+    left: spacing.lg,
+    right: spacing.lg,
   },
-  recenterWrap: {
+  controls: {
     position: 'absolute',
-    right: spacing.md,
+    right: spacing.lg,
     bottom: spacing.xl,
     alignItems: 'flex-end',
     gap: spacing.sm,
   },
   hint: {
     maxWidth: 220,
-    backgroundColor: colors.background,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    backgroundColor: MAP_PAPER,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: MAP_CHROME_EDGE,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-  },
-  recenter: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    ...shadows.md,
   },
 });

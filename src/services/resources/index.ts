@@ -1,18 +1,11 @@
 import { SupabaseResourceService } from './supabaseResourceService';
 import type { ResourceService } from './ResourceService';
 
-export type {
-  ResourceService,
-  ResourceQuery,
-  ResourceSearchResult,
-} from './ResourceService';
-export { needToResourceCategories, resourceToNeedCategory } from './needMapping';
-export { isNationalReferral, filterReferralsByState } from './sortResults';
+export type { ResourceService, ResourceQuery, ResourceSearchResult } from './ResourceService';
+export { resourceToNeedCategory } from './needMapping';
+export { splitLocalsAndReferrals, demoteDownvoted } from './sortResults';
+export { browseCountCap } from './supabaseResourceService';
 
-/**
- * The app's resource service — the REAL Supabase backend, always. There is no
- * simulated fallback: every resource comes from the live ingestion pipeline
- * (VA, USAJOBS, GI Bill, HUD, SSVF, curated veteran referrals). Without Supabase
- * env, resource calls throw and surface as the error/retry UI — never fake data.
- */
+/** The app's resource service: the live Supabase backend. Without Supabase env,
+ *  calls throw into the error/retry UI; there is no simulated fallback. */
 export const resourceService: ResourceService = new SupabaseResourceService();

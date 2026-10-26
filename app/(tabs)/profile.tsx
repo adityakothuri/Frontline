@@ -1,40 +1,56 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { View, Alert, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { View, Alert, StyleSheet } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AppText,
-  Card,
+  DataRow,
   EmptyState,
+  Loading,
+  useLoadingGate,
   OptionGroup,
   PrimaryButton,
   ScreenContainer,
   ScreenHeader,
+  SectionHeader,
+  TextAction,
   TextField,
 } from '@/components';
 import { useProfile } from '@/services/profile';
-import { colors, radii, spacing, withAlpha } from '@/theme';
-import { ROLE_OPTIONS, RADIUS_OPTIONS, VETERAN_ROLE_LABELS, type VeteranRole } from '@/types/profile';
+import { spacing } from '@/theme';
+import { tapImpact } from '@/lib/haptics';
+import { stateFromZip } from '@/lib/zipState';
 import {
-  DEFAULT_RADIUS_MILES,
-  DOCUMENT_OPTIONS,
-  VETERAN_DOCUMENT_LABELS,
-  type VeteranDocument,
-} from '@/types/need';
+  ROLE_OPTIONS,
+  RADIUS_OPTIONS,
+  VETERAN_ROLE_LABELS,
+  type VeteranRole,
+} from '@/types/profile';
+import { DEFAULT_RADIUS_MILES, DOCUMENT_OPTIONS, type VeteranDocument } from '@/types/need';
+import { useSaved } from '@/services/saved';
+import { useReminders } from '@/services/reminders';
+import { DocumentsOnHand } from '@/features/profile/DocumentsOnHand';
 
-type IconName = keyof typeof Ionicons.glyphMap;
-
-/** Short, recognizable summary of the documents on hand (never just a count). */
-function documentsSummary(docs: VeteranDocument[]): string {
-  if (docs.length === 0) return 'None yet';
-  const labels = docs.map((d) => VETERAN_DOCUMENT_LABELS[d]);
-  if (labels.length <= 2) return labels.join(', ');
-  return `${labels.slice(0, 2).join(', ')} +${labels.length - 2} more`;
+/** "OCT 2026", or null when the stored timestamp can't be read. */
+function sinceLabel(createdAt: string): string | null {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
 }
+
+const NEVER_ASKED = [
+  'Never your Social Security number',
+  'Never your VA login',
+  'Never bank details or diagnoses',
+];
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, saveDetails, resetProfile } = useProfile();
+  const { profile, isHydrated, saveDetails, resetProfile } = useProfile();
+  const { savedIds } = useSaved();
+  const { reminderCount } = useReminders();
+  // `?edit=1` (sent by "Change ZIP or radius") opens the form directly. Applied
+  // on focus and then cleared, so the same value can arrive again.
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(profile?.firstName ?? '');
@@ -44,24 +60,46 @@ export default function ProfileScreen() {
   const [radius, setRadius] = useState<number | undefined>(profile?.preferredRadiusMiles);
   const [saving, setSaving] = useState(false);
 
-  // Keep the form in sync when the stored profile changes (save, or re-setup).
+  // Declared with the other hooks because the hydration branch returns early.
+  const gate = useLoadingGate(!isHydrated);
+
+  // Follow the stored profile (a save, a backup restore), but never mid-edit.
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || editing) return;
     setFirstName(profile.firstName);
     setZip(profile.zip ?? '');
     setRole(profile.role);
     setDocs(profile.documentsOnHand ?? []);
     setRadius(profile.preferredRadiusMiles);
-  }, [profile]);
+  }, [profile, editing]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (edit !== '1' || !profile) return;
+      setEditing(true);
+      router.setParams({ edit: '' });
+    }, [edit, profile, router]),
+  );
+
+  // Before hydration `profile` is null for everyone, so neither branch below can
+  // be trusted yet. `holding` (not `!isHydrated`) lets a visible shield finish.
+  if (gate.holding) {
+    return (
+      <ScreenContainer>
+        {/* No subtitle yet: the two branches below word it differently. */}
+        <ScreenHeader title="Profile" />
+        {gate.showShield ? <Loading label="Loading your profile…" /> : null}
+      </ScreenContainer>
+    );
+  }
 
   if (!profile) {
     return (
       <ScreenContainer>
         <ScreenHeader title="Profile" subtitle="Optional — never required" />
         <EmptyState
-          icon="person-outline"
-          title="Your preferences will live here"
-          message="Set up Frontline to personalize your experience. Frontline never asks for sensitive information."
+          title="Set up Frontline in two minutes"
+          message="A first name and a ZIP code are all it takes to find help near you. No sign-in, and nothing sensitive — ever."
           actionLabel="Set up now"
           onAction={() => router.replace('/')}
         />
@@ -69,11 +107,13 @@ export default function ProfileScreen() {
     );
   }
 
-  const canSave = firstName.trim().length > 0 && zip.length === 5;
-  const initial = profile.firstName.trim().charAt(0).toUpperCase() || '·';
+  // The same rule onboarding applies: five digits the state table can place.
+  const zipValid = zip.length === 5 && stateFromZip(zip) !== null;
+  const canSave = firstName.trim().length > 0 && zipValid;
   const storedDocs = profile.documentsOnHand ?? [];
+  // Trimmed like the save, so a trailing space doesn't prompt "Discard changes?".
   const dirty =
-    firstName !== profile.firstName ||
+    firstName.trim() !== profile.firstName ||
     zip !== (profile.zip ?? '') ||
     role !== profile.role ||
     radius !== profile.preferredRadiusMiles ||
@@ -84,7 +124,13 @@ export default function ProfileScreen() {
     if (!canSave || saving) return;
     setSaving(true);
     try {
-      await saveDetails({ firstName, zip, role, documentsOnHand: docs, preferredRadiusMiles: radius });
+      await saveDetails({
+        firstName,
+        zip,
+        role,
+        documentsOnHand: docs,
+        preferredRadiusMiles: radius,
+      });
       setEditing(false);
     } catch {
       Alert.alert("Couldn't save", 'Something went wrong saving your changes. Please try again.');
@@ -125,8 +171,15 @@ export default function ProfileScreen() {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            await resetProfile();
-            router.replace('/');
+            try {
+              await resetProfile();
+              router.replace('/');
+            } catch {
+              Alert.alert(
+                'Couldn’t reset',
+                'Something went wrong clearing your details. Please try again.',
+              );
+            }
           },
         },
       ],
@@ -138,11 +191,11 @@ export default function ProfileScreen() {
       <ScreenContainer scroll keyboardAware>
         <ScreenHeader
           title="Edit profile"
-          action={<HeaderButton icon="close" label="Cancel editing" onPress={cancelEdit} />}
+          action={<TextAction label="Cancel" onPress={cancelEdit} />}
         />
 
         <View style={styles.form}>
-          <Section icon="create-outline" label="Your details">
+          <Section number={1} title="Your details">
             <TextField
               label="First name"
               value={firstName}
@@ -159,142 +212,169 @@ export default function ProfileScreen() {
               placeholder="e.g. 90015"
               keyboardType="number-pad"
               maxLength={5}
-              hint="Used only to find nearby resources."
+              hint={
+                zip.length === 5 && !zipValid
+                  ? 'That doesn’t look like a US ZIP code — check the digits.'
+                  : 'Used only to find nearby resources.'
+              }
             />
           </Section>
 
-          <Section icon="medal-outline" label="I am a…">
+          <Section number={2} title="I am a…">
             <OptionGroup options={ROLE_OPTIONS} value={role} onChange={setRole} />
           </Section>
 
-          <Section icon="folder-open-outline" label="Documents I have">
+          <Section number={3} title="Documents I have">
             <OptionGroup multiple options={DOCUMENT_OPTIONS} value={docs} onChange={setDocs} />
           </Section>
 
-          <Section icon="navigate-outline" label="Search radius">
+          <Section number={4} title="Search radius">
             <OptionGroup options={RADIUS_OPTIONS} value={radius} onChange={setRadius} />
           </Section>
         </View>
 
-        <PrimaryButton label="Save changes" onPress={save} disabled={!canSave} loading={saving} />
+        <PrimaryButton
+          label="Save changes"
+          onPress={() => {
+            tapImpact();
+            save();
+          }}
+          disabled={!canSave}
+          loading={saving}
+        />
 
-        <AppText variant="caption" color="textMuted" style={styles.footNote}>
-          Everything here is optional except your name and ZIP, and it all stays on this device.
+        {/* Saves are mirrored to the device backup (services/sync/backupSync.ts). */}
+        <AppText variant="caption" color="textSecondary" style={styles.footNote}>
+          Only your name and ZIP are required. Everything is kept on this device, with a private
+          backup so a new phone can pick up where you left off — never sold or shared.
         </AppText>
       </ScreenContainer>
     );
   }
 
+  const radiusMiles = profile.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES;
+  const roleLabel = profile.role ? VETERAN_ROLE_LABELS[profile.role] : null;
+  const since = sinceLabel(profile.createdAt);
+  const identity = [roleLabel?.toUpperCase(), since ? `ON FRONTLINE SINCE ${since}` : null]
+    .filter(Boolean)
+    .join(' · ');
+  const activity =
+    savedIds.length === 0 && reminderCount === 0
+      ? 'NOTHING SAVED YET'
+      : [
+          `${savedIds.length} SAVED`,
+          reminderCount > 0
+            ? `${reminderCount} REMINDER${reminderCount === 1 ? '' : 'S'} ON`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+
   return (
-    // Scrollable so large accessibility text sizes overflow gracefully; flexGrow keeps
-    // the reset link pinned to the bottom when everything fits on one screen.
+    // flexGrow pins the reset link to the bottom when everything fits.
     <ScreenContainer scroll contentStyle={styles.viewContent}>
       <ScreenHeader
         title="Profile"
-        subtitle="Your details, kept on this device"
-        action={<HeaderButton icon="pencil" label="Edit profile" onPress={() => setEditing(true)} />}
+        subtitle="Only what you chose to share."
+        action={<TextAction label="Edit" onPress={() => setEditing(true)} />}
       />
 
-      <View style={styles.hero}>
-        <View style={styles.avatarRing}>
-          <View style={styles.avatar}>
-            <AppText variant="display" style={styles.avatarText}>
-              {initial}
-            </AppText>
-          </View>
-        </View>
-        <AppText variant="title">{profile.firstName}</AppText>
-        {profile.role ? (
-          <AppText variant="caption" color="textMuted">
-            {VETERAN_ROLE_LABELS[profile.role]}
+      <View style={styles.identity}>
+        <AppText variant="title" style={styles.name} numberOfLines={1} adjustsFontSizeToFit>
+          {profile.firstName}
+        </AppText>
+        {identity ? (
+          <AppText variant="kicker" color="textSecondary">
+            {identity}
           </AppText>
         ) : null}
+        <View style={styles.activity}>
+          <AppText variant="data" style={styles.activityText}>
+            {activity}
+          </AppText>
+          {savedIds.length > 0 ? (
+            <TextAction
+              label="View"
+              onPress={() => router.navigate('/saved')}
+              accessibilityHint="Opens your saved places"
+            />
+          ) : null}
+        </View>
       </View>
 
-      <Card style={styles.infoCard}>
-        <InfoRow icon="location-outline" label="ZIP code" value={profile.zip || 'Not set'} />
-        <InfoRow
-          icon="navigate-outline"
-          label="Search radius"
-          value={
-            profile.preferredRadiusMiles
-              ? `${profile.preferredRadiusMiles} miles`
-              : `${DEFAULT_RADIUS_MILES} miles (default)`
-          }
-        />
-        <InfoRow icon="folder-open-outline" label="Documents" value={documentsSummary(storedDocs)} last />
-      </Card>
+      <View style={styles.sections}>
+        <View style={styles.section}>
+          <SectionHeader number={1} title="Search area" />
+          <View>
+            <DataRow label="ZIP code" value={profile.zip || 'Not set'} />
+            <DataRow
+              label="Radius"
+              value={
+                profile.preferredRadiusMiles
+                  ? `${radiusMiles} miles`
+                  : `${radiusMiles} miles (default)`
+              }
+              last
+            />
+          </View>
+        </View>
 
-      <View style={styles.spacer} />
+        <View style={styles.section}>
+          <View style={styles.sectionTitleRow}>
+            <SectionHeader
+              number={2}
+              title="Documents on hand"
+              caption="Frontline uses this to tell you what to bring."
+              style={styles.sectionTitle}
+            />
+            <AppText variant="data" color="textSecondary">
+              {`${storedDocs.length} OF ${DOCUMENT_OPTIONS.length}`}
+            </AppText>
+          </View>
+          <DocumentsOnHand held={storedDocs} />
+        </View>
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={confirmReset}
-        hitSlop={8}
-        style={({ pressed }) => [styles.reset, pressed && styles.resetPressed]}
-      >
-        <Ionicons name="refresh-outline" size={16} color={colors.danger} />
-        <AppText variant="label" style={styles.resetLabel}>
-          Reset setup
-        </AppText>
-      </Pressable>
+        <View style={styles.section}>
+          <SectionHeader number={3} title="Privacy" />
+          <View>
+            {NEVER_ASKED.map((line) => (
+              <View key={line} style={styles.neverRow}>
+                <AppText variant="data" color="textSecondary">
+                  —
+                </AppText>
+                <AppText variant="body" style={styles.neverText}>
+                  {line}
+                </AppText>
+              </View>
+            ))}
+          </View>
+          <AppText variant="caption" color="textSecondary">
+            Kept on this device, with a private backup so a new phone can pick up where you left
+            off. Never sold or shared.
+          </AppText>
+        </View>
+      </View>
 
-      <AppText variant="caption" color="textMuted" style={styles.footNote}>
-        Frontline never asks for sensitive information.
-      </AppText>
+      <View style={styles.foot}>
+        <TextAction label="Reset setup" tone="textPrimary" onPress={confirmReset} />
+      </View>
     </ScreenContainer>
   );
 }
 
-// Small round icon action for the header's trailing slot (edit / cancel).
-function HeaderButton({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonPressed]}
-    >
-      <Ionicons name={icon} size={18} color={colors.accent} />
-    </Pressable>
-  );
-}
-
-// One line of the at-a-glance card: olive icon chip, label, current value.
-function InfoRow({
-  icon,
-  label,
-  value,
-  last = false,
+// A form group: the shared section heading over its controls.
+function Section({
+  number,
+  title,
+  children,
 }: {
-  icon: IconName;
-  label: string;
-  value: string;
-  last?: boolean;
+  number: number;
+  title: string;
+  children: ReactNode;
 }) {
   return (
-    <View style={[styles.infoRow, !last && styles.infoRowDivider]}>
-      <View style={styles.infoIcon}>
-        <Ionicons name={icon} size={15} color={colors.accent} />
-      </View>
-      <AppText variant="body" color="textSecondary">
-        {label}
-      </AppText>
-      <AppText variant="bodyStrong" style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
-        {value}
-      </AppText>
-    </View>
-  );
-}
-
-function Section({ icon, label, children }: { icon: IconName; label: string; children: ReactNode }) {
-  return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Ionicons name={icon} size={16} color={colors.accent} />
-        <AppText variant="subtitle">{label}</AppText>
-      </View>
+      <SectionHeader number={number} title={title} />
       {children}
     </View>
   );
@@ -302,69 +382,28 @@ function Section({ icon, label, children }: { icon: IconName; label: string; chi
 
 const styles = StyleSheet.create({
   viewContent: { flexGrow: 1 },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-  },
-  headerButtonPressed: { opacity: 0.6 },
-  hero: {
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xl,
-  },
-  avatarRing: {
-    padding: spacing.xxs,
-    borderRadius: radii.pill,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    marginBottom: spacing.sm,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: withAlpha(colors.accent, 0.16),
-  },
-  avatarText: { color: colors.accentPressed },
-  infoCard: { paddingVertical: spacing.xs },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  infoRowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  infoIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-  },
-  infoValue: { flex: 1, textAlign: 'right' },
   form: { gap: spacing.xl, marginBottom: spacing.xl },
   section: { gap: spacing.sm },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  spacer: { flex: 1 },
-  reset: {
+  identity: { gap: spacing.xs, marginBottom: spacing.xl },
+  name: { textTransform: 'uppercase' },
+  activity: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.lg,
-    marginTop: spacing.sm,
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    minHeight: 44,
   },
-  resetPressed: { opacity: 0.6 },
-  resetLabel: { color: colors.danger },
-  footNote: { marginTop: spacing.sm, textAlign: 'center' },
+  activityText: { flexShrink: 1 },
+  sections: { gap: spacing.xxl },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  sectionTitle: { flex: 1 },
+  neverRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  neverText: { flex: 1 },
+  foot: { marginTop: 'auto', paddingTop: spacing.xl },
+  footNote: { marginTop: spacing.sm },
 });

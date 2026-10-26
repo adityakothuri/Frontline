@@ -1,14 +1,7 @@
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  StyleSheet,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radii, spacing } from '@/theme';
 import { AppText } from './AppText';
+import { PressableScale } from './PressableScale';
 
 type PrimaryButtonProps = {
   label: string;
@@ -19,9 +12,8 @@ type PrimaryButtonProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-// One obvious primary action per screen. `secondary` is the quiet outline
-// variant. Presses get both a color shift and a slight spring-down, so every
-// CTA in the app feels tactile the same way cards do (PressableScale).
+// The one filled action on a screen: square olive block, caps label.
+// `secondary` is an ink outline for the quieter alternative.
 export function PrimaryButton({
   label,
   onPress,
@@ -32,60 +24,55 @@ export function PrimaryButton({
 }: PrimaryButtonProps) {
   const isSecondary = variant === 'secondary';
   const inactive = disabled || loading;
-  const [scale] = useState(() => new Animated.Value(1));
-
-  const spring = (toValue: number) =>
-    Animated.spring(scale, { toValue, useNativeDriver: true, speed: 40, bounciness: 5 }).start();
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ disabled: inactive }}
+      accessibilityLabel={label}
       disabled={inactive}
       onPress={onPress}
-      onPressIn={() => spring(0.97)}
-      onPressOut={() => spring(1)}
+      style={style}
     >
       {({ pressed }) => (
-        <Animated.View
+        <View
           style={[
             styles.base,
             isSecondary ? styles.secondary : styles.primary,
-            pressed && (isSecondary ? styles.secondaryPressed : styles.primaryPressed),
+            pressed && !inactive && (isSecondary ? styles.secondaryPressed : styles.primaryPressed),
             inactive && styles.disabled,
-            style,
-            { transform: [{ scale }] },
           ]}
         >
           {loading ? (
             <ActivityIndicator color={isSecondary ? colors.textPrimary : colors.textOnAccent} />
           ) : (
-            <AppText variant="subtitle" color={isSecondary ? 'textPrimary' : 'textOnAccent'}>
+            <AppText
+              variant="label"
+              color={isSecondary ? 'textPrimary' : 'textOnAccent'}
+              style={styles.label}
+            >
               {label}
             </AppText>
           )}
-        </Animated.View>
+        </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
     minHeight: 52,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     paddingHorizontal: spacing.xl,
   },
+  label: { fontSize: 15, letterSpacing: 0.8, textTransform: 'uppercase' },
   primary: { backgroundColor: colors.accent },
   primaryPressed: { backgroundColor: colors.accentPressed },
-  secondary: {
-    backgroundColor: colors.transparent,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
+  secondary: { borderWidth: 1.5, borderColor: colors.textPrimary },
   secondaryPressed: { backgroundColor: colors.surfaceMuted },
-  disabled: { opacity: 0.5 },
+  disabled: { opacity: 0.45 },
 });

@@ -1,13 +1,9 @@
-import type { Ionicons } from '@expo/vector-icons';
 import type { VeteranDocument } from './need';
-
-type IconName = keyof typeof Ionicons.glyphMap;
 
 /**
  * The on-device veteran profile captured in the one-time setup. Privacy-first:
- * name + ZIP plus a few optional preferences — never anything sensitive (no SSN,
- * VA login, bank, or diagnosis). Optional fields load tolerantly, so older stored
- * profiles keep working. See `docs/obsidian/04 Build Roadmap/Phase 8 Saved and Profile.md`.
+ * name + ZIP plus a few optional preferences — never SSN, VA login, bank, or
+ * diagnosis.
  */
 
 /** How the person relates to service — shapes tone, not eligibility. */
@@ -21,18 +17,10 @@ export const VETERAN_ROLE_LABELS: Record<VeteranRole, string> = {
   other: 'Other',
 };
 
-const ROLE_ICONS: Record<VeteranRole, IconName> = {
-  veteran: 'ribbon-outline',
-  active_duty: 'shield-outline',
-  family: 'people-outline',
-  caregiver: 'heart-outline',
-  other: 'ellipsis-horizontal',
-};
-
 /** Role options for the setup wizard + profile form (single source). */
-export const ROLE_OPTIONS: { value: VeteranRole; label: string; icon: IconName }[] = (
+export const ROLE_OPTIONS: { value: VeteranRole; label: string }[] = (
   Object.keys(VETERAN_ROLE_LABELS) as VeteranRole[]
-).map((value) => ({ value, label: VETERAN_ROLE_LABELS[value], icon: ROLE_ICONS[value] }));
+).map((value) => ({ value, label: VETERAN_ROLE_LABELS[value] }));
 
 /** Preferred search-radius options (miles). */
 export const RADIUS_OPTIONS: { value: number; label: string }[] = [5, 10, 15, 25, 50].map((m) => ({
@@ -41,13 +29,13 @@ export const RADIUS_OPTIONS: { value: number; label: string }[] = [5, 10, 15, 25
 }));
 
 export interface VeteranProfile {
-  /** What the veteran wants to be called — used to greet them on the home screen. */
+  /** What the veteran wants to be called. */
   firstName: string;
   /** Home ZIP — captured at setup so resource searches are local without asking each time. */
   zip?: string;
   /** Optional: how the person relates to service. */
   role?: VeteranRole;
-  /** Optional: documents they already have (drives "what to bring" guidance later). */
+  /** Optional: documents they already have. */
   documentsOnHand?: VeteranDocument[];
   /** Optional: preferred search radius in miles; falls back to the default when unset. */
   preferredRadiusMiles?: number;

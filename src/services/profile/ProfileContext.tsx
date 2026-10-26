@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -11,10 +12,7 @@ import type { ProfileDetails, VeteranProfile } from '@/types/profile';
 import { clearProfile, loadProfile, saveProfile } from './profileStorage';
 import { clearProfileBackup, pushProfile, restoreProfile } from '../sync/backupSync';
 
-// The app's single source of truth for the on-device veteran profile. A small
-// Context (not a global state library) so the home greeting updates reactively
-// after setup, and returning users are recognized on launch. This is the first
-// shared state in the app; keep it minimal.
+// The single source of truth for the on-device veteran profile.
 interface ProfileContextValue {
   profile: VeteranProfile | null;
   /** False until the stored profile has been read on launch (gates first-run routing). */
@@ -31,22 +29,38 @@ const ProfileContext = createContext<ProfileContextValue | null>(null);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<VeteranProfile | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  // Lets the late backup restore see a profile written since mount, without
+  // making `profile` a dependency of the mount-once effect.
+  const profileRef = useRef<VeteranProfile | null>(null);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   useEffect(() => {
     let active = true;
-    // Restore from the backup when there's no local profile (e.g. a reinstall);
-    // local wins when present. If a restore happened, mirror it straight back so
-    // the backup's updated_at advances. No-op when sync is off.
     loadProfile()
-      .then((stored) => restoreProfile(stored))
-      .then((resolved) => {
+      .then((stored) => {
         if (!active) return;
-        setProfile(resolved);
-        setIsHydrated(true);
-        if (resolved) {
-          saveProfile(resolved);
-          pushProfile(resolved);
+        if (stored) {
+          setProfile(stored);
+          setIsHydrated(true);
+          return;
         }
+        // No local profile: hydrate now rather than block on a cold `sync`
+        // round trip (up to 12s), and let a restore land afterwards.
+        setIsHydrated(true);
+        return restoreProfile(null).then((restored) => {
+          // A profile written while the pull was in flight is newer; keep it.
+          if (!active || !restored || profileRef.current) return;
+          setProfile(restored);
+          // Mirror the restore back so the backup's updated_at advances.
+          saveProfile(restored);
+          pushProfile(restored);
+        });
+      })
+      .catch(() => {
+        // isHydrated gates first-run routing, so it must never stay false.
+        if (active) setIsHydrated(true);
       });
     return () => {
       active = false;
@@ -64,7 +78,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         documentsOnHand: details.documentsOnHand ?? profile?.documentsOnHand,
         preferredRadiusMiles: details.preferredRadiusMiles ?? profile?.preferredRadiusMiles,
         onboardingComplete: true,
-        // Preserve the original creation time when editing an existing profile.
         createdAt: profile?.createdAt ?? new Date().toISOString(),
       };
       await saveProfile(next);

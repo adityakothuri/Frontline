@@ -1,31 +1,17 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import {
-  View,
-  ScrollView,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  Easing,
-  AccessibilityInfo,
-  StyleSheet,
-} from 'react-native';
+import { useEffect, type ReactNode } from 'react';
+import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PrimaryButton } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
-
-type IconName = keyof typeof Ionicons.glyphMap;
+import { AppText, Glyph, PressableScale, PrimaryButton } from '@/components';
+import { colors, durations, pressScale, rise, spacing } from '@/theme';
+import { easings, riseIn } from '@/theme/motionPresets';
+import { tapImpact } from '@/lib/haptics';
 
 type OnboardingStepProps = {
   stepIndex: number;
   stepCount: number;
-  /** The step shown before this one, so the progress bar animates from where it
-   * actually was — in both directions. -1 means "came from the welcome". */
+  /** The previous step, so the progress bar animates from it; -1 = the welcome. */
   previousStepIndex?: number;
-  icon: IconName;
-  /** Tint for the hero icon; defaults to the olive accent. */
-  iconColor?: string;
   title: string;
   subtitle?: string;
   children?: ReactNode;
@@ -37,15 +23,12 @@ type OnboardingStepProps = {
   loading?: boolean;
 };
 
-// The shared chrome for every setup step: a progress bar + back control, an
-// icon hero, the prompt, the step's input, and a pinned Continue / Skip footer.
-// Content springs in on each step (keyed remount in the wizard).
+// Shared chrome for every setup step: back, step counter and progress rule,
+// question, input, and a pinned Continue / Skip footer. Remounted per step.
 export function OnboardingStep({
   stepIndex,
   stepCount,
   previousStepIndex,
-  icon,
-  iconColor = colors.accent,
   title,
   subtitle,
   children,
@@ -56,54 +39,23 @@ export function OnboardingStep({
   canContinue,
   loading = false,
 }: OnboardingStepProps) {
-  const [anim] = useState(() => new Animated.Value(0));
-  // Starts at the previously shown step's fill so the bar eases into place on
-  // each remount — forward or back. Width % needs the JS driver; it's a 4px bar.
-  const [fill] = useState(
-    () =>
-      new Animated.Value(
-        previousStepIndex === undefined
-          ? stepIndex / stepCount
-          : (previousStepIndex + 1) / stepCount,
-      ),
+  // Starts at the previous step's fill so the bar eases in either direction.
+  const fill = useSharedValue(
+    previousStepIndex === undefined ? stepIndex / stepCount : (previousStepIndex + 1) / stepCount,
   );
 
   useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!active) return;
-      if (reduce) {
-        anim.setValue(1);
-        fill.setValue((stepIndex + 1) / stepCount);
-      } else {
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 260,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }).start();
-        Animated.timing(fill, {
-          toValue: (stepIndex + 1) / stepCount,
-          duration: 320,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: false,
-        }).start();
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [anim, fill, stepIndex, stepCount]);
+    fill.set(
+      withTiming((stepIndex + 1) / stepCount, {
+        duration: durations.slow,
+        easing: easings.out,
+      }),
+    );
+  }, [fill, stepIndex, stepCount]);
 
-  const bodyStyle = {
-    opacity: anim,
-    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
-  };
-  const fillWidth = fill.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-    extrapolate: 'clamp',
-  });
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${Math.min(100, Math.max(0, fill.get() * 100))}%`,
+  }));
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -113,20 +65,20 @@ export function OnboardingStep({
       >
         <View style={styles.topBar}>
           {onBack ? (
-            <Pressable
+            <PressableScale
               accessibilityRole="button"
               accessibilityLabel="Back"
               onPress={onBack}
-              hitSlop={10}
-              style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+              scaleTo={pressScale.control}
+              style={styles.backBtn}
             >
-              <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-            </Pressable>
+              <Glyph name="back" size={22} />
+            </PressableScale>
           ) : (
             <View style={styles.backBtn} />
           )}
-          <AppText variant="caption" color="textMuted">
-            Step {stepIndex + 1} of {stepCount}
+          <AppText variant="kicker" color="textSecondary">
+            Step {String(stepIndex + 1).padStart(2, '0')} / {String(stepCount).padStart(2, '0')}
           </AppText>
         </View>
 
@@ -135,7 +87,7 @@ export function OnboardingStep({
           accessibilityRole="progressbar"
           accessibilityValue={{ min: 0, max: stepCount, now: stepIndex + 1 }}
         >
-          <Animated.View style={[styles.trackFill, { width: fillWidth }]} />
+          <Animated.View style={[styles.trackFill, fillStyle]} />
         </View>
 
         <ScrollView
@@ -143,10 +95,7 @@ export function OnboardingStep({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={bodyStyle}>
-            <View style={[styles.hero, { backgroundColor: withAlpha(iconColor, 0.14) }]}>
-              <Ionicons name={icon} size={30} color={iconColor} />
-            </View>
+          <Animated.View entering={riseIn(0, rise.md)}>
             <AppText variant="display" style={styles.title}>
               {title}
             </AppText>
@@ -162,21 +111,25 @@ export function OnboardingStep({
         <View style={styles.footer}>
           <PrimaryButton
             label={continueLabel}
-            onPress={onContinue}
+            onPress={() => {
+              tapImpact();
+              onContinue();
+            }}
             disabled={!canContinue}
             loading={loading}
           />
           {onSkip ? (
-            <Pressable
+            <PressableScale
               accessibilityRole="button"
               onPress={onSkip}
-              hitSlop={8}
-              style={({ pressed }) => [styles.skip, pressed && styles.pressed]}
+              scaleTo={pressScale.chip}
+              containerStyle={styles.skipSlot}
+              style={styles.skip}
             >
-              <AppText variant="label" color="textMuted">
+              <AppText variant="data" color="textSecondary">
                 Skip for now
               </AppText>
-            </Pressable>
+            </PressableScale>
           ) : null}
         </View>
       </KeyboardAvoidingView>
@@ -195,28 +148,27 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     marginBottom: spacing.md,
   },
-  backBtn: { width: 32, height: 32, alignItems: 'flex-start', justifyContent: 'center' },
+  // 44pt target with the glyph on the leading edge, aligned to the gutter.
+  backBtn: { width: 44, height: 44, alignItems: 'flex-start', justifyContent: 'center' },
+  // A ruled track: hairline ink, filled with a solid olive rule.
   track: {
-    height: 4,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surfaceMuted,
+    height: 3,
+    backgroundColor: colors.border,
     marginHorizontal: spacing.xl,
     overflow: 'hidden',
   },
-  trackFill: { height: 4, borderRadius: radii.pill, backgroundColor: colors.accent },
+  trackFill: { height: 3, backgroundColor: colors.accent },
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
-  hero: {
-    width: 60,
-    height: 60,
-    borderRadius: radii.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  title: { marginBottom: spacing.sm },
+  title: { marginBottom: spacing.sm, textTransform: 'uppercase' },
   subtitle: { maxWidth: 380 },
   content: { marginTop: spacing.xl },
-  footer: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.sm },
-  skip: { alignSelf: 'center', paddingVertical: spacing.xs },
-  pressed: { opacity: 0.6 },
+  // For devices with no home-indicator inset.
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  skipSlot: { alignSelf: 'center' },
+  skip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md },
 });

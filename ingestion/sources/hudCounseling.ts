@@ -1,28 +1,18 @@
 /**
- * HUD Housing Counseling adapter (data.hud.gov).
+ * HUD Housing Counseling adapter (data.hud.gov) — HUD-approved housing counseling
+ * agencies: free help with renting, buying, foreclosure, budgeting and
+ * homelessness (including HUD-VASH).
  *
- * Official, nationwide source of **HUD-approved housing counseling agencies** —
- * physical offices that give free help with renting, buying a home, avoiding
- * foreclosure, budgeting, and homelessness (including veterans navigating
- * HUD-VASH). Fills the `housing` category, our biggest gap.
+ * Keyless: GET /searchByLocation?Lat=&Long=&Distance= (miles) returns a flat JSON
+ * array with lowercase provider keys (nme, adr1, phone1, weburl, agcid, …). The
+ * provider uses the string "N/A" as a null sentinel, treated as null here.
  *
- * Base: https://data.hud.gov/Housing_Counselor. Auth: NONE — the endpoint is
- * public and keyless (the token-gated huduser.gov API is Fair Market Rent
- * reference data, a different thing). Endpoint:
- * GET /searchByLocation?Lat=&Long=&Distance= (miles). Response is a flat JSON
- * array of agencies; fields are lowercase provider keys (nme, adr1, phone1,
- * weburl, agc_ADDR_LATITUDE, services, counslg_METHOD, agcid).
- *
- * Because it's an official API, rows are `source_type: 'official'` /
- * `verification_status: 'verified'` with `last_checked` = fetch date. Field
- * shapes are verified against a live sample (via `--dry-run`) before any write.
- * The provider uses the string "N/A" as a null sentinel for weburl/email —
- * treated as null here so a real "no website" never shows a fake link.
- *
- * `veteran_relevance: 'general'` — open to everyone, not veteran-specific.
- * Backfills the housing category under the hybrid rule (2026-07-23): the UI
- * labels these "Open to everyone" and veteran rows always rank first.
+ * `veteran_relevance: 'general'` — labelled "Open to everyone" in the app, ranked
+ * below veteran rows.
  */
+import { titleCaseName } from '../lib/displayName.ts';
+import { sleep } from '../lib/http.ts';
+import { normalizeUrl, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -35,8 +25,6 @@ const PROVIDER = 'hud-housing-counseling';
 const REQUEST_TIMEOUT_MS = 20_000;
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_DISTANCE_MILES = 25;
-
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** One agency as the HUD locator returns it (only the fields we read). */
 interface HudAgency {
@@ -87,9 +75,9 @@ const THEME_ORDER = [
   'avoiding loan scams',
 ];
 
-const trimOrNull = (s: string | null | undefined): string | null => {
-  const t = s?.trim();
-  // "N/A" is HUD's literal null sentinel for weburl/email — never a real value.
+/** A trimmed HUD field, treating HUD's literal "N/A" sentinel as missing. */
+const hudValue = (s: string | null | undefined): string | null => {
+  const t = trimOrNull(s);
   return t && t.toUpperCase() !== 'N/A' ? t : null;
 };
 
@@ -104,15 +92,14 @@ function parseCoord(raw: string | null | undefined, kind: 'lat' | 'long'): numbe
 }
 
 /** "www.example.org/" → "https://www.example.org"; "N/A"/blank → null. */
-function normalizeUrl(raw: string | null | undefined): string | null {
-  const v = trimOrNull(raw);
-  if (!v) return null;
-  const withScheme = /^https?:\/\//i.test(v) ? v : `https://${v}`;
-  return withScheme.replace(/\/+$/, '');
-}
+const agencyUrl = (raw: string | null | undefined): string | null =>
+  normalizeUrl(hudValue(raw))?.replace(/\/+$/, '') ?? null;
 
 function buildAddress(a: HudAgency): string | null {
-  const street = [a.adr1, a.adr2].map((s) => s?.trim()).filter(Boolean).join(' ');
+  const street = [a.adr1, a.adr2]
+    .map((s) => s?.trim())
+    .filter(Boolean)
+    .join(' ');
   const region = [a.statecd?.trim(), a.zipcd?.trim()].filter(Boolean).join(' ');
   const cityRegion = [a.city?.trim(), region].filter(Boolean).join(', ');
   const full = [street, cityRegion].filter(Boolean).join(', ');
@@ -161,23 +148,24 @@ function describe(agency: HudAgency): string {
 
 /** HUD agency → our `Resource`, or null if it isn't a usable resource. */
 function normalize(agency: HudAgency, today: string): NormalizedResource | null {
-  const externalId = trimOrNull(agency.agcid);
-  const name = trimOrNull(agency.nme);
+  const externalId = hudValue(agency.agcid);
+  const name = hudValue(agency.nme);
   if (!externalId || !name) return null;
 
-  const website = normalizeUrl(agency.weburl);
+  const website = agencyUrl(agency.weburl);
 
   return {
     id: `hud:${externalId}`,
-    name,
+    // Upstream stores names in upper case; see lib/displayName.ts.
+    name: titleCaseName(name),
     category: 'housing',
     description: describe(agency),
     address: buildAddress(agency),
     latitude: parseCoord(agency.agc_ADDR_LATITUDE, 'lat'),
     longitude: parseCoord(agency.agc_ADDR_LONGITUDE, 'long'),
-    phone: trimOrNull(agency.phone1),
+    phone: hudValue(agency.phone1),
     website,
-    hours: null, // the locator doesn't return hours — honest unknown
+    hours: null, // the locator returns no hours
     eligibility:
       'Open to everyone and free of charge. Veterans can ask about VA housing programs like HUD-VASH.',
     documents_needed: [],
@@ -199,7 +187,9 @@ function normalize(agency: HudAgency, today: string): NormalizedResource | null 
 
 function buildUrl(baseUrl: string, query: IngestionQuery): string {
   if (typeof query.lat !== 'number' || typeof query.long !== 'number') {
-    throw new Error('HUD housing counseling needs a location: pass --lat and --long (with optional --radius).');
+    throw new Error(
+      'HUD housing counseling needs a location: pass --lat and --long (with optional --radius).',
+    );
   }
   const params = new URLSearchParams({
     Lat: String(query.lat),
@@ -216,14 +206,19 @@ async function fetchAgencies(url: string, maxRetries: number): Promise<HudAgency
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     let response: Response;
     try {
-      response = await fetch(url, { headers: { accept: 'application/json' }, signal: controller.signal });
+      response = await fetch(url, {
+        headers: { accept: 'application/json' },
+        signal: controller.signal,
+      });
     } finally {
       clearTimeout(timeout);
     }
 
     if (response.status === 429 && attempt < maxRetries) {
       const backoffMs = Math.min(30_000, 1000 * 2 ** attempt);
-      console.warn(`[ingest] hud 429 — backing off ${Math.round(backoffMs / 1000)}s (retry ${attempt + 1}/${maxRetries})`);
+      console.warn(
+        `[ingest] hud 429 — backing off ${Math.round(backoffMs / 1000)}s (retry ${attempt + 1}/${maxRetries})`,
+      );
       await sleep(backoffMs);
       continue;
     }
@@ -231,7 +226,14 @@ async function fetchAgencies(url: string, maxRetries: number): Promise<HudAgency
       throw new Error(`HUD Housing Counselor API ${response.status}: ${await response.text()}`);
     }
     const body = (await response.json()) as HudAgency[] | { error?: unknown };
-    return Array.isArray(body) ? body : [];
+    // Throw rather than return []: the sweep's reap would read an empty region
+    // as every agency in it having closed.
+    if (!Array.isArray(body)) {
+      throw new Error(
+        `HUD Housing Counselor API returned a non-list body: ${JSON.stringify(body)}`,
+      );
+    }
+    return body;
   }
 }
 

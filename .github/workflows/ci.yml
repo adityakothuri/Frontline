@@ -1,7 +1,8 @@
 name: CI
 
-# Verification for every PR and push to main/dev: typecheck, lint, and unit
-# tests. No production/EAS builds, and no secrets required.
+# Verification for every PR and push to main/dev: `npm run verify` (typecheck,
+# lint, format check, unit tests) — the same command run locally before a PR.
+# No production/EAS builds, and no secrets required.
 
 on:
   push:
@@ -28,8 +29,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify (typecheck + lint)
+      - name: Verify (typecheck, lint, format, test)
         run: npm run verify
-
-      - name: Test
-        run: npm test

@@ -2,23 +2,22 @@ import type { NeedCategory } from '@/types/need';
 import type { ResourceCategory } from '@/types/resource';
 
 /**
- * The 11 user-facing need categories don't map 1:1 to the 11 resource
- * categories. "Essentials" fans out to food + clothing; "Disability benefits"
- * should see benefits-help resources; "Family / caregiver" should see community
- * support, etc. This is the single place that translation lives.
+ * The 10 user-facing need categories don't map 1:1 to the 11 resource
+ * categories. "Essentials" fans out to food + clothing; "Disability & VA
+ * benefits" should see benefits-help resources; "Family / caregiver" should see
+ * community support, etc. This is the single place that translation lives.
  */
 const NEED_TO_RESOURCE_CATEGORIES: Record<NeedCategory, ResourceCategory[]> = {
   essentials: ['food', 'clothing'],
   housing: ['housing'],
   healthcare: ['healthcare'],
-  disability_benefits: ['benefits_help'],
+  va_benefits: ['benefits_help'],
   education_benefits: ['education', 'benefits_help'],
   jobs: ['jobs'],
   legal: ['legal'],
   transportation: ['transportation'],
   family_caregiver: ['community_support', 'healthcare'],
   emergency: ['emergency'],
-  general_benefits: ['benefits_help'],
 };
 
 export function needToResourceCategories(need: NeedCategory): ResourceCategory[] {
@@ -35,7 +34,7 @@ const RESOURCE_TO_NEED_CATEGORY: Record<ResourceCategory, NeedCategory> = {
   clothing: 'essentials',
   housing: 'housing',
   healthcare: 'healthcare',
-  benefits_help: 'general_benefits',
+  benefits_help: 'va_benefits',
   legal: 'legal',
   jobs: 'jobs',
   education: 'education_benefits',

@@ -1,11 +1,7 @@
 import * as Location from 'expo-location';
 import type { Coordinates } from '@/lib/geo';
 
-/**
- * Thin wrappers over expo-location — the single device seam for the map's
- * "recenter on me". Session-only: nothing here is persisted. Kept separate from
- * the pure `@/lib/geo` math so the platform dependency stays isolated (and mockable).
- */
+/** Thin wrappers over expo-location for the map's "recenter on me". Nothing is persisted. */
 
 /**
  * Request foreground permission and return the device's current coordinates.

@@ -1,0 +1,54 @@
+-- Frontline — reclaim the archived upstream payloads in resource_sources.raw.
+--
+-- WHY
+--
+-- The second data audit (2026-07-28) measured the live project against the
+-- 500 MB free-tier ceiling and found the payload archive is the binding
+-- constraint on how much veteran-specific data the app can hold:
+--
+--   database total        333 MB / 500 MB
+--   resource_sources      168 MB   <- larger than the catalogue itself
+--   resources             150 MB
+--
+-- `raw` is the verbatim upstream record, kept for lineage. Nothing reads it:
+-- no client query touches resource_sources, and 0022 revoked every grant on
+-- the table to anon and authenticated. Its only consumer has been a human
+-- debugging an adapter, and an adapter is easier debugged by re-running it
+-- against the live provider than by reading a months-old snapshot.
+--
+-- The rest of the row is what actually earns its keep — (provider,
+-- external_id, resource_id, fetched_at) is the provenance trail and the
+-- dedupe key, so the rows stay; only the payload goes.
+--
+-- Freeing ~160 MB is what makes room for the audit's new sources (SAMHSA
+-- veteran-flagged behavioural health, USAspending VA grantees, IRS 501(c)(19)
+-- veterans organizations, HRSA sites), which together need ~60-80 MB.
+--
+-- GOING FORWARD
+--
+-- ingestion/upsert.ts now writes `raw` only for the providers on its
+-- STORE_RAW_PROVIDERS allow-list — the small, hand-maintained sources where a
+-- snapshot genuinely aids debugging. High-volume feeds store '{}', so this
+-- reclaim cannot silently undo itself on the next refresh.
+--
+-- NOTE ON SPACE
+--
+-- This UPDATE rewrites every row, so it does not shrink the table on its own —
+-- it leaves dead tuples behind, and the on-disk size only drops once the table
+-- is rewritten. VACUUM FULL takes an ACCESS EXCLUSIVE lock, so it cannot run
+-- inside this migration's transaction; run it separately, right after:
+--
+--   vacuum full public.resource_sources;
+--
+-- MEASURED after doing exactly that on 2026-07-28:
+--
+--   resource_sources    168 MB -> 35 MB
+--   database total      333 MB -> 200 MB
+--
+-- The residual 35 MB is the 157,513 provenance rows themselves plus their
+-- unique (provider, external_id) index and the resource_id FK index — that is
+-- the part we are deliberately keeping.
+
+update public.resource_sources
+set raw = '{}'::jsonb
+where raw <> '{}'::jsonb;

@@ -1,7 +1,6 @@
-import { View, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText } from '@/components';
-import { colors, radii, spacing, withAlpha } from '@/theme';
+import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { AppText, Glyph, PressableScale } from '@/components';
+import { colors, radii, spacing } from '@/theme';
 import type { Resource } from '@/types/resource';
 
 type DangerCallBannerProps = {
@@ -13,10 +12,8 @@ type DangerCallBannerProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-// The one danger-tinted banner shell: alert title, one line of context, one
-// big call button. EmergencyCallBanner (per-resource, detail page) and
-// CrisisBanner (category-level, Emergency results) both wrap it so the
-// treatment can't drift.
+// The shared danger-tinted banner shell (title, context, call button) wrapped by
+// EmergencyCallBanner and CrisisBanner.
 export function DangerCallBanner({
   title,
   message,
@@ -27,26 +24,29 @@ export function DangerCallBanner({
 }: DangerCallBannerProps) {
   return (
     <View style={[styles.banner, style]}>
-      <View style={styles.headerRow}>
-        <Ionicons name="alert-circle" size={20} color={colors.danger} />
-        <AppText variant="subtitle" style={styles.title}>
-          {title}
-        </AppText>
-      </View>
+      <AppText variant="kicker" color="dangerText">
+        Emergency
+      </AppText>
+      <AppText variant="heading" style={styles.title}>
+        {title}
+      </AppText>
       <AppText variant="body" color="textSecondary">
         {message}
       </AppText>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         onPress={onCall}
-        style={({ pressed }) => [styles.callButton, pressed && styles.callButtonPressed]}
       >
-        <Ionicons name="call" size={18} color={colors.background} />
-        <AppText variant="subtitle" style={styles.callLabel}>
-          {callLabel}
-        </AppText>
-      </Pressable>
+        {({ pressed }) => (
+          <View style={[styles.callButton, pressed && styles.callButtonPressed]}>
+            <Glyph name="call" size={18} color={colors.background} />
+            <AppText variant="label" style={styles.callLabel}>
+              {callLabel}
+            </AppText>
+          </View>
+        )}
+      </PressableScale>
     </View>
   );
 }
@@ -56,9 +56,7 @@ type EmergencyCallBannerProps = {
   onCall: () => void;
 };
 
-// A prominent, contact-only urgent action shown at the top of an emergency
-// resource. It only helps the veteran reach the resource fast — it gives no
-// triage or advice.
+// Contact-only urgent action at the top of an emergency resource; no triage or advice.
 export function EmergencyCallBanner({ resource, onCall }: EmergencyCallBannerProps) {
   if (!resource.phone) return null;
   return (
@@ -74,26 +72,30 @@ export function EmergencyCallBanner({ resource, onCall }: EmergencyCallBannerPro
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: withAlpha(colors.danger, 0.1),
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: withAlpha(colors.danger, 0.4),
+    backgroundColor: colors.dangerSoft,
+    borderWidth: 2,
+    borderColor: colors.danger,
     padding: spacing.lg,
     gap: spacing.sm,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  title: { color: colors.dangerText, flexShrink: 1 },
+  title: { color: colors.dangerText },
   callButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     minHeight: 52,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     paddingHorizontal: spacing.xl,
     backgroundColor: colors.danger,
     marginTop: spacing.xs,
   },
-  callButtonPressed: { opacity: 0.85 },
-  callLabel: { color: colors.background },
+  // Darkens on press rather than dimming, so it never looks disabled.
+  callButtonPressed: { backgroundColor: colors.dangerText },
+  callLabel: {
+    color: colors.background,
+    fontSize: 15,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
 });

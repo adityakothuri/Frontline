@@ -1,58 +1,37 @@
-// Frontline color tokens — warm "paper" light theme (Granola-inspired). Color
-// carries MEANING here: deep-emerald green = verified/confirmed, amber =
-// unverified/outdated, red = emergency only; muted olive accent = primary
-// action. Never decorative. Direction: docs/obsidian/02 Design/UI Design System.md.
+// Field Manual palette: manila paper, ink, one olive-drab action colour.
+// Colour carries meaning (olive = action, emerald = verified, amber = check the
+// source, red = emergency) and is never decorative. Contrast figures are on
+// `background`.
 export const colors = {
-  // Foundation — warm off-white "near-paper" (never pure white)
-  background: '#F5F1E8',
-  backgroundElevated: '#EFEADD',
+  background: '#ECE9E0',
+  surface: '#F6F4EE', // sheets and input fields
+  surfaceMuted: '#E3DFD3',
+  border: '#D3CEC0', // hairline between rows
+  rule: 'rgba(23,24,15,0.85)', // the heavy 2px rule under a masthead
 
-  // Surfaces — soft paper cards lifting off the foundation
-  surface: '#FBF8F0',
-  surfaceMuted: '#EDE8DA',
-  border: '#DED8C7',
+  textPrimary: '#17180F', // 14.7:1
+  textSecondary: '#4F4F45', // 6.8:1
+  textMuted: '#64625A', // 5.0:1 — never for mono or caps text
+  textOnAccent: '#F6F4EE', // 5.8:1 on accent
 
-  // Text — warm near-black on paper
-  textPrimary: '#1A1A17',
-  textSecondary: '#57564F',
-  textMuted: '#6F6D63', // AA (>=4.5:1) on background/surface; only 4.24:1 on surfaceMuted — use textSecondary there for small text
-  textOnAccent: '#FBF8F0', // warm paper-white on olive (5.0:1)
+  accent: '#606210', // olive drab, 5.3:1
+  accentPressed: '#4C4E0C',
+  accentSoft: 'rgba(96,98,16,0.12)',
 
-  // Accent — a real olive green (high chroma, never gray), primary actions only.
-  // 4.7:1 as text/icons on the background; textOnAccent passes AA on top of it.
-  accent: '#5F7326',
-  accentPressed: '#4C5C1E',
-  accentSoft: 'rgba(95,115,38,0.14)',
-
-  // Semantic — used for meaning, never as chrome
-  danger: '#C0392B', // red — emergencies only
-  dangerText: '#A93226', // red as *text* — >=4.5:1 on the danger-tinted banners
+  danger: '#C0392B', // emergencies only
+  dangerText: '#A93226',
   dangerSoft: 'rgba(192,57,43,0.12)',
-  warning: '#B7791F', // amber — unverified / outdated / caution (dots + icons)
-  warningText: '#8F5D16', // amber as *text* — >=4.5:1 on all paper surfaces
+  warning: '#B7791F', // unverified / outdated
+  warningText: '#82540F', // 5.3:1
   warningSoft: 'rgba(183,121,31,0.14)',
-  success: '#2E7D32', // deep emerald — verified / confirmed (distinct from the olive accent)
-  successSoft: 'rgba(46,125,50,0.12)',
+  success: '#2B7230', // verified, 5.0:1
+  successSoft: 'rgba(43,114,48,0.12)',
 
-  // Utility
-  overlay: 'rgba(26,26,23,0.45)',
+  overlay: 'rgba(23,24,15,0.45)',
   transparent: 'transparent',
 } as const;
 
 export type ColorToken = keyof typeof colors;
-
-// Per-step icon accents for onboarding. A small quartet of four DISTINCT earth
-// hues (sage · taupe · ochre · clay) so each step reads differently while staying
-// on-palette — replaces the off-palette blues/teals that were hardcoded in the
-// screen. Deliberately avoids the olive brand `accent` (#5F7326) so a step icon
-// never looks like a primary action. Kept out of `colors` so `ColorToken` stays
-// a flat string map.
-export const onboardingAccents = {
-  location: '#4E7D5B', // sage green
-  role: '#8A6A48', // warm taupe
-  documents: '#A56E24', // amber ochre
-  radius: '#9C5D3B', // clay / terracotta
-} as const;
 
 /** Build a translucent version of a solid hex color (e.g. for soft category tints). */
 export function withAlpha(hex: string, alpha: number): string {

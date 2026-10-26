@@ -10,15 +10,13 @@ module.exports = defineConfig([
   expoConfig,
   prettierConfig,
   {
-    // Lint Frontline app source only. Build output, deps, and the vendored
-    // Claude/Codex tooling and Obsidian docs are not app code.
+    // Lint Frontline app source only; build output, deps, docs and local
+    // dot-folders (editor/tooling state) are not app code.
     ignores: [
       'node_modules/**',
-      '.expo/**',
+      '.*/**',
       'dist/**',
       'web-build/**',
-      '.claude/**',
-      '.codex/**',
       'docs/**',
       // Deno-flavored TS (npm: specifiers, Deno globals) — not app code.
       'supabase/functions/**',

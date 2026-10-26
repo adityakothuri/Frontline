@@ -1,79 +1,146 @@
-import { useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText } from '@/components';
-import { colors, spacing } from '@/theme';
-import { humanizeDocument } from '@/types/need';
+import { useMemo, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { AppText, Glyph, PressableScale } from '@/components';
+import { colors, pressScale, spacing } from '@/theme';
+import { tapSelection } from '@/lib/haptics';
+import { humanizeDocument, VETERAN_DOCUMENT_LABELS, type VeteranDocument } from '@/types/need';
 
 type DocumentChecklistProps = {
+  /** Document keys the listing itself names (`dd214`, `photo_id`, …). */
   documents: string[];
+  /** Documents the AI plan suggests; merged after the listing's, deduped by label. */
+  suggested?: string[];
+  /** Documents the veteran said they have; those rows arrive pre-ticked. */
+  onHand?: VeteranDocument[];
 };
 
-// "What should I bring?" — checkable rows a veteran can tick off before they go.
-// State is local and intentionally not persisted (a packing aid, not saved data).
-export function DocumentChecklist({ documents }: DocumentChecklistProps) {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
+type Item = { key: string; label: string; have: boolean };
 
-  if (documents.length === 0) {
+/**
+ * "What should I bring?" — rows to tick off before going. State is local and not
+ * persisted (a packing aid, not saved data).
+ */
+export function DocumentChecklist({
+  documents,
+  suggested = [],
+  onHand = [],
+}: DocumentChecklistProps) {
+  const items = useMemo(
+    () => buildItems(documents, suggested, onHand),
+    [documents, suggested, onHand],
+  );
+  // Ticks the veteran has added themselves, on top of what they already own.
+  const [ticked, setTicked] = useState<Set<string>>(() => new Set());
+
+  if (items.length === 0) {
     return (
       <AppText variant="body" color="textSecondary">
-        No specific documents are required. A photo ID is usually helpful, even when nothing is
-        asked for.
+        This listing doesn’t name any documents. A photo ID is worth bringing anyway — most places
+        ask for one.
       </AppText>
     );
   }
 
-  const toggle = (doc: string) =>
-    setChecked((prev) => {
+  const toggle = (key: string) => {
+    tapSelection();
+    setTicked((prev) => {
       const next = new Set(prev);
-      if (next.has(doc)) {
-        next.delete(doc);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(doc);
+        next.add(key);
       }
       return next;
     });
+  };
 
   return (
     <View style={styles.list}>
-      {documents.map((doc) => {
-        const isChecked = checked.has(doc);
+      {items.map((item) => {
+        // An owned row starts ticked and un-ticks on tap ("not with me after
+        // all"); every other row starts clear and ticks when packed.
+        const checked = item.have ? !ticked.has(item.key) : ticked.has(item.key);
+        // Strike-through only for the veteran's own ticks: owning is not packing.
+        const packed = checked && !item.have;
         return (
-          <Pressable
-            key={doc}
+          <PressableScale
+            key={item.key}
             accessibilityRole="checkbox"
-            accessibilityLabel={doc}
-            accessibilityState={{ checked: isChecked }}
-            onPress={() => toggle(doc)}
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            accessibilityLabel={
+              item.have && checked ? `${item.label}, you said you have this` : item.label
+            }
+            accessibilityState={{ checked }}
+            onPress={() => toggle(item.key)}
+            scaleTo={pressScale.subtle}
+            style={styles.row}
           >
-            <Ionicons
-              name={isChecked ? 'checkbox' : 'square-outline'}
-              size={22}
-              color={isChecked ? colors.accent : colors.textMuted}
-            />
-            <AppText
-              variant="body"
-              color={isChecked ? 'textMuted' : 'textPrimary'}
-              style={isChecked ? styles.checkedText : undefined}
-            >
-              {humanizeDocument(doc)}
-            </AppText>
-          </Pressable>
+            <View style={[styles.box, checked && styles.boxOn]}>
+              {checked ? <Glyph name="check" size={16} color={colors.surface} /> : null}
+            </View>
+            <View style={styles.text}>
+              <AppText
+                variant="body"
+                color={packed ? 'textSecondary' : 'textPrimary'}
+                style={packed ? styles.checkedText : undefined}
+              >
+                {item.label}
+              </AppText>
+              {item.have ? (
+                <AppText variant="caption" color="textSecondary">
+                  {checked ? 'You said you have this' : 'Back on your list to find'}
+                </AppText>
+              ) : null}
+            </View>
+          </PressableScale>
         );
       })}
     </View>
   );
 }
 
+/** Merges listing keys, then plan suggestions (minus repeats), with owned rows
+ *  sunk to the bottom so the top of the list is what is left to find. */
+function buildItems(documents: string[], suggested: string[], onHand: VeteranDocument[]): Item[] {
+  const owned = onHand.map((doc) => VETERAN_DOCUMENT_LABELS[doc].toLowerCase());
+  // One direction only: the label must contain the owned name, or a one-word
+  // suggestion like "ID" would match photo ID.
+  const has = (label: string) => {
+    const l = label.toLowerCase();
+    return owned.some((o) => l.includes(o));
+  };
+  const seen = new Set<string>();
+  const items: Item[] = [];
+  const push = (key: string, label: string) => {
+    const norm = label.trim().toLowerCase();
+    if (!norm || seen.has(norm)) return;
+    seen.add(norm);
+    items.push({ key, label: label.trim(), have: has(label) });
+  };
+  for (const doc of documents) push(`doc:${doc}`, humanizeDocument(doc));
+  suggested.forEach((text, i) => push(`ai:${i}`, text));
+  return [...items.filter((i) => !i.have), ...items.filter((i) => i.have)];
+}
+
 const styles = StyleSheet.create({
-  list: { gap: spacing.xs },
+  list: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    gap: spacing.md,
+    minHeight: 52,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  rowPressed: { opacity: 0.6 },
+  box: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
+  },
+  boxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  text: { flex: 1, gap: spacing.xxs },
   checkedText: { textDecorationLine: 'line-through' },
 });

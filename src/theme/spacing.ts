@@ -14,41 +14,24 @@ export const spacing = {
   xxxl: 48,
 } as const;
 
-// Corner radii — rounded, calm surfaces (no sharp or wildly varied corners).
+// Crisp corners, never a pill: `xs` for small marks (a checkbox, a map dot), `sm`
+// for fields, buttons and chips, `md` for cards and sheets. Past ~10 a bordered
+// card starts to read as a rounded-card template.
 export const radii = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  pill: 999,
+  none: 0,
+  xs: 3,
+  sm: 6,
+  md: 10,
 } as const;
 
-// Three elevation tiers so every lifted surface reads as one system instead of
-// hand-rolled shadow recipes. `sm` = resting cards, `md` = floating controls /
-// framed map, `lg` = sheets & overlays. Spread a tier into a StyleSheet entry.
+// Only the bottom sheet lifts off the page — it has to read over a live map.
+// Everything else is separated by rules, not elevation.
 export const shadows = {
-  sm: {
+  sheet: {
     shadowColor: colors.textPrimary,
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 1,
-  },
-  md: {
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  lg: {
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 8,
   },
 } as const;
-
-export type SpacingToken = keyof typeof spacing;
-export type ShadowToken = keyof typeof shadows;

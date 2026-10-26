@@ -3,11 +3,16 @@ import { distanceMiles, formatDistance } from './geo';
 
 describe('distanceMiles', () => {
   it('is zero for the same point', () => {
-    expect(distanceMiles({ latitude: 32.78, longitude: -96.8 }, { latitude: 32.78, longitude: -96.8 })).toBe(0);
+    expect(
+      distanceMiles({ latitude: 32.78, longitude: -96.8 }, { latitude: 32.78, longitude: -96.8 }),
+    ).toBe(0);
   });
 
   it('is ~69 miles for one degree of longitude at the equator', () => {
-    expect(distanceMiles({ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 1 })).toBeCloseTo(69.09, 1);
+    expect(distanceMiles({ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 1 })).toBeCloseTo(
+      69.09,
+      1,
+    );
   });
 
   it('is symmetric', () => {

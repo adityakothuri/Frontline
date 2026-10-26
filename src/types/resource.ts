@@ -1,22 +1,13 @@
 import type { Ionicons } from '@expo/vector-icons';
 
 /**
- * The canonical resource/benefit model for Frontline.
- *
- * A `Resource` is a single place or program a veteran can get help from (a food
- * pantry, a housing program, a legal-aid clinic, a benefit, etc.). This is the
- * contract every screen, card, map pin, and the trust surfacing depend on. See
- * `docs/obsidian/03 Technical/Resource Data Model.md`.
- *
- * All resources are REAL, ingested from official and directory sources (VA,
- * USAJOBS, GI Bill Comparison Tool, HUD, SSVF, curated veteran referrals) via
- * `ingestion/`. There is no simulated resource data anywhere in the app.
+ * The canonical resource model: a single place or program a veteran can get help
+ * from, ingested from official and directory sources by `ingestion/`.
  */
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
-/** What a resource offers. Distinct from the user-facing need categories (food +
- * clothing here map up to the single "essentials" need — see needMapping.ts). */
+/** What a resource offers. Maps onto the user-facing need categories via needMapping.ts. */
 export type ResourceCategory =
   | 'food'
   | 'clothing'
@@ -31,25 +22,16 @@ export type ResourceCategory =
   | 'community_support';
 
 /** Where a resource's information came from — drives the trust badge. */
-export type SourceType =
-  | 'official'
-  | 'directory'
-  | 'nonprofit'
-  | 'community'
-  | 'unverified';
+export type SourceType = 'official' | 'directory' | 'nonprofit' | 'community' | 'unverified';
 
 /** How confident we are the information is current and correct. */
 export type VerificationStatus = 'verified' | 'needs_review' | 'unverified';
 
 /**
- * Why this resource belongs in a veterans' app — the hybrid inclusion rule.
- * `veteran_specific`: exists to serve veterans (VA, Vet Centers, VSOs, GPD/SSVF,
- * DAV, CVSOs). `veteran_benefit`: a place/program that offers a concrete veteran
- * benefit (GI Bill-approved school, veterans' hiring preference). `general`:
- * open to everyone and clearly labeled so — used to backfill categories with no
- * veteran-specific local coverage (legal aid, housing counseling, food pantries).
- * Veteran rows always take priority: they fill the per-category result cap first
- * and win distance ties. Every row must carry one of these labels (DB NOT NULL).
+ * Why this resource belongs in a veterans' app. `veteran_specific` exists to serve
+ * veterans (VA, VSOs, SSVF); `veteran_benefit` offers a concrete veteran benefit
+ * (a GI Bill school); `general` is open to everyone, labeled so, and backfills
+ * thin categories. Veteran rows win the per-category cap and distance ties.
  */
 export type VeteranRelevance = 'veteran_specific' | 'veteran_benefit' | 'general';
 
@@ -97,64 +79,67 @@ export interface ResourceCategoryMeta {
 }
 
 /**
- * Display metadata for each resource category — one source of truth for UI.
- * Colors come from the app's olive/earth family and match the corresponding
- * need category in NEED_CATEGORY_META (`types/need.ts`); keep the two in sync.
+ * Display metadata for each resource category. Each muted hue is measured, not
+ * picked by eye (`categoryMeta.test.ts`): far from every semantic token except
+ * `emergency`, far from every other category, and >=3:1 as an icon on its own
+ * wash. Identity only — icons, pins, washes, never small text. Mirrored in
+ * NEED_CATEGORY_META.
  */
 export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMeta> = {
   food: {
     label: 'Food',
     icon: 'fast-food-outline',
     blurb: 'Food pantries, meals, and grocery assistance.',
-    color: '#A56E24',
+    color: '#B85C1E',
   },
   clothing: {
     label: 'Clothing',
     icon: 'shirt-outline',
     blurb: 'Clothing closets and essential-item assistance.',
-    color: '#8A6A48',
+    color: '#7E6144',
   },
   housing: {
     label: 'Housing',
     icon: 'home-outline',
     blurb: 'Shelter, rent help, and housing programs.',
-    color: '#5F7326',
+    color: '#35521F',
   },
   healthcare: {
     label: 'Healthcare',
     icon: 'medkit-outline',
     blurb: 'Clinics, mental health, and VA health services.',
-    color: '#4E7D5B',
+    color: '#1F7A7A',
   },
   benefits_help: {
     label: 'Benefits help',
+    // Same glyph as `va_benefits` in NEED_CATEGORY_META.
     icon: 'document-text-outline',
     blurb: 'Help understanding and applying for VA benefits.',
-    color: '#46602A',
+    color: '#4A5580',
   },
   legal: {
     label: 'Legal',
     icon: 'shield-outline',
     blurb: 'VA-accredited VSO reps who help with claims and appeals.',
-    color: '#587045',
+    color: '#2F5550',
   },
   jobs: {
     label: 'Jobs',
     icon: 'briefcase-outline',
     blurb: 'Employment support, training, and placement.',
-    color: '#A98E2E',
+    color: '#8A6B1C',
   },
   education: {
     label: 'Education',
     icon: 'school-outline',
     blurb: 'Education benefits, tuition, and training help.',
-    color: '#87702A',
+    color: '#47708A',
   },
   transportation: {
     label: 'Transportation',
     icon: 'bus-outline',
     blurb: 'Rides to appointments and transit assistance.',
-    color: '#6F8F5A',
+    color: '#6A5266',
   },
   emergency: {
     label: 'Emergency',
@@ -166,7 +151,7 @@ export const RESOURCE_CATEGORY_META: Record<ResourceCategory, ResourceCategoryMe
     label: 'Community support',
     icon: 'people-outline',
     blurb: 'Peer groups, caregiver support, and local orgs.',
-    color: '#7E9146',
+    color: '#9C606E',
   },
 };
 

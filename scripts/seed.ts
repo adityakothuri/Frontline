@@ -8,9 +8,8 @@
  *                    (shell env or a git-ignored .env.seed — never EXPO_PUBLIC_*)
  *
  * Resources are NOT seeded here — they come exclusively from the real ingestion
- * pipeline (`ingestion/run.ts`: VA Facilities, GI Bill, USAJOBS, HUD, SSVF,
- * VSO reps, Feeding America, and a curated national list). There is no
- * simulated resource data anywhere.
+ * pipeline (`ingestion/run.ts`; the full source list is in ingestion/README.md).
+ * There is no simulated resource data anywhere.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -56,6 +55,8 @@ const centroids = csv
 const BATCH = 2000;
 for (let i = 0; i < centroids.length; i += BATCH) {
   await upsert('zip_centroids', 'zip', centroids.slice(i, i + BATCH));
-  process.stdout.write(`\rzip_centroids: ${Math.min(i + BATCH, centroids.length)}/${centroids.length}`);
+  process.stdout.write(
+    `\rzip_centroids: ${Math.min(i + BATCH, centroids.length)}/${centroids.length}`,
+  );
 }
 console.log('\nDone.');

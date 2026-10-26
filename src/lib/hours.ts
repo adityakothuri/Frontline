@@ -1,19 +1,16 @@
 /**
- * Best-effort "open now" from a resource's `hours` string.
- *
- * Understands the controlled format used by our seed data:
+ * Parsing for the controlled hours format ingestion writes:
  *   `Mon-Fri 09:00-17:00; Sat 10:00-14:00`
- * - semicolon-separated groups
- * - each group: a day or day-range (Mon, Tue … Sun) then a 24h time range
- *
- * Anything it can't confidently parse returns `null` (unknown) rather than a
- * misleading guess — the UI shows "hours unknown" in that case.
+ * Anything not confidently parsed is `null` (unknown) rather than a guess.
  */
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
-interface Interval {
-  /** 0 = Sunday … 6 = Saturday */
+export const MINUTES_PER_DAY = 24 * 60;
+
+/** One contiguous window a resource is open. */
+export interface OpenInterval {
+  /** 0 = Sunday … 6 = Saturday, matching `Date.getDay()`. */
   day: number;
   /** minutes from midnight */
   start: number;
@@ -55,8 +52,11 @@ const parseDayRange = (token: string): number[] | null => {
   return days;
 };
 
-function parseHours(hours: string): Interval[] | null {
-  const intervals: Interval[] = [];
+/** Every window the resource is open during a week, or `null` when unknown. The single parse path. */
+export function weeklyIntervals(hours: string | null): OpenInterval[] | null {
+  if (!hours) return null;
+
+  const intervals: OpenInterval[] = [];
 
   for (const group of hours.split(';')) {
     const trimmed = group.trim();
@@ -89,9 +89,7 @@ function parseHours(hours: string): Interval[] | null {
  * `now` is injectable for testing.
  */
 export function isOpenNow(hours: string | null, now: Date = new Date()): boolean | null {
-  if (!hours) return null;
-
-  const intervals = parseHours(hours);
+  const intervals = weeklyIntervals(hours);
   if (!intervals) return null;
 
   const day = now.getDay();
@@ -102,28 +100,95 @@ export function isOpenNow(hours: string | null, now: Date = new Date()): boolean
   );
 }
 
-const formatMinutes = (mins: number): string => {
+/** Minutes from midnight as a friendly clock time: `540` → `9 AM`, `990` → `4:30 PM`. */
+export function formatTimeOfDay(mins: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   const period = h < 12 ? 'AM' : 'PM';
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return m === 0 ? `${h12} ${period}` : `${h12}:${String(m).padStart(2, '0')} ${period}`;
-};
+}
+
+/** The one opening and closing that matter on a given day. */
+export interface DayWindow {
+  /** 0 = Sunday … 6 = Saturday. */
+  day: number;
+  open: number;
+  close: number;
+}
+
+/** A week collapsed to one window per day: earliest opening, latest closing (lunch gaps ignored). */
+export function dayWindows(hours: string | null): DayWindow[] {
+  const intervals = weeklyIntervals(hours);
+  if (!intervals) return [];
+
+  const byDay = new Map<number, DayWindow>();
+  for (const interval of intervals) {
+    const existing = byDay.get(interval.day);
+    if (!existing) {
+      byDay.set(interval.day, { day: interval.day, open: interval.start, close: interval.end });
+      continue;
+    }
+    existing.open = Math.min(existing.open, interval.start);
+    existing.close = Math.max(existing.close, interval.end);
+  }
+
+  return [...byDay.values()].sort((a, b) => a.day - b.day);
+}
+
+/** Monday-first display order, which is how a posted schedule reads. */
+const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_LABEL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /**
- * If the resource is open right now, the time it closes today (e.g. "5 PM"),
- * else `null`. Reuses the same parser so time-format knowledge stays in one place.
+ * Opening hours as readable lines, `['Mon–Fri · 8 AM – 4:30 PM']`, with
+ * consecutive matching days collapsed. Empty when the hours are unknown.
  */
-export function closingTimeToday(hours: string | null, now: Date = new Date()): string | null {
-  if (!hours) return null;
+export function describeHours(hours: string | null): string[] {
+  const windows = dayWindows(hours);
+  if (windows.length === 0) return [];
 
-  const intervals = parseHours(hours);
-  if (!intervals) return null;
+  const byDay = new Map(windows.map((w) => [w.day, w]));
+  const lines: string[] = [];
+  let run: { first: number; last: number; open: number; close: number } | null = null;
 
-  const day = now.getDay();
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  const current = intervals.find(
-    (interval) => interval.day === day && minutes >= interval.start && minutes < interval.end,
+  const flush = () => {
+    if (!run) return;
+    const days =
+      run.first === run.last
+        ? DAY_LABEL[run.first]
+        : `${DAY_LABEL[run.first]}–${DAY_LABEL[run.last]}`;
+    lines.push(`${days} · ${formatTimeOfDay(run.open)} – ${formatTimeOfDay(run.close)}`);
+    run = null;
+  };
+
+  for (const day of DISPLAY_ORDER) {
+    const window = byDay.get(day);
+    if (!window) {
+      flush();
+      continue;
+    }
+    if (run && run.open === window.open && run.close === window.close) {
+      run.last = day;
+      continue;
+    }
+    flush();
+    run = { first: day, last: day, open: window.open, close: window.close };
+  }
+  flush();
+
+  return lines;
+}
+
+/** True when open every hour of every day (ingestion's `Mon-Sun 00:00-23:59`), checked structurally. */
+export function isAlwaysOpen(hours: string | null): boolean {
+  const intervals = weeklyIntervals(hours);
+  if (!intervals) return false;
+
+  return DAYS.every((_, day) =>
+    intervals.some(
+      (interval) =>
+        interval.day === day && interval.start === 0 && interval.end >= MINUTES_PER_DAY - 1,
+    ),
   );
-  return current ? formatMinutes(current.end) : null;
 }

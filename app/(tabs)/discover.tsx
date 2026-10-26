@@ -1,41 +1,46 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Pressable, FlatList, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, FlatList, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  AppText,
-  Card,
   EmptyState,
   ErrorState,
   Loading,
-  LocationButton,
-  PressableScale,
+  useLoadingGate,
+  RefreshFailedBanner,
+  ScreenHeader,
 } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+import { riseIn, stepDelay } from '@/theme/motionPresets';
+import { useStaggerGate } from '@/hooks/useStaggerGate';
+import { useRetryOnReturn } from '@/hooks/useRetryOnReturn';
 import {
-  filterReferralsByState,
-  isNationalReferral,
+  demoteDownvoted,
   resourceService,
   resourceToNeedCategory,
+  splitLocalsAndReferrals,
   type ResourceSearchResult,
 } from '@/services/resources';
+import { useActivity } from '@/services/activity';
 import { stateFromZip } from '@/lib/zipState';
+import { reportDataError } from '@/services/monitoring';
 import { useProfile } from '@/services/profile';
 import { ResourceCard } from '@/features/resources/ResourceCard';
 import { NeedCategoryCard } from '@/features/needs/NeedCategoryCard';
-import { CategoryShells, shellCategory, type ShellId } from '@/features/discover/CategoryShells';
+import {
+  CategoryShells,
+  isShellId,
+  shellCategory,
+  type ShellId,
+} from '@/features/discover/CategoryShells';
+import { ReferralSection } from '@/features/resources/ReferralSection';
+import { resultsOf, type ResourceSearchState } from '@/features/resources/useResourceSearch';
 import { NEED_CATEGORIES, DEFAULT_RADIUS_MILES, type NeedCategory } from '@/types/need';
 
-type BrowseState =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'ready'; results: ResourceSearchResult[] };
-
-// On the "all" browse the results come back distance-sorted, so a dense category
-// (healthcare) fills the top of the list. Round-robin across categories instead,
-// so the list alternates and a veteran immediately sees the full variety the app
-// offers. Each category keeps its own nearest-first order internally.
+// The "all" browse arrives distance-sorted, so a dense category (healthcare)
+// would fill the top. Round-robin across categories instead; each keeps its own
+// nearest-first order.
 function interleaveByCategory(results: ResourceSearchResult[]): ResourceSearchResult[] {
   const buckets = new Map<string, ResourceSearchResult[]>();
   for (const r of results) {
@@ -58,227 +63,214 @@ function interleaveByCategory(results: ResourceSearchResult[]): ResourceSearchRe
   return out;
 }
 
-// Browse opportunities: a curated shell row over all opportunities (or one
-// category), with an "Other" shell that opens the full category list.
+// Browse nearby help: a shell row over every place near the veteran (or one
+// category), with "Other" opening the full category index.
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { profile } = useProfile();
-  const [selected, setSelected] = useState<ShellId>('all');
-  const [miscOpen, setMiscOpen] = useState(false);
-  const [state, setState] = useState<BrowseState>({ status: 'loading' });
+  const { profile, isHydrated: isProfileHydrated } = useProfile();
+  // Home can open this tab on a given shell (`shell=other` lands on the full
+  // category index). Validated, since a deep link can carry any string.
+  const { shell: shellParam } = useLocalSearchParams<{ shell?: string }>();
+  const shell = isShellId(shellParam) ? shellParam : undefined;
+  const [selected, setSelected] = useState<ShellId>(shell ?? 'all');
+  const [state, setState] = useState<ResourceSearchState>({ status: 'loading', stale: [] });
+  const { getRating } = useActivity();
 
   // Bumped by the error state's Retry so the fetch effect re-runs on demand.
   const [reloadToken, setReloadToken] = useState(0);
-  const reload = () => setReloadToken((n) => n + 1);
+  const reload = useCallback(() => {
+    setReloadToken((n) => n + 1);
+  }, []);
+  const stateStatus = state.status;
 
   const zip = profile?.zip;
   const radiusMiles = profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES;
+  // Holds only when there is nothing to show; a refresh keeps stale rows up.
+  const gate = useLoadingGate(state.status === 'loading' && resultsOf(state).length === 0);
+  // Only the first screenful of a shell gets a staggered entrance.
+  const staggered = useStaggerGate(selected);
+
+  // A new shell drops the stale fallback: last shell's rows are the wrong answer,
+  // not an old one. Runs before the fetch effect below.
+  useEffect(() => {
+    setState({ status: 'loading', stale: [] });
+  }, [selected]);
+
+  // Coming back to a failed tab retries.
+  useRetryOnReturn(stateStatus === 'error', reload);
+
+  // The tab stays mounted, so `shell` is applied on focus and then cleared;
+  // otherwise a second arrival with the same value would select nothing.
+  useFocusEffect(
+    useCallback(() => {
+      if (!shell) return;
+      setSelected(shell);
+      router.setParams({ shell: '' });
+    }, [shell, router]),
+  );
 
   useEffect(() => {
     if (selected === 'other') return;
-    // `active` guards against out-of-order resolution: flipping between shells
-    // faster than the network must not let an older response land last.
+    // Wait for the profile: without a ZIP the browse returns referrals only.
+    if (!isProfileHydrated) return;
+    // Guards against an older response landing after a newer one.
     let active = true;
-    setState({ status: 'loading' });
+    setState((prev) => ({ status: 'loading', stale: resultsOf(prev) }));
     resourceService
       .listResources(shellCategory(selected), zip, radiusMiles)
       .then((results) => {
         if (active) setState({ status: 'ready', results });
       })
-      .catch(() => {
-        if (active) setState({ status: 'error' });
+      .catch((error) => {
+        reportDataError('Discover', error);
+        // A failed refresh degrades to a banner over the last good list.
+        if (active) setState((prev) => ({ status: 'error', error, stale: resultsOf(prev) }));
       });
     return () => {
       active = false;
     };
-  }, [selected, zip, radiusMiles, reloadToken]);
+  }, [selected, zip, radiusMiles, reloadToken, isProfileHydrated]);
 
-  // The multi-category "all" browse alternates categories; a single category
-  // keeps its natural nearest-first order, with statewide/national veteran help
-  // (no location) pulled into its own strip on top, filtered to the veteran's
-  // state so SSVF and the like aren't out-of-state noise.
+  // "All" alternates categories. A single category stays nearest-first, with
+  // statewide veteran help (no location) in its own strip, filtered to the
+  // veteran's state and placed above the list only when little is nearby.
   const veteranState = stateFromZip(profile?.zip);
-  const { referrals, displayResults } = useMemo(() => {
-    if (state.status !== 'ready') return { referrals: [], displayResults: [] };
-    if (shellCategory(selected) === undefined) {
-      return { referrals: [], displayResults: interleaveByCategory(state.results) };
+  const { referrals, displayResults, referralsLead } = useMemo(() => {
+    const source = resultsOf(state);
+    if (source.length === 0) {
+      return { referrals: [], displayResults: [], referralsLead: false };
     }
+    // Places rated "Not helpful" sink to the bottom. This must run last:
+    // `interleaveByCategory` re-buckets, so demoting earlier would only sink a
+    // row within its own category.
+    if (shellCategory(selected) === undefined) {
+      return {
+        referrals: [],
+        displayResults: demoteDownvoted(interleaveByCategory(source), getRating),
+        referralsLead: false,
+      };
+    }
+    const {
+      locals,
+      referrals: stateReferrals,
+      referralsLead: lead,
+    } = splitLocalsAndReferrals(source, veteranState);
     return {
-      referrals: filterReferralsByState(
-        state.results.filter((r) => isNationalReferral(r.resource)),
-        veteranState,
-      ),
-      displayResults: state.results.filter((r) => !isNationalReferral(r.resource)),
+      referrals: stateReferrals,
+      displayResults: demoteDownvoted(locals, getRating),
+      referralsLead: lead,
     };
-  }, [state, selected, veteranState]);
+  }, [state, selected, veteranState, getRating]);
 
-  const handleSelect = (id: ShellId) => {
-    setSelected(id);
-    setMiscOpen(false);
-  };
+  const referralSection = (
+    <ReferralSection
+      referrals={referrals}
+      leads={referralsLead}
+      hasLocals={displayResults.length > 0}
+      needCategoryFor={(item) =>
+        shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)
+      }
+    />
+  );
 
   const openCategory = (category: NeedCategory) =>
     router.push({ pathname: '/results', params: { category } });
 
+  const shown = displayResults.length + referrals.length;
+  const subtitle = useMemo(() => {
+    if (selected === 'other') return 'Every kind of help Frontline can find for you.';
+    if (gate.holding || (state.status === 'loading' && shown === 0))
+      return 'Finding help near you…';
+    if (shown === 0) return 'Places that can help, near you.';
+    const where = zip ? ` near ${zip}` : ' near you';
+    return `${shown} ${shown === 1 ? 'place' : 'places'} that can help${where}.`;
+  }, [selected, state.status, shown, zip, gate.holding]);
+
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <View style={styles.topBar}>
-        <LocationButton zip={profile?.zip} onPress={() => router.navigate('/profile')} />
-      </View>
+      <ScreenHeader
+        style={styles.masthead}
+        location={{ zip: profile?.zip, onPress: () => router.navigate('/profile') }}
+        title="Find help nearby"
+        subtitle={subtitle}
+        subtitleKey={subtitle}
+      />
 
-      <View style={styles.header}>
-        <AppText variant="title">Discover</AppText>
-        <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-          Browse opportunities for veterans near you.
-        </AppText>
-      </View>
-
-      <CategoryShells selected={selected} onSelect={handleSelect} />
+      <CategoryShells selected={selected} onSelect={setSelected} />
 
       <View style={styles.content}>
         {selected === 'other' ? (
-          miscOpen ? (
-            <View style={styles.misc}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Back to all categories"
-                onPress={() => setMiscOpen(false)}
-                hitSlop={6}
-                style={styles.backRow}
-              >
-                <Ionicons name="chevron-back" size={16} color={colors.accent} />
-                <AppText variant="label" color="textSecondary">
-                  All categories
-                </AppText>
-              </Pressable>
-              <EmptyState
-                icon="shapes-outline"
-                title="Nothing here yet"
-                message="Opportunities that don’t fit a category will show up here once we add them."
-              />
-            </View>
-          ) : (
-            <FlatList
-              data={NEED_CATEGORIES}
-              keyExtractor={(category) => category}
-              renderItem={({ item }) => (
+          // The full category index, including the categories with their own shell.
+          <FlatList
+            data={NEED_CATEGORIES}
+            keyExtractor={(category) => category}
+            renderItem={({ item, index }) => (
+              <Animated.View entering={staggered(index) ? riseIn(stepDelay(index)) : undefined}>
                 <NeedCategoryCard category={item} onPress={() => openCategory(item)} />
+              </Animated.View>
+            )}
+            contentContainerStyle={[styles.list, styles.index]}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : gate.holding ? (
+          gate.showShield ? (
+            <Loading label="Finding help near you…" />
+          ) : null
+        ) : state.status === 'error' && displayResults.length === 0 && referrals.length === 0 ? (
+          <ErrorState error={state.error} onRetry={reload} />
+        ) : displayResults.length === 0 && referrals.length === 0 ? (
+          // Almost always "nothing within your radius", so offer what changes that.
+          <EmptyState
+            title={
+              profile?.zip
+                ? `Nothing nearby for this near ${profile.zip}`
+                : 'Nothing nearby for this yet'
+            }
+            message={`We looked within ${radiusMiles} miles. A wider search radius or a nearby ZIP usually finds more.`}
+            actionLabel="Change ZIP or radius"
+            onAction={() => router.push({ pathname: '/profile', params: { edit: '1' } })}
+          />
+        ) : (
+          <>
+            {state.status === 'error' ? (
+              <View style={styles.banner}>
+                <RefreshFailedBanner error={state.error} onRetry={reload} />
+              </View>
+            ) : null}
+            <FlatList
+              // Keyed on the shell: a new filter remounts the list and resets scroll.
+              key={selected}
+              data={displayResults}
+              keyExtractor={(item) => item.resource.id}
+              renderItem={({ item, index }) => (
+                <Animated.View entering={staggered(index) ? riseIn(stepDelay(index)) : undefined}>
+                  <ResourceCard
+                    result={item}
+                    needCategory={
+                      shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)
+                    }
+                  />
+                </Animated.View>
               )}
-              ListFooterComponent={<MiscCard onPress={() => setMiscOpen(true)} />}
+              ListHeaderComponent={referralsLead ? referralSection : null}
+              ListFooterComponent={referralsLead ? null : referralSection}
               contentContainerStyle={styles.list}
               showsVerticalScrollIndicator={false}
             />
-          )
-        ) : state.status === 'loading' ? (
-          <Loading label="Loading opportunities…" />
-        ) : state.status === 'error' ? (
-          <ErrorState onRetry={reload} />
-        ) : displayResults.length === 0 && referrals.length === 0 ? (
-          <EmptyState
-            icon="search-outline"
-            title="Nothing here yet"
-            message="We don’t have opportunities in this category yet. Try another, or check back soon."
-          />
-        ) : (
-          <FlatList
-            data={displayResults}
-            keyExtractor={(item) => item.resource.id}
-            renderItem={({ item }) => (
-              <ResourceCard
-                result={item}
-                needCategory={shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)}
-              />
-            )}
-            ListHeaderComponent={
-              referrals.length > 0 ? (
-                <View style={styles.referralSection}>
-                  <AppText variant="label" color="textSecondary" accessibilityRole="header">
-                    Statewide &amp; national veteran help
-                  </AppText>
-                  {referrals.map((item) => (
-                    <ResourceCard
-                      key={item.resource.id}
-                      result={item}
-                      needCategory={
-                        shellCategory(selected) ?? resourceToNeedCategory(item.resource.category)
-                      }
-                    />
-                  ))}
-                  {displayResults.length > 0 ? (
-                    <AppText
-                      variant="label"
-                      color="textSecondary"
-                      accessibilityRole="header"
-                      style={styles.nearYouLabel}
-                    >
-                      Near you
-                    </AppText>
-                  ) : null}
-                </View>
-              ) : null
-            }
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
+          </>
         )}
       </View>
     </SafeAreaView>
   );
 }
 
-// The "doesn't fit a rigid category" entry at the bottom of the Other list.
-function MiscCard({ onPress }: { onPress: () => void }) {
-  return (
-    <PressableScale accessibilityRole="button" accessibilityLabel="Miscellaneous" onPress={onPress}>
-      <Card style={styles.miscCard}>
-        <View style={styles.miscIcon}>
-          <Ionicons name="shapes-outline" size={24} color={colors.textSecondary} />
-        </View>
-        <View style={styles.miscText}>
-          <AppText variant="subtitle">Miscellaneous</AppText>
-          <AppText variant="caption" color="textSecondary">
-            Other opportunities that don’t fit a category
-          </AppText>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </Card>
-    </PressableScale>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  topBar: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md },
-  header: { paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
-  subtitle: { marginTop: spacing.sm },
+  // Tight under the title: the shell row below belongs to the same unit.
+  masthead: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, marginBottom: spacing.sm },
   content: { flex: 1 },
-  list: {
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingTop: 0,
-    paddingBottom: spacing.xl,
-  },
-  referralSection: { gap: spacing.md },
-  nearYouLabel: { marginTop: spacing.sm },
-  misc: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  miscCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  miscIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-  },
-  miscText: { flex: 1, gap: spacing.xxs },
+  banner: { paddingHorizontal: spacing.xl },
+  // Rows carry their own hairlines; a gap would break the ruling.
+  list: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
+  index: { paddingTop: spacing.sm },
 });

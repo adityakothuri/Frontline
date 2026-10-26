@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        One task per branch. Use `/start-task` to produce a plan before coding, and
-        `/finish-task` to run checks and update the Obsidian logs when done.
+        One task per branch. Write a short plan before coding, and run
+        `npm run verify` before opening the PR.
   - type: textarea
     id: summary
     attributes:
@@ -19,7 +19,7 @@ body:
     id: phase
     attributes:
       label: Phase / roadmap link
-      description: e.g. "Phase 1 App Shell" — link the roadmap note.
+      description: Which part of the roadmap this belongs to.
     validations:
       required: true
   - type: textarea
@@ -56,12 +56,3 @@ body:
         - label: lint
         - label: test (if meaningful)
         - label: manual run of the flow
-  - type: checkboxes
-    id: logs
-    attributes:
-      label: Obsidian logs to update on completion
-      options:
-        - label: Build log
-        - label: app_walkthrough (if meaningful)
-        - label: Decision log (if a decision)
-        - label: Bug log (if a bug)

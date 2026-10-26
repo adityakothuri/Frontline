@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ActivityState, EngagementEntry, Rating } from '@/types/activity';
+import { captureException } from '../monitoring';
 
-// One versioned key for the on-device activity blob (engagements + ratings).
 const STORAGE_KEY = 'frontline.activity.v1';
 
-const EMPTY: ActivityState = { engagements: [], ratings: {} };
+export const EMPTY_ACTIVITY: ActivityState = { engagements: [], ratings: {} };
 
 function isEngagement(value: unknown): value is EngagementEntry {
   const e = value as Partial<EngagementEntry>;
@@ -28,21 +28,22 @@ function normalizeRatings(value: unknown): Record<string, Rating> {
 export async function loadActivity(): Promise<ActivityState> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY;
+    if (!raw) return EMPTY_ACTIVITY;
     const parsed = JSON.parse(raw) as Partial<ActivityState>;
     return {
-      engagements: Array.isArray(parsed.engagements)
-        ? parsed.engagements.filter(isEngagement)
-        : [],
+      engagements: Array.isArray(parsed.engagements) ? parsed.engagements.filter(isEngagement) : [],
       ratings: normalizeRatings(parsed.ratings),
     };
   } catch {
-    // Never let a storage/parse failure block the app.
-    return EMPTY;
+    return EMPTY_ACTIVITY;
   }
 }
 
-/** Persist the activity blob. */
+/** Persist the activity blob. Never throws. */
 export async function saveActivity(state: ActivityState): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    captureException(error);
+  }
 }

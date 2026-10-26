@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Features go through scope + approval before building. Non-MVP features are parked
-        unless explicitly approved — see `docs/obsidian/01 Product/Non-MVP Ideas.md`.
+        Features go through scope + approval before building. See PRODUCT.md for what
+        Frontline is and is not.
   - type: textarea
     id: summary
     attributes:
@@ -54,9 +54,9 @@ body:
     id: technical
     attributes:
       label: Technical notes
-      description: Types, mock data, service seams, libraries to verify with Context7.
+      description: Types, data sources, service seams, libraries involved.
   - type: textarea
     id: risks
     attributes:
       label: Risks / privacy concerns
-      description: Especially anything touching camera/video, location, or what becomes public.
+      description: Especially anything touching location, AI output, or what leaves the device.

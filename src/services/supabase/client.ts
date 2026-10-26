@@ -2,12 +2,20 @@ import { supabaseConfig } from './config';
 
 /**
  * Minimal typed fetch helper for Supabase (PostgREST + Edge Functions). No
- * supabase-js: the app only needs anon-key REST reads and one function call,
- * and the SDK's auth/realtime/storage baggage would be dead weight.
+ * supabase-js: the app only needs anon-key REST calls, and the SDK's
+ * auth/realtime/storage would be dead weight.
  */
 
 /** RN fetch has no timeout; without one a dead network outlives every loading state. */
 const TIMEOUT_MS = 8000;
+
+/** The bundle shipped without EXPO_PUBLIC_SUPABASE_* — never worth a retry. */
+export class NotConfiguredError extends Error {
+  constructor() {
+    super('Supabase is not configured');
+    this.name = 'NotConfiguredError';
+  }
+}
 
 export class SupabaseRequestError extends Error {
   readonly status: number;
@@ -19,17 +27,44 @@ export class SupabaseRequestError extends Error {
   }
 }
 
+/** Backoff before the one retry, long enough for a waking radio or DNS lookup. */
+const RETRY_DELAYS_MS = [400];
+
 type RequestOptions = {
   method?: 'GET' | 'POST';
   body?: unknown;
   /** Override the default timeout (the AI function can be slower than reads). */
   timeoutMs?: number;
+  /** Retry once on a transient failure. On by default (reads are idempotent);
+   *  the AI function opts out because of its cost and long timeout. */
+  retry?: boolean;
 };
 
+/** Timeouts, dropped connections and 5xx are transient; a 4xx or a missing config is not. */
+function isTransient(error: unknown): boolean {
+  if (error instanceof SupabaseRequestError) return error.status >= 500;
+  if (error instanceof NotConfiguredError) return false;
+  // AbortError (our timeout) and RN's TypeError for a failed connection.
+  return error instanceof Error;
+}
+
+/** A typed Supabase request, retried once on a transient failure (common on cold launch). */
 export async function supabaseRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const delays = options.retry === false ? [] : RETRY_DELAYS_MS;
+  for (let i = 0; ; i++) {
+    try {
+      return await attempt<T>(path, options);
+    } catch (error) {
+      if (i >= delays.length || !isTransient(error)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delays[i]));
+    }
+  }
+}
+
+async function attempt<T>(path: string, options: RequestOptions): Promise<T> {
   if (!supabaseConfig) {
     // Factories only construct Supabase-backed services when config exists.
-    throw new Error('Supabase is not configured');
+    throw new NotConfiguredError();
   }
 
   const controller = new AbortController();
@@ -52,8 +87,6 @@ export async function supabaseRequest<T>(path: string, options: RequestOptions =
     });
 
     if (!response.ok) {
-      // PostgREST/function errors carry {message, ...}; surface it to the
-      // existing error/retry UI.
       let message = `HTTP ${response.status}`;
       try {
         const payload = (await response.json()) as { message?: string; error?: string };

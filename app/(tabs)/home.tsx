@@ -1,111 +1,76 @@
-import { useEffect, useState } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import { useCallback } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, EmptyState, LocationButton, ScreenContainer } from '@/components';
+import { ScreenContainer, ScreenHeader } from '@/components';
 import { useProfile } from '@/services/profile';
 import { useActivity } from '@/services/activity';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { timeGreeting } from '@/lib/greeting';
-import { dailyHomeMessage } from '@/lib/homeMessages';
-import { colors, radii, shadows, spacing, surfaceTint } from '@/theme';
-import { ReviewPrompt } from '@/features/home/ReviewPrompt';
+import { ratingsService } from '@/services/ratings';
+import { getDeviceId } from '@/services/sync/deviceId';
+import { spacing } from '@/theme';
+import { ReviewDeck } from '@/features/home/ReviewDeck';
+import { HomeStartCard } from '@/features/home/HomeStartCard';
+import { NearbyGlance } from '@/features/home/NearbyGlance';
+import { DEFAULT_RADIUS_MILES } from '@/types/need';
+import type { EngagementEntry, Rating } from '@/types/activity';
 
-// The front door: a warm, personal landing. A soft olive-washed hero panel with
-// the brand mark, greeting, and a message — then a prompt to rate the last
-// opportunity you engaged with, or a nudge to go explore.
+// The front door: the wordmark and date, Ask Frontline, a one-line question
+// about the last place they tried, then the kinds of help with most places nearby.
 export default function HomeScreen() {
   const router = useRouter();
-  const { profile } = useProfile();
-  const { pendingReview, isHydrated } = useActivity();
-  const reduced = useReducedMotion();
+  const { profile, isHydrated: isProfileHydrated } = useProfile();
+  const { pendingReviews, isHydrated, rate } = useActivity();
 
-  const greeting = profile?.firstName
-    ? `${timeGreeting()}, ${profile.firstName}`
-    : timeGreeting();
+  const dateline = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 
-  // One quiet fade so the front door settles in rather than snapping (a single
-  // element, not an orchestrated sequence). Instant under reduce-motion.
-  const [fade] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    if (reduced) {
-      fade.setValue(1);
-      return;
-    }
-    Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-  }, [fade, reduced]);
+  // Records the vote on-device, then adds it to the shared community count.
+  // The deck calls this once the card has finished leaving.
+  const recordVote = useCallback(
+    async (entry: EngagementEntry, choice: Rating) => {
+      rate(entry.resourceId, choice);
+      const deviceId = await getDeviceId();
+      if (!deviceId) return;
+      ratingsService.submitVote(entry.resourceId, deviceId, choice).catch(() => {
+        // The local vote still counts; the shared total catches up on next open.
+      });
+    },
+    [rate],
+  );
 
   return (
-    <ScreenContainer>
-      <View style={styles.topBar}>
-        <LocationButton zip={profile?.zip} onPress={() => router.navigate('/profile')} />
-      </View>
-      <Animated.View style={{ opacity: fade }}>
-        <View style={styles.hero}>
-          <View style={styles.mark}>
-            <Ionicons name="compass" size={22} color={colors.accent} />
-          </View>
-          <AppText variant="display">{greeting}</AppText>
-          <AppText variant="body" color="textSecondary" style={styles.subtitle}>
-            {dailyHomeMessage()}
-          </AppText>
-          {profile?.zip ? (
-            <View style={styles.zipRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-              {/* textSecondary keeps AA on the olive-washed hero panel. */}
-              <AppText variant="caption" color="textSecondary">
-                Showing help near {profile.zip}
-              </AppText>
-            </View>
-          ) : null}
-        </View>
-      </Animated.View>
+    <ScreenContainer scroll contentStyle={styles.content}>
+      <ScreenHeader
+        location={{ zip: profile?.zip, onPress: () => router.navigate('/profile') }}
+        title="Frontline"
+        subtitle={profile?.firstName ? `${profile.firstName} · ${dateline}` : dateline}
+      />
 
-      {!isHydrated ? null : pendingReview ? (
-        <ReviewPrompt engagement={pendingReview} />
-      ) : (
-        <View style={styles.empty}>
-          <EmptyState
-            icon="sparkles-outline"
-            title="Nothing to see here yet"
-            message="Once you check out an opportunity, you can come back to rate it. Ready to find some help?"
-            actionLabel="Explore help"
-            onAction={() => router.navigate('/discover')}
-          />
+      <View style={styles.section}>
+        <HomeStartCard />
+      </View>
+
+      {/* Mounted even when empty, so the last card's exit isn't torn down with it. */}
+      {isHydrated ? (
+        // The gap below only exists while there is a card to rate.
+        <View style={pendingReviews.length > 0 ? styles.section : undefined}>
+          <ReviewDeck reviews={pendingReviews} onVote={recordVote} />
         </View>
-      )}
+      ) : null}
+
+      {/* Data-gated: it draws nothing on a failure or an empty ZIP. */}
+      <NearbyGlance
+        zip={profile?.zip}
+        radiusMiles={profile?.preferredRadiusMiles ?? DEFAULT_RADIUS_MILES}
+        enabled={isProfileHydrated}
+      />
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  topBar: { marginBottom: spacing.md },
-  // A warm olive-washed panel so the greeting reads as a designed hero, not bare
-  // text on paper. Soft tint keeps AA contrast for the serif greeting.
-  hero: {
-    marginBottom: spacing.xl,
-    padding: spacing.xl,
-    borderRadius: radii.xl,
-    backgroundColor: surfaceTint(colors.accent, 0.07),
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    ...shadows.sm,
-  },
-  mark: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-    marginBottom: spacing.md,
-  },
-  subtitle: { marginTop: spacing.sm },
-  zipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  empty: { flex: 1 },
+  content: { flexGrow: 1 },
+  section: { gap: spacing.md, marginBottom: spacing.xl },
 });

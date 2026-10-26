@@ -13,15 +13,23 @@
  * renders the amber "call ahead" treatment, which is exactly right for pantry
  * hours. `veteran_relevance: 'general'` (open to everyone, hybrid rule).
  *
- * ROLLOUT IS PILOT-GATED: run with `--state XX` and spot-check before any
- * national ingest (national also needs a DB-size check — 310k rows would be
- * ~20x the rest of the dataset combined).
+ * Runs nationally by default; `--state XX[,YY]` narrows it for spot-checks.
  *
- * Tables (locations/addresses/phones/services, aligned by `loc-N`/`svc-N` ids)
- * are pulled via the JSON endpoints at per_page=1000 — page 1 reports
+ * Tables are pulled via the JSON endpoints at per_page=1000 — page 1 reports
  * `total_pages`, so the rest fetch in parallel chunks (~311 pages per table
- * nationally). Joins are by `location_id`/`service_id`.
+ * nationally). Locations join to services through `service_at_location`, and
+ * services carry their food taxonomy in `attributes`.
+ *
+ * Two properties of this feed drive the defensive code below: its row ids are
+ * reassigned on every rebuild (so identity is derived — see `stableKey`), and its
+ * taxonomies are often wrong (so food is proven on content — see
+ * `isProvenFoodSite`).
  */
+import { fromDayRanges, type DayRange } from '../lib/openingHours.ts';
+import { stableKey } from '../lib/stableKey.ts';
+import { titleCaseName } from '../lib/displayName.ts';
+import { sleep } from '../lib/http.ts';
+import { formatAddress, isSaneCoord, parseStateFilter, trimOrNull } from '../lib/normalize.ts';
 import type {
   IngestionQuery,
   IngestionSource,
@@ -33,9 +41,8 @@ import type {
 const PROVIDER = 'feed-america';
 const ATTRIBUTION_URL = 'https://feedam.org';
 
-// The feed also carries FQHC health centers, SNAP-enrollment offices, and WIC
-// offices — real services, but not "a place to get food" (spot-check found
-// dental clinics). Only actual food-distribution taxonomies are ingested.
+// Food-distribution taxonomies only. Child-nutrition programs (`school-meals`,
+// `summer-meals`) are excluded: they are served at schools, not to adult veterans.
 const FOOD_TAXONOMIES = new Set([
   'food-pantries',
   'food-banks',
@@ -43,9 +50,59 @@ const FOOD_TAXONOMIES = new Set([
   'mobile-food-pantries',
   'community-fridges',
   'emergency-food',
-  'school-meals',
-  'summer-meals',
 ]);
+
+// The feed's food taxonomies are attached to senior apartments, home health,
+// hospice, clinics and more, so food must be PROVEN: a row counts only if its own
+// text says food and it carries no clinical/housing class marker (NON_FOOD_CLASS).
+// The survivors (~61k) match Feeding America's published network size.
+const FOOD_EVIDENCE =
+  // Plurals matter: `\bmeal\b` does NOT match "meals", which silently rejected
+  // "Hot meals served daily to anyone in need" — a soup kitchen.
+  /\b(foods?|meals?|pantr(?:y|ies)|grocer\w*|produce|hunger|harvest|commodit\w*|soup kitchen|congregate dining|WIC|SNAP|nutrition assistance|feeding)\b/i;
+
+/**
+ * Class markers that disqualify a row no matter what else it says. Dialysis
+ * centres are here because their service text mentions renal *diet* and therefore
+ * trips FOOD_EVIDENCE — proof that positive evidence alone is not enough.
+ */
+const NON_FOOD_CLASS =
+  /\b(home health|hospice|rural health clinic|federally.certified rural|HUD Section|Rent typically|apply via property management|LIHTC|Medicare.certified|intermediate care facility|Ryan White|Indian Health Service|Department of Veterans Affairs facility|dialysis|end.stage renal|skilled nursing|assisted living|opioid treatment|methadone|buprenorphine|naltrexone|medication.assisted|substance use disorder|detox|psychiatric|mental health treatment facility)\b/i;
+
+/**
+ * Is this actually somewhere a veteran can get food? Checked against the service's
+ * `eligibility_description` plus the location name — the only two pieces of text
+ * the feed gives us that describe what the place does.
+ */
+export const isProvenFoodSite = (text: string): boolean =>
+  FOOD_EVIDENCE.test(text) && !NON_FOOD_CLASS.test(text);
+
+// Pantries hosted inside a school or childcare centre ("Kids Café Parkwood
+// Elementary") usually serve enrolled families only. Deliberately narrow:
+// "University Baptist Church" and "College Hill Food Pantry" must survive.
+const SCHOOL_VENUE =
+  /(\belementary\b|\bmiddle school\b|\bhigh school\b|\bjunior high\b|\bpreschool\b|\bpre-k\b|\bhead start\b|\bkids caf|\bdaycare\b|\bday care\b|\bchild care\b|\bchildcare\b|\bacademy\b|\bschool district\b|\b[A-Z]{2,4} ISD\b|\bisd\b)/i;
+// SNAP-accepting retailers ("Subway # 42247", "WALMART #5663", "… dba KFC") are
+// not food assistance. A national chain brand OR a franchise marker
+// (COMMERCIAL_MARKER) is decisive. Generic words like `kitchen`/`bakery` are not
+// matched: "St Mary's Kitchen" is a real pantry.
+// Use JS `\b` here — Postgres's `\m`/`\M` is an identity escape in JS and matches nothing.
+const COMMERCIAL_CHAIN =
+  // Possessive brands require the apostrophe-s ("McDonald Mission Center" is a real
+  // mission), and `target` is excluded ("On Target Ministries").
+  /\b(kfc|mcdonald's|subway|starbucks|domino's|pizza hut|taco bell|wendy's|burger king|chipotle|dunkin|panera|popeyes|chick[- ]?fil[- ]?a|little caesars|papa john's|jack in the box|sonic drive|arby's|hardee's|whataburger|culver's|jimmy john's|firehouse subs|wingstop|panda express|olive garden|applebee's|denny's|ihop|waffle house|7[- ]?eleven|walmart|kroger|safeway|costco|dollar general|dollar tree|family dollar|cvs|walgreens|rite aid|circle k|speedway|wawa|sheetz|aldi|publix|winn[- ]?dixie|trader joe's|whole foods)\b/i;
+
+/**
+ * Franchise markers. `dba` is a franchisee trading name, which no pantry has.
+ * Store numbers appear three ways in this feed — `Subway # 42247`, `Subway 20053`,
+ * and `Kfc K312047` — so a bare run of four or more digits counts, with or without
+ * the hash. Real pantries do not carry four-digit numbers in their names.
+ */
+const COMMERCIAL_MARKER = /\bdba\b|#\s*\d{2,}|\b[A-Z]?\d{4,}\b/i;
+
+export const isCommercialVenue = (name: string): boolean =>
+  COMMERCIAL_CHAIN.test(name) || COMMERCIAL_MARKER.test(name);
+
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 3;
 const PER_PAGE = 1000;
@@ -78,10 +135,12 @@ async function fetchPage(url: string): Promise<FeedPage | null> {
       return (await response.json()) as FeedPage;
     } catch (err) {
       if (attempt >= MAX_RETRIES) {
-        console.warn(`[ingest] feed-america: skipping page after retries (${String(err).slice(0, 120)})`);
+        console.warn(
+          `[ingest] feed-america: skipping page after retries (${String(err).slice(0, 120)})`,
+        );
         return null;
       }
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      await sleep(1000 * 2 ** attempt);
     } finally {
       clearTimeout(timeout);
     }
@@ -109,65 +168,54 @@ async function fetchTable(baseUrl: string, resource: string): Promise<FeedRow[]>
       if (body) rows.push(...(body.contents ?? []));
       else skipped++;
     }
-    await new Promise((r) => setTimeout(r, WAVE_DELAY_MS));
+    await sleep(WAVE_DELAY_MS);
     if (start % (CONCURRENCY * 10) < CONCURRENCY) {
       console.log(`[ingest] feed-america ${resource}: ${rows.length} rows…`);
     }
   }
   if (skipped > 0) {
     console.warn(`[ingest] feed-america ${resource}: skipped ${skipped}/${totalPages} pages`);
-    if (skipped / totalPages > 0.1) throw new Error(`Feed America: ${resource} lost ${skipped} pages`);
+    if (skipped / totalPages > 0.1)
+      throw new Error(`Feed America: ${resource} lost ${skipped} pages`);
   }
   return rows;
 }
 
-const trimOrNull = (s: string | undefined): string | null => {
-  const t = s?.trim();
-  return t ? t : null;
-};
-
-function isSaneCoord(lat: number, lng: number): boolean {
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
-  return lat !== 0 || lng !== 0;
-}
-
-export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig): IngestionSource => {
+export const createFeedAmericaFoodSource: SourceFactory = (
+  config: SourceConfig,
+): IngestionSource => {
   return {
     provider: PROVIDER,
     async fetch(query: IngestionQuery): Promise<NormalizedResource[]> {
       const today = new Date().toISOString().slice(0, 10);
-      // Comma-separated states, e.g. --state "TX,FL,CA" — one download pass
-      // covers them all. Decision 2026-07-24: veteran-dense states only for
-      // now (DB-size bound); national needs a Supabase tier decision.
-      const stateFilter = query.state
-        ? new Set(
-            query.state
-              .toUpperCase()
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          )
-        : null;
-      if (!stateFilter || stateFilter.size === 0) {
-        // Hard gate, not a comment: national is ~310k rows and needs an
-        // explicit license + DB-size decision. Remove this only with sign-off.
-        throw new Error(
-          'feed-america is state-gated: pass --state XX[,YY,…]. National ingest requires explicit approval (CC BY-SA + DB size).',
-        );
-      }
+      // Optional `--state "TX,FL"` for spot-checks; national by default.
+      const stateFilter = parseStateFilter(query.state);
 
-      console.log('[ingest] feed-america: downloading locations/addresses/phones/services/attributes…');
-      const [locations, addresses, phones, services, attributes] = await Promise.all([
-        fetchTable(config.baseUrl, 'locations'),
-        fetchTable(config.baseUrl, 'addresses'),
-        fetchTable(config.baseUrl, 'phones'),
-        fetchTable(config.baseUrl, 'services'),
-        fetchTable(config.baseUrl, 'attributes'),
-      ]);
+      console.log(
+        '[ingest] feed-america: downloading locations/addresses/phones/services/attributes/schedules…',
+      );
+      const [locations, addresses, phones, services, attributes, serviceAtLocation, schedules] =
+        await Promise.all([
+          fetchTable(config.baseUrl, 'locations'),
+          fetchTable(config.baseUrl, 'addresses'),
+          fetchTable(config.baseUrl, 'phones'),
+          fetchTable(config.baseUrl, 'services'),
+          fetchTable(config.baseUrl, 'attributes'),
+          fetchTable(config.baseUrl, 'service_at_location'),
+          fetchTable(config.baseUrl, 'schedules'),
+        ]);
 
       const addressByLocation = new Map(addresses.map((a) => [str(a, 'location_id'), a]));
       const serviceById = new Map(services.map((s) => [str(s, 'id'), s]));
+      // Join through HSDS's explicit `service_at_location` link, never by id pattern.
+      const serviceIdByLocation = new Map<string, string>();
+      for (const link of serviceAtLocation) {
+        const locId = str(link, 'location_id');
+        const svcId = str(link, 'service_id');
+        if (locId && svcId && !serviceIdByLocation.has(locId)) {
+          serviceIdByLocation.set(locId, svcId);
+        }
+      }
       // service id → is it an actual food-distribution service?
       const foodServices = new Set<string>();
       for (const t of attributes) {
@@ -175,6 +223,25 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
           foodServices.add(str(t, 'link_id'));
         }
       }
+      // HSDS `schedules`: one row per open day per service, real clock times.
+      // Grouped by location; fromDayRanges keeps the widest span per day.
+      const scheduleByLocation = new Map<string, DayRange[]>();
+      for (const row of schedules) {
+        const locId = str(row, 'location_id');
+        if (!locId) continue;
+        // Skip delivery / appointment-only windows; only promise explicit open hours.
+        const attending = str(row, 'attending_type').toLowerCase();
+        if (attending && attending !== 'open') continue;
+        const day = str(row, 'byday');
+        const opens = str(row, 'opens_at');
+        const closes = str(row, 'closes_at');
+        if (!day || !opens || !closes) continue;
+        const bucket = scheduleByLocation.get(locId);
+        const entry = { day, opens, closes };
+        if (bucket) bucket.push(entry);
+        else scheduleByLocation.set(locId, [entry]);
+      }
+
       const phoneByLocation = new Map<string, string>();
       for (const p of phones) {
         const locId = str(p, 'location_id');
@@ -190,14 +257,13 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
         if (str(loc, 'location_type') !== 'physical') continue;
         const locId = str(loc, 'id');
         const addr = addressByLocation.get(locId);
-        const state = (addr ? trimOrNull(str(addr, 'state_province')) : null)?.toUpperCase() ?? null;
-        if (!state || !stateFilter.has(state)) continue;
+        const state =
+          (addr ? trimOrNull(str(addr, 'state_province')) : null)?.toUpperCase() ?? null;
+        if (!state) continue;
+        if (stateFilter && !stateFilter.has(state)) continue;
 
         const name = trimOrNull(str(loc, 'name'));
         if (!name) continue;
-        const externalId = trimOrNull(str(loc, 'external_identifier')) ?? locId;
-        const id = `feedam:${externalId}`;
-        if (seen.has(id)) continue;
 
         const lat = Number(str(loc, 'latitude'));
         const lng = Number(str(loc, 'longitude'));
@@ -208,25 +274,34 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
         ]
           .filter(Boolean)
           .join(' ');
-        const region = [state, addr ? trimOrNull(str(addr, 'postal_code')) : null]
-          .filter(Boolean)
-          .join(' ');
-        const address =
-          [street, [addr ? trimOrNull(str(addr, 'city')) : null, region].filter(Boolean).join(', ')]
-            .filter(Boolean)
-            .join(', ') || null;
+        const address = formatAddress(
+          street,
+          addr ? trimOrNull(str(addr, 'city')) : null,
+          state,
+          addr ? trimOrNull(str(addr, 'postal_code')) : null,
+        );
         if (!located && !address) continue; // neither pinnable nor visitable
 
-        // `svc-N` aligns with `loc-N` in this feed; fall back gracefully if not.
-        const serviceId = locId.replace(/^loc-/, 'svc-');
-        if (!foodServices.has(serviceId)) continue; // clinic / SNAP office / WIC — not a food site
+        const serviceId = serviceIdByLocation.get(locId);
+        if (!serviceId || !foodServices.has(serviceId)) continue; // clinic / SNAP office / WIC
         const service = serviceById.get(serviceId);
+        const eligibility = service ? trimOrNull(str(service, 'eligibility_description')) : null;
+        // Food must be proven, not assumed — see isProvenFoodSite.
+        if (!isProvenFoodSite(`${name} ${eligibility ?? ''}`)) continue;
+        if (SCHOOL_VENUE.test(name)) continue;
+        if (isCommercialVenue(name)) continue;
+
+        // Keyed on identity, not on the feed's volatile row ids — see stableKey().
+        const externalId = stableKey(name, address, state);
+        const id = `feedam:${externalId}`;
+        if (seen.has(id)) continue;
         const website = service ? trimOrNull(str(service, 'url')) : null;
 
         seen.add(id);
         results.push({
           id,
-          name,
+          // Upstream stores names in upper case; see lib/displayName.ts.
+          name: titleCaseName(name),
           category: 'food',
           description:
             (service ? trimOrNull(str(service, 'description')) : null) ??
@@ -236,9 +311,9 @@ export const createFeedAmericaFoodSource: SourceFactory = (config: SourceConfig)
           longitude: located ? lng : null,
           phone: phoneByLocation.get(locId) ?? null,
           website,
-          hours: null, // schedules exist upstream but are irregular — call ahead
+          hours: fromDayRanges(scheduleByLocation.get(locId) ?? []),
           eligibility:
-            (service ? trimOrNull(str(service, 'eligibility_description')) : null) ??
+            eligibility ??
             'Open to everyone, including veterans and families. Call ahead to confirm hours and what to bring.',
           documents_needed: [],
           source_url: ATTRIBUTION_URL,

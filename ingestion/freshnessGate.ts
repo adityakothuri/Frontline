@@ -14,14 +14,27 @@ import { resolve } from 'node:path';
 import { loadEnvFile } from './lib/env.ts';
 
 const CADENCE_DAYS: Record<string, number> = {
-  usajobs: 10, // weekly refresh
   'va-facilities': 40, // monthly
   'va-gi-bill': 40, // monthly
   'hud-housing-counseling': 40, // monthly
-  'feed-america': 40, // monthly (8 veteran-dense states, scoped food pantries)
+  'feed-america': 40, // monthly (national, food-distribution taxonomies only)
+  'state-veterans-homes': 40, // monthly (NASVH wp-json; 166 homes, changes rarely)
+  'vso-organizations': 40, // monthly (VA OGC export, rolled up to organization × state)
+  'samhsa-veteran-bh': 40, // monthly (FindTreatment.gov, sCodes=VET)
+  'usaspending-va-grants': 40, // monthly (USAspending refreshes on a monthly cycle)
+  'hrsa-health-centers': 40, // monthly (HRSA refreshes the site file near-daily)
+  'hud-pha': 40, // monthly (HUD updates the PHA layer roughly quarterly)
+  'careeronestop-ajc': 40, // monthly (CareerOneStop republishes the AJC workbook periodically)
+  'osm-clothing': 40, // monthly (OpenStreetMap changes continuously; monthly is ample)
+  'va-transportation': 40, // monthly (VA edits the VTP representatives page in place)
+  'catholic-charities': 120, // quarterly (the agency roster changes rarely)
+  'fta-ntd': 400, // ANNUAL — the NTD publishes one release a year, so 40 days would
+  //                 fail permanently. This is the only source on a yearly cadence.
+  'nacvso-cvso': 120, // quarterly (officers turn over; offices rarely move)
+  'fisher-houses': 40, // monthly (74 houses; the network grows by one or two a year)
+  'lsc-legal-aid': 120, // quarterly (LSC updates Programs.json irregularly)
   'curated-national': 120, // quarterly manual review (last_checked = verified_on)
   'ssvf-providers': 120, // quarterly manual refresh from the VA FY list
-  'vso-representatives': 120, // quarterly manual re-export from the VA accreditation search
 };
 
 async function newestCheck(url: string, key: string, provider: string): Promise<string | null> {
@@ -51,8 +64,11 @@ for (const [provider, maxDays] of Object.entries(CADENCE_DAYS)) {
   }
   const ageDays = (Date.now() - new Date(newest).getTime()) / 86_400_000;
   const status = ageDays > maxDays ? 'STALE' : 'ok';
-  console.log(`${status.padEnd(5)} ${provider}: newest last_checked ${newest} (${Math.floor(ageDays)}d, limit ${maxDays}d)`);
-  if (ageDays > maxDays) failures.push(`${provider}: ${Math.floor(ageDays)}d old (limit ${maxDays}d)`);
+  console.log(
+    `${status.padEnd(5)} ${provider}: newest last_checked ${newest} (${Math.floor(ageDays)}d, limit ${maxDays}d)`,
+  );
+  if (ageDays > maxDays)
+    failures.push(`${provider}: ${Math.floor(ageDays)}d old (limit ${maxDays}d)`);
 }
 
 if (failures.length > 0) {

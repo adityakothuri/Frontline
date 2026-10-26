@@ -12,12 +12,10 @@ import {
 
 /**
  * Backup-sync orchestration. Local storage stays the source of truth; this
- * layer mirrors it to the server and restores it after a reinstall. Every
- * function is a safe no-op when the backend is unconfigured or the device id /
- * network is unavailable — so offline behavior is byte-for-byte unchanged, and
- * a sync failure never blocks or breaks the app. Pushes are fire-and-forget and
- * debounced; the server enforces updated_at monotonicity, so a reinstall's
- * empty-before-restore state can never overwrite good backup data.
+ * mirrors it to the server and restores it after a reinstall. Every function is
+ * a no-op when sync is unavailable and never throws. Pushes are debounced and
+ * fire-and-forget; the server enforces updated_at monotonicity, so an empty
+ * pre-restore state can't overwrite a good backup.
  */
 
 // One cached pull per launch — the restore paths for saved and profile share it.
@@ -39,21 +37,23 @@ function getSnapshot(): Promise<BackupSnapshot | null> {
 }
 
 /**
- * Merge the on-device saved list with the backup: a union by id preserving the
- * earliest savedAt, newest-first. Restores a reinstalled device's list and
- * folds in any ids saved before the backend was reachable. Returns the local
- * list unchanged when sync is off/unreachable.
+ * Union two saved lists by id, keeping the earliest savedAt, newest-first. Also
+ * used by SavedContext to merge saves made while the backup was in flight.
  */
-export async function reconcileSaved(local: SavedEntry[]): Promise<SavedEntry[]> {
-  const remote = (await getSnapshot())?.saved;
-  if (!remote || remote.length === 0) return local;
-
+export function unionSaved(a: SavedEntry[], b: SavedEntry[]): SavedEntry[] {
   const byId = new Map<string, SavedEntry>();
-  for (const entry of [...remote, ...local]) {
+  for (const entry of [...a, ...b]) {
     const existing = byId.get(entry.id);
     if (!existing || entry.savedAt < existing.savedAt) byId.set(entry.id, entry);
   }
   return [...byId.values()].sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+/** Merge the on-device saved list with the backup; local unchanged when sync is off. */
+export async function reconcileSaved(local: SavedEntry[]): Promise<SavedEntry[]> {
+  const remote = (await getSnapshot())?.saved;
+  if (!remote || remote.length === 0) return local;
+  return unionSaved(remote, local);
 }
 
 /**

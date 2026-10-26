@@ -1,7 +1,7 @@
-import { Pressable, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, radii, spacing } from '@/theme';
+import { StyleSheet } from 'react-native';
+import { pressScale, spacing } from '@/theme';
 import { AppText } from './AppText';
+import { PressableScale } from './PressableScale';
 
 type LocationButtonProps = {
   /** The veteran's ZIP, or undefined if not set yet. */
@@ -9,37 +9,27 @@ type LocationButtonProps = {
   onPress: () => void;
 };
 
-// The top-left location control. Shows the ZIP that scopes what help is nearby
-// (set at onboarding, always changeable). Tapping opens where it can be edited.
+// The ZIP that scopes what is shown, as a mono line above a masthead title.
 export function LocationButton({ zip, onPress }: LocationButtonProps) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
-      accessibilityLabel={zip ? `Location ${zip}, tap to change` : 'Set your location'}
+      // Starts with the visible text so Voice Control's "tap ZIP 78701" works.
+      accessibilityLabel={zip ? `ZIP ${zip}, change location` : 'Set your location'}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+      scaleTo={pressScale.chip}
+      containerStyle={styles.container}
+      style={styles.button}
     >
-      <Ionicons name="location-outline" size={14} color={colors.accent} />
-      <AppText variant="label" color="textSecondary">
-        {zip ?? 'Set location'}
+      <AppText variant="data" color="accent">
+        {zip ? `ZIP ${zip} ▸` : 'SET LOCATION ▸'}
       </AppText>
-      <Ionicons name="chevron-down" size={12} color={colors.textMuted} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  pressed: { opacity: 0.7 },
+  container: { alignSelf: 'flex-start' },
+  // The text line is 18pt; vertical padding brings the target to 44.
+  button: { minHeight: 44, justifyContent: 'center', paddingVertical: spacing.md },
 });

@@ -1,11 +1,13 @@
-import { Share, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, PressableScale } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { AppText, Glyph, PressableScale, type GlyphName } from '@/components';
+import { colors, pressScale, radii, spacing } from '@/theme';
+import { tapSelection } from '@/lib/haptics';
 import { useSaved } from '@/services/saved';
+import { useReminders } from '@/services/reminders';
 import type { Resource } from '@/types/resource';
-import { SeeInMapButton } from './SeeInMapButton';
+import { confirmUnsaveWithReminder } from './ReminderBell';
+import { isOnMap } from './resourceActions';
 
 type ActionRowProps = {
   resource: Resource;
@@ -17,76 +19,73 @@ type ActionRowProps = {
   onGetScript?: () => void;
 };
 
-// Every action on a resource, in one compact cluster under the header: pill
-// buttons that hug their content (Call filled, the rest quiet) plus the
-// call-script entry point. Save state lives here (not in the route header) so
-// there is exactly one Save control on the page.
+// The detail page's action bar: equal tiles, Call leading in olive. Only actions
+// this place supports are shown.
 export function ActionRow({ resource, onCall, onDirections, onGetScript }: ActionRowProps) {
   const router = useRouter();
   const { isSaved, toggleSave } = useSaved();
+  const { isReminded, clearReminder } = useReminders();
   const saved = isSaved(resource.id);
 
-  const share = () => {
-    const lines = [resource.name, resource.address, resource.phone, resource.website].filter(
-      (line): line is string => Boolean(line),
-    );
-    // Fire-and-forget: the OS sheet owns the interaction from here. The catch
-    // covers web, where navigator.share may be unavailable and reject.
-    Share.share({ message: lines.join('\n') }).catch(() => {});
+  // Un-saving leaves the reminder alone unless the veteran says otherwise.
+  const onToggleSave = () => {
+    toggleSave(resource.id);
+    if (saved && isReminded(resource.id)) {
+      confirmUnsaveWithReminder(resource.name, () => clearReminder(resource.id));
+    }
   };
 
   return (
-    <View style={styles.row}>
-      {onCall ? <ActionPill icon="call" label="Call" primary onPress={onCall} /> : null}
-      {onDirections ? (
-        <ActionPill icon="navigate-outline" label="Directions" onPress={onDirections} />
+    <View style={styles.bar}>
+      {onCall ? <Tile glyph="call" label="Call" lead onPress={onCall} /> : null}
+      {onDirections ? <Tile glyph="directions" label="Route" onPress={onDirections} /> : null}
+      {isOnMap(resource) ? (
+        <Tile
+          glyph="map"
+          label="Map"
+          onPress={() => router.navigate({ pathname: '/map', params: { focus: resource.id } })}
+        />
       ) : null}
-      <SeeInMapButton
-        resource={resource}
-        variant="pill"
-        onPress={(id) => router.navigate({ pathname: '/map', params: { focus: id } })}
-      />
-      <ActionPill
-        icon={saved ? 'bookmark' : 'bookmark-outline'}
+      <Tile
+        glyph="bookmark"
         label={saved ? 'Saved' : 'Save'}
-        active={saved}
-        onPress={() => toggleSave(resource.id)}
+        selected={saved}
+        onPress={onToggleSave}
       />
-      <ActionPill icon="share-outline" label="Share" onPress={share} />
-      {onGetScript ? (
-        <ActionPill icon="sparkles-outline" label="Call script" active onPress={onGetScript} />
-      ) : null}
+      {onGetScript ? <Tile glyph="script" label="Script" onPress={onGetScript} /> : null}
     </View>
   );
 }
 
-function ActionPill({
-  icon,
+function Tile({
+  glyph,
   label,
   onPress,
-  primary = false,
-  active = false,
+  lead = false,
+  selected,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  glyph: GlyphName;
   label: string;
   onPress: () => void;
-  primary?: boolean;
-  active?: boolean;
+  lead?: boolean;
+  selected?: boolean;
 }) {
+  const ink = lead ? colors.textOnAccent : colors.textPrimary;
   return (
     <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={onPress}
-      scaleTo={0.95}
-      style={[styles.pill, primary && styles.pillPrimary, active && styles.pillActive]}
+      accessibilityState={selected === undefined ? undefined : { selected }}
+      onPress={() => {
+        tapSelection();
+        onPress();
+      }}
+      scaleTo={pressScale.chip}
+      containerStyle={styles.slot}
+      style={[styles.tile, lead && styles.lead]}
     >
-      <Ionicons
-        name={icon}
-        size={16}
-        color={primary ? colors.textOnAccent : colors.accent}
-      />
-      <AppText variant="label" color={primary ? 'textOnAccent' : 'accentPressed'}>
+      <Glyph name={glyph} size={22} color={ink} filled={selected} />
+      <AppText variant="kicker" style={{ color: ink }}>
         {label}
       </AppText>
     </PressableScale>
@@ -94,18 +93,16 @@ function ActionPill({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  pill: {
-    flexDirection: 'row',
+  bar: { flexDirection: 'row', gap: spacing.xs },
+  slot: { flex: 1 },
+  tile: {
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xs,
-    minHeight: 44,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    minHeight: 64,
+    borderRadius: radii.sm,
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
   },
-  pillPrimary: { backgroundColor: colors.accent, borderColor: colors.accent },
-  pillActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+  lead: { backgroundColor: colors.accent, borderColor: colors.accent },
 });

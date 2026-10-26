@@ -1,17 +1,22 @@
-import { View, Pressable, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText } from '@/components';
-import { colors, radii, spacing } from '@/theme';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, type LayoutChangeEvent } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { AppText, PressableScale } from '@/components';
+import { colors, pressScale, radii, spacing, springs } from '@/theme';
+import { tapSelection } from '@/lib/haptics';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 export type ResultsView = 'list' | 'map';
 
-const OPTIONS: { value: ResultsView; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'list', label: 'List', icon: 'list-outline' },
-  { value: 'map', label: 'Map', icon: 'map-outline' },
+const OPTIONS: { value: ResultsView; label: string }[] = [
+  { value: 'list', label: 'List' },
+  { value: 'map', label: 'Map' },
 ];
 
-// Segmented control that flips Results between the list and the map. Both views
-// render the same result set, so this only swaps presentation.
+type Frame = { x: number; width: number };
+
+// Segmented control that flips Results between list and map (same result set).
+// One ink block slides between the two 44pt segments.
 export function ViewToggle({
   value,
   onChange,
@@ -19,30 +24,66 @@ export function ViewToggle({
   value: ResultsView;
   onChange: (next: ResultsView) => void;
 }) {
+  const reduced = useReducedMotion();
+  const [frames, setFrames] = useState<Partial<Record<ResultsView, Frame>>>({});
+  const x = useSharedValue(0);
+  const width = useSharedValue(0);
+  // The pill must appear *at* the selected segment on first layout, not slide
+  // in from the left edge.
+  const positioned = useRef(false);
+
+  const onFrame = useCallback((view: ResultsView, e: LayoutChangeEvent) => {
+    const { x: fx, width: fw } = e.nativeEvent.layout;
+    setFrames((prev) => {
+      const existing = prev[view];
+      if (existing && existing.x === fx && existing.width === fw) return prev;
+      return { ...prev, [view]: { x: fx, width: fw } };
+    });
+  }, []);
+
+  useEffect(() => {
+    const frame = frames[value];
+    if (!frame) return;
+    if (!positioned.current || reduced) {
+      positioned.current = true;
+      x.set(frame.x);
+      width.set(frame.width);
+    } else {
+      x.set(withSpring(frame.x, springs.settle));
+      width.set(withSpring(frame.width, springs.settle));
+    }
+  }, [value, frames, reduced, x, width]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.get() }],
+    width: width.get(),
+  }));
+
   return (
-    <View style={styles.track}>
+    <View style={styles.track} accessibilityRole="tablist">
+      <Animated.View style={[styles.pill, pillStyle]} pointerEvents="none" />
       {OPTIONS.map((opt) => {
         const selected = opt.value === value;
         return (
-          <Pressable
+          <PressableScale
             key={opt.value}
-            accessibilityRole="button"
-            // "List" / "Map" alone doesn't say what the control does; naming the
-            // action makes the segment self-explanatory out of context.
+            accessibilityRole="tab"
+            // Names the action, since "List" / "Map" alone is unclear out of context.
             accessibilityLabel={`Show results as ${opt.label.toLowerCase()}`}
             accessibilityState={{ selected }}
-            onPress={() => onChange(opt.value)}
-            style={[styles.segment, selected && styles.segmentSelected]}
+            onLayout={(e) => onFrame(opt.value, e)}
+            onPress={() => {
+              if (selected) return;
+              tapSelection();
+              onChange(opt.value);
+            }}
+            scaleTo={pressScale.chip}
+            style={styles.segment}
           >
-            <Ionicons
-              name={opt.icon}
-              size={15}
-              color={selected ? colors.textOnAccent : colors.textSecondary}
-            />
-            <AppText variant="label" color={selected ? 'textOnAccent' : 'textSecondary'}>
+            <AppText variant="data" color={selected ? 'surface' : 'textPrimary'}>
               {opt.label}
             </AppText>
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>
@@ -52,18 +93,17 @@ export function ViewToggle({
 const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.xs,
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.md,
-  },
-  segment: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
     borderRadius: radii.sm,
+    backgroundColor: colors.surface,
   },
-  segmentSelected: { backgroundColor: colors.accent },
+  // Sits behind the segments, in the same coordinate space their onLayout reports.
+  pill: { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: colors.textPrimary },
+  segment: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+  },
 });

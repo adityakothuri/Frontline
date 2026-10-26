@@ -1,15 +1,11 @@
-import type { Need } from '@/types/need';
+import type { Need, NeedCategory, VeteranDocument } from '@/types/need';
+import type { VeteranRole } from '@/types/profile';
 import type { Resource } from '@/types/resource';
 
 /**
- * The AI seam. All AI in Frontline is **embedded in workflows**, never a chatbot,
- * and is **simplified guidance — never legal, medical, financial, or
- * government-certified advice**. See `docs/obsidian/03 Technical/AI Feature Design.md`.
- *
- * Implemented only by `ClaudeAiService` — real Claude via a proxy edge function
- * (the API key never ships in the client — see
- * `docs/obsidian/03 Technical/Environment Variables.md`). There is no simulated
- * implementation; on failure the calling screen shows an error/retry state.
+ * The AI seam: plans, scripts, summaries and the Ask Frontline navigator, every
+ * reply ending in an in-app action. Simplified guidance, never legal, medical,
+ * financial or government-certified advice. Implemented by `ClaudeAiService`.
  */
 
 export interface PlanStep {
@@ -49,6 +45,46 @@ export interface BenefitSummary {
   verificationNote: string;
 }
 
+// --- Ask Frontline ---------------------------------------------------------
+
+export type ChatRole = 'user' | 'assistant';
+
+/** One turn of the conversation as the model sees it: plain text only. */
+export interface ChatTurn {
+  role: ChatRole;
+  content: string;
+}
+
+/**
+ * What a reply can ask the veteran to do next. Every kind maps to a real
+ * destination in the app; the model cannot point anywhere else.
+ */
+export type ChatAction =
+  | { kind: 'results'; category: NeedCategory; label: string }
+  | { kind: 'map' }
+  | { kind: 'profile' }
+  | { kind: 'crisis' };
+
+/** What the app knows about the person asking. Never anything sensitive. */
+export interface ChatContext {
+  zip?: string;
+  state?: string;
+  radiusMiles: number;
+  firstName?: string;
+  role?: VeteranRole;
+  documentsOnHand?: VeteranDocument[];
+}
+
+export interface ChatReply {
+  /** Plain text, a few short sentences. */
+  reply: string;
+  /** At most three, most useful first; a crisis action is always first. */
+  actions: ChatAction[];
+  /** Up to three things the veteran might say next, in their own voice. */
+  followUps: string[];
+  disclaimer: string;
+}
+
 export interface AiService {
   buildNextStepPlan(input: { need: Need; resource: Resource }): Promise<NextStepPlan>;
   buildCallScript(input: {
@@ -59,6 +95,9 @@ export interface AiService {
     firstName?: string;
   }): Promise<CallScript>;
   summarizeBenefit(input: { resource: Resource }): Promise<BenefitSummary>;
+  /** One turn of Ask Frontline. `messages` is the whole history so far, ending
+   *  with the veteran's latest turn; nothing is remembered between calls. */
+  chat(input: { messages: ChatTurn[]; context: ChatContext }): Promise<ChatReply>;
 }
 
 /** Attached to every AI surface so guidance is never mistaken for advice. */

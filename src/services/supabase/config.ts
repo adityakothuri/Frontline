@@ -1,10 +1,9 @@
 /**
- * Whether the real backend is configured. Everything is real: resources, ratings,
- * and AI all require Supabase. Without config, those calls throw and the UI shows
- * an error/retry state — there is no simulated data or templated AI anywhere.
+ * The backend config, or null when the bundle shipped without it (calls then
+ * throw into the error/retry UI).
  *
- * Env access MUST be literal property reads — Expo inlines EXPO_PUBLIC_* at
- * bundle time and dynamic access (process.env[name]) silently yields undefined.
+ * Env access MUST be literal property reads: Expo inlines EXPO_PUBLIC_* at
+ * bundle time and dynamic access (process.env[name]) yields undefined.
  */
 
 export interface SupabaseConfig {

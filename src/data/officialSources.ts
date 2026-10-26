@@ -1,12 +1,11 @@
+import { colors } from '@/theme';
 import type { NeedCategory } from '@/types/need';
+import { RESOURCE_CATEGORY_META } from '@/types/resource';
 
 /**
- * Curated **official / trusted online** backups shown as a supporting widget on
- * each category page — never the main experience. Prioritizes VA.gov and federal
- * benefit pages, state/county veteran-service directories, and verified
- * nonprofits. Descriptions are plain-English summaries; links go to the official
- * sites. This is static reference data (not a live directory) — replace with a
- * verified feed in Phase 10.
+ * Curated official / trusted online backups, shown as a supporting widget on each
+ * category page. Static reference data: VA.gov and federal pages first, then
+ * state/county directories and verified nonprofits.
  */
 
 export type SourceTrust = 'va' | 'federal' | 'state' | 'county' | 'nonprofit';
@@ -27,13 +26,14 @@ export const SOURCE_TRUST_LABELS: Record<SourceTrust, string> = {
   nonprofit: 'Verified Nonprofit',
 };
 
-/** Tint per trust type (reuses the app's category color hues). */
+/** Hue per trust type, for the badge's glyph and wash only — never its text.
+ *  Borrowed from the measured palette rather than invented. */
 export const SOURCE_TRUST_COLORS: Record<SourceTrust, string> = {
-  va: '#2E7D32',
-  federal: '#3D8BC7',
-  state: '#5567C7',
-  county: '#3AA0B5',
-  nonprofit: '#C99A33',
+  va: colors.success,
+  federal: RESOURCE_CATEGORY_META.benefits_help.color,
+  state: RESOURCE_CATEGORY_META.education.color,
+  county: RESOURCE_CATEGORY_META.legal.color,
+  nonprofit: RESOURCE_CATEGORY_META.jobs.color,
 };
 
 const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
@@ -69,7 +69,8 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
     {
       title: 'Food, clothing & everyday basics',
       sourceName: '211 · United Way',
-      description: 'Free, confidential help finding food, meals, clothing, and other basics nearby.',
+      description:
+        'Free, confidential help finding food, meals, clothing, and other basics nearby.',
       url: 'https://www.211.org/',
       trust: 'nonprofit',
     },
@@ -85,7 +86,8 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
     {
       title: 'VA home loan benefits',
       sourceName: 'VA.gov',
-      description: 'Understand and apply for VA-backed home loans and your Certificate of Eligibility.',
+      description:
+        'Understand and apply for VA-backed home loans and your Certificate of Eligibility.',
       url: 'https://www.va.gov/housing-assistance/home-loans/',
       trust: 'va',
     },
@@ -134,7 +136,9 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       trust: 'federal',
     },
   ],
-  disability_benefits: [
+  // Claims first (the dominant intent), then VA benefits generally, then the
+  // people who help with either.
+  va_benefits: [
     {
       title: 'VA disability compensation',
       sourceName: 'VA.gov',
@@ -150,9 +154,16 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       trust: 'va',
     },
     {
+      title: 'Explore all VA benefits',
+      sourceName: 'VA.gov',
+      description: 'The official home for health care, disability, education, and more.',
+      url: 'https://www.va.gov/',
+      trust: 'va',
+    },
+    {
       title: 'Get free help from an accredited rep',
       sourceName: 'VA.gov',
-      description: 'Find a VSO or accredited representative to help file your claim — at no cost.',
+      description: 'Find a VSO or accredited representative to guide you through benefits.',
       url: 'https://www.va.gov/get-help-from-accredited-representative/',
       trust: 'va',
     },
@@ -162,6 +173,20 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       description: 'Free help from Disabled American Veterans with filing and appeals.',
       url: 'https://www.dav.org/',
       trust: 'nonprofit',
+    },
+    {
+      title: 'Your state’s veterans affairs office',
+      sourceName: 'NASDVA directory',
+      description: 'Find your state veterans office — many offer added state-level benefits.',
+      url: 'https://www.nasdva.us/',
+      trust: 'state',
+    },
+    {
+      title: 'Your county veteran service officer',
+      sourceName: 'NACVSO directory',
+      description: 'Locate a county VSO for free, local, one-on-one benefits help.',
+      url: 'https://www.nacvso.org/',
+      trust: 'county',
     },
   ],
   education_benefits: [
@@ -335,43 +360,6 @@ const OFFICIAL_SOURCES: Record<NeedCategory, OfficialSource[]> = {
       description: 'Locate crisis, mental-health, and substance-use help lines and services.',
       url: 'https://www.samhsa.gov/find-help',
       trust: 'federal',
-    },
-  ],
-  general_benefits: [
-    {
-      title: 'Explore all VA benefits',
-      sourceName: 'VA.gov',
-      description: 'The official home for health care, disability, education, and more.',
-      url: 'https://www.va.gov/',
-      trust: 'va',
-    },
-    {
-      title: 'Find VA forms',
-      sourceName: 'VA.gov',
-      description: 'Search and download official VA application and claim forms.',
-      url: 'https://www.va.gov/find-forms/',
-      trust: 'va',
-    },
-    {
-      title: 'Get free help from an accredited rep',
-      sourceName: 'VA.gov',
-      description: 'Find a VSO or accredited representative to guide you through benefits.',
-      url: 'https://www.va.gov/get-help-from-accredited-representative/',
-      trust: 'va',
-    },
-    {
-      title: 'Your state’s veterans affairs office',
-      sourceName: 'NASDVA directory',
-      description: 'Find your state veterans office — many offer added state-level benefits.',
-      url: 'https://www.nasdva.us/',
-      trust: 'state',
-    },
-    {
-      title: 'Your county veteran service officer',
-      sourceName: 'NACVSO directory',
-      description: 'Locate a county VSO for free, local, one-on-one benefits help.',
-      url: 'https://www.nacvso.org/',
-      trust: 'county',
     },
   ],
 };

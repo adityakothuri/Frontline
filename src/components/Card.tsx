@@ -1,25 +1,32 @@
 import type { ReactNode } from 'react';
 import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 
 type CardProps = {
-  children: ReactNode;
+  children?: ReactNode;
+  /** `ruled` sits on the page between rules; `panel` is a bordered surface for
+   *  things that float over something else (a map, a stacked deck). */
+  variant?: 'ruled' | 'panel';
   style?: StyleProp<ViewStyle>;
 };
 
-// A single quiet surface: hairline border plus a whisper of shadow so cards
-// lift just off the paper (never heavy, never card-in-card) per the design system.
-export function Card({ children, style }: CardProps) {
-  return <View style={[styles.card, style]}>{children}</View>;
+// A block of related content. No fill, radius or shadow on the page — a hairline
+// below separates it from the next, so a list hangs cleanly off the masthead rule.
+export function Card({ children, variant = 'ruled', style }: CardProps) {
+  return <View style={[variant === 'panel' ? styles.panel : styles.ruled, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  ruled: {
+    paddingVertical: spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  panel: {
     padding: spacing.lg,
-    ...shadows.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
   },
 });

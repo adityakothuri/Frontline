@@ -1,31 +1,41 @@
-import { View, Pressable, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { AccessibilityInfo, Platform, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { AppText, Card } from '@/components';
-import { colors, radii, spacing } from '@/theme';
-import { useActivity } from '@/services/activity';
-import { ratingsService } from '@/services/ratings';
-import { getDeviceId } from '@/services/sync/deviceId';
+import { AppText, Card, GlyphButton, PressableScale } from '@/components';
+import { pressScale, spacing, swatchStyle } from '@/theme';
 import { resourceToNeedCategory } from '@/services/resources';
 import { RESOURCE_CATEGORY_META } from '@/types/resource';
 import type { EngagementEntry, Rating } from '@/types/activity';
 
-// "How was ___?" — surfaces the veteran's most recent unrated opportunity so they
-// can leave a quick thumbs vote. The vote is recorded on-device and, when a
-// backend is configured, added to the resource's real community count.
-export function ReviewPrompt({ engagement }: { engagement: EngagementEntry }) {
+// "How was ___?" — one card in the Home review deck. It only reports the vote;
+// `ReviewDeck` records it once the card has finished leaving.
+
+/**
+ * The acknowledgement; short enough to read within `timings.reviewAck`. The
+ * downvote says "this one" because `demoteDownvoted` sinks only that place.
+ */
+const ackMessage = (choice: Rating) =>
+  choice === 'down' ? "Thanks — we'll show this one lower." : 'Glad that one helped.';
+
+export function ReviewPrompt({
+  engagement,
+  confirmed,
+  onVote,
+}: {
+  engagement: EngagementEntry;
+  /** The vote just cast, while the card is acknowledging it. */
+  confirmed: Rating | null;
+  onVote: (choice: Rating) => void;
+}) {
   const router = useRouter();
-  const { rate } = useActivity();
   const meta = RESOURCE_CATEGORY_META[engagement.category];
 
-  const vote = async (choice: Rating) => {
-    rate(engagement.resourceId, choice);
-    const deviceId = await getDeviceId();
-    if (!deviceId) return;
-    ratingsService.submitVote(engagement.resourceId, deviceId, choice).catch(() => {
-      // The local vote still counts; the shared total catches up on next open.
-    });
-  };
+  // iOS only: VoiceOver has no live regions. Android uses
+  // `accessibilityLiveRegion` and would otherwise hear it twice.
+  useEffect(() => {
+    if (!confirmed || Platform.OS !== 'ios') return;
+    AccessibilityInfo.announceForAccessibility(ackMessage(confirmed));
+  }, [confirmed]);
 
   const openDetail = () =>
     router.push({
@@ -34,66 +44,60 @@ export function ReviewPrompt({ engagement }: { engagement: EngagementEntry }) {
     });
 
   return (
-    <Card style={styles.card}>
-      <View style={styles.categoryChip}>
-        <Ionicons name={meta.icon} size={14} color={meta.color} />
-        <AppText variant="caption" color="textSecondary">
-          {meta.label}
-        </AppText>
-      </View>
-
-      <AppText variant="subtitle">How was {engagement.resourceName}?</AppText>
-
-      <View style={styles.votes}>
-        <VoteButton icon="thumbs-up-outline" label="Helpful" onPress={() => vote('up')} />
-        <VoteButton icon="thumbs-down-outline" label="Not helpful" onPress={() => vote('down')} />
-      </View>
-
-      <Pressable accessibilityRole="link" onPress={openDetail} hitSlop={6}>
-        <AppText variant="label" color="textSecondary">
-          View details ›
-        </AppText>
-      </Pressable>
+    // The acknowledgement replaces the question at the same height, so the
+    // deck's measured height does not change.
+    <Card variant="panel" style={styles.card}>
+      <View style={swatchStyle(meta.color, 10)} />
+      {confirmed ? (
+        <View style={styles.slot}>
+          {/* Android hears this live region; iOS gets the announcement above. */}
+          <AppText variant="label" color="textSecondary" accessibilityLiveRegion="polite">
+            {ackMessage(confirmed)}
+          </AppText>
+        </View>
+      ) : (
+        <PressableScale
+          accessibilityRole="link"
+          accessibilityLabel={`View details for ${engagement.resourceName}`}
+          onPress={openDetail}
+          scaleTo={pressScale.subtle}
+          containerStyle={styles.slotContainer}
+          style={styles.slot}
+        >
+          <AppText variant="kicker" color="textSecondary">
+            How was it?
+          </AppText>
+          <AppText variant="label" numberOfLines={2}>
+            {engagement.resourceName}
+          </AppText>
+        </PressableScale>
+      )}
+      <GlyphButton
+        name="check"
+        label="Helpful"
+        selected={confirmed === 'up'}
+        disabled={confirmed === 'down'}
+        onPress={() => onVote('up')}
+      />
+      <GlyphButton
+        name="close"
+        label="Not helpful"
+        selected={confirmed === 'down'}
+        disabled={confirmed === 'up'}
+        onPress={() => onVote('down')}
+      />
     </Card>
   );
 }
 
-function VoteButton({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [styles.vote, pressed && styles.votePressed]}
-    >
-      <Ionicons name={icon} size={18} color={colors.textPrimary} />
-      <AppText variant="label">{label}</AppText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  votes: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  vote: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: spacing.md,
   },
-  votePressed: { opacity: 0.7 },
+  slotContainer: { flex: 1 },
+  slot: { flex: 1, minHeight: 44, justifyContent: 'center', gap: spacing.xxs },
 });

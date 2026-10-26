@@ -75,7 +75,9 @@ function normalize(entry: CuratedEntry, today: string): NormalizedResource {
   };
 }
 
-export const createCuratedNationalSource: SourceFactory = (config: SourceConfig): IngestionSource => {
+export const createCuratedNationalSource: SourceFactory = (
+  config: SourceConfig,
+): IngestionSource => {
   return {
     provider: PROVIDER,
     // Reads the curated JSON file (config.baseUrl is its path). No network.
