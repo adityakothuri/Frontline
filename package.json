@@ -15,10 +15,10 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/adikothuri3/Frontline.git"
+    "url": "git+https://github.com/adityakothuri/Frontline.git"
   },
   "bugs": {
-    "url": "https://github.com/adikothuri3/Frontline/issues"
+    "url": "https://github.com/adityakothuri/Frontline/issues"
   },
   "engines": {
     "node": ">=22"
